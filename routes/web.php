@@ -237,6 +237,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::get('/facilities/create', [AdminController::class, 'createFacility'])->name('admin.facilities.create');
         Route::post('/facilities', [AdminController::class, 'storeFacility'])->name('admin.facilities.store');
+        Route::put('/facilities/{facility}', [AdminController::class, 'updateFacility'])->name('admin.facilities.update');
+        Route::delete('/facilities/{facility}', [AdminController::class, 'destroyFacility'])->name('admin.facilities.destroy');
         Route::post('/reservations/{reservation}/approve', [AdminController::class, 'approve'])->name('admin.reservations.approve');
         Route::post('/reservations/{reservation}/reject', [AdminController::class, 'reject'])->name('admin.reservations.reject');
         Route::delete('/reservations/{reservation}', [AdminController::class, 'destroyReservation'])->name('admin.reservations.destroy');

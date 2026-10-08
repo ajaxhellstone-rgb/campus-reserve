@@ -56,7 +56,6 @@ class User extends Authenticatable
         'password' => 'hashed',
         'remember_device_expires_at' => 'datetime',
         'two_fa_enabled' => 'boolean',
-        'two_fa_secret' => 'encrypted',
         'is_admin' => 'boolean',
         'is_super_admin' => 'boolean',
     ];
@@ -143,6 +142,31 @@ class User extends Authenticatable
             return Crypt::decryptString($value);
         } catch (\Exception $e) {
             return $value;
+        }
+    }
+
+    /**
+     * Safely encrypt the 2FA secret when it is set.
+     */
+    public function setTwoFaSecretAttribute($value)
+    {
+        $this->attributes['two_fa_secret'] = $value === null || $value === '' ? null : Crypt::encryptString($value);
+    }
+
+    /**
+     * Safely decrypt the 2FA secret. If it was encrypted with an older app key,
+     * treat it as absent instead of crashing the login flow.
+     */
+    public function getTwoFaSecretAttribute($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($value);
+        } catch (\Throwable $e) {
+            return null;
         }
     }
 

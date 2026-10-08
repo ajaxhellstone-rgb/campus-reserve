@@ -250,8 +250,25 @@
                     });
                 }
 
+                function setChatbotButtonVisibility(isOpen) {
+                    if (!toggle) return;
+
+                    const shouldHide = Boolean(isOpen);
+                    toggle.style.opacity = shouldHide ? '0' : '1';
+                    toggle.style.visibility = shouldHide ? 'hidden' : 'visible';
+                    toggle.style.pointerEvents = shouldHide ? 'none' : 'auto';
+                    toggle.setAttribute('aria-hidden', shouldHide ? 'true' : 'false');
+                }
+
                 toggle?.addEventListener('click', function() {
                     const isClosed = panel.classList.contains('invisible');
+
+                    if (isClosed) {
+                        setChatbotButtonVisibility(true);
+                    } else {
+                        setChatbotButtonVisibility(false);
+                    }
+
                     panel.classList.toggle('invisible', !isClosed);
                     panel.classList.toggle('pointer-events-none', !isClosed);
                     panel.classList.toggle('translate-x-full', !isClosed);
@@ -272,6 +289,7 @@
                     backdrop.classList.add('invisible', 'pointer-events-none', 'opacity-0');
                     document.getElementById('chatbot-widget').classList.add('pointer-events-none');
                     panel.style.pointerEvents = 'none';
+                    setChatbotButtonVisibility(false);
                 });
                 backdrop?.addEventListener('click', function() { close.click(); });
 

@@ -53,7 +53,6 @@
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">System</p>
                 <div class="mt-4 space-y-3">
                     <a href="{{ route('notifications.index') }}" class="w-full block rounded-3xl border border-gray-200 bg-white px-4 py-4 text-left text-sm text-gray-600 transition hover:border-black hover:text-black">Notifications</a>
-                    <button type="button" class="w-full rounded-3xl border border-gray-200 bg-white px-4 py-4 text-left text-sm text-gray-600 transition hover:border-black hover:text-black">Preferences</button>
                 </div>
             </div>
         </aside>
@@ -124,7 +123,7 @@
                                     <span class="text-sm font-semibold text-gray-900">Phone number</span>
                                     
                                     <!-- Display Mode -->
-                                    <div id="phone_display_mode" class="mt-2">
+                                    <div id="phone_display_mode" class="mt-2 hidden">
                                         <div class="flex items-center justify-between rounded-3xl border border-gray-300 bg-slate-50 px-4 py-3">
                                             <span class="text-sm text-gray-900" id="phone_display_text">
                                                 @if(auth()->user()->phone)
@@ -142,7 +141,7 @@
                                     </div>
                                     
                                     <!-- Edit Mode -->
-                                    <div id="phone_edit_mode" class="mt-2 space-y-3 hidden">
+                                    <div id="phone_edit_mode" class="mt-2 space-y-3">
                                         <div class="grid gap-3 sm:grid-cols-[150px_1fr]">
                                             <label class="block">
                                                 <span class="text-xs font-semibold text-gray-700">Country Code</span>
@@ -284,7 +283,7 @@
                     <input id="password-modal-new" form="profile-settings-form" type="password" name="password" class="w-full rounded-3xl border border-gray-300 px-4 py-3 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-black" autocomplete="new-password">
                     <button type="button" data-password-toggle="password-modal-new" class="absolute inset-y-0 right-3 z-10 bg-transparent px-1 text-xs font-semibold text-gray-600 hover:text-black" aria-label="Show new password">Show</button>
                 </div>
-                <p class="mt-2 text-xs leading-5 text-gray-500">Use 5-30 characters with at least one uppercase letter, one lowercase letter, one number, and one special character: <span class="font-medium text-gray-700">! @ # $ % ^ &amp; * ( ) _ +</span>. For better security, use 12 or more characters.</p>
+                <p class="mt-2 text-xs leading-5 text-gray-500">Use 5-30 characters for a secure password. Longer passwords are easier to keep safe.</p>
             </label>
             <label class="block">
                 <span class="text-sm font-semibold text-gray-900">Confirm new password</span>
@@ -546,7 +545,7 @@
             }
 
             if (!passwordRequirement.test(passwordModalNew.value)) {
-                passwordModalError.textContent = 'Password must be 5-30 characters with uppercase, lowercase, number, and special character.';
+                passwordModalError.textContent = 'Password must be at least 5 characters.';
                 passwordModalError.classList.remove('hidden');
                 passwordModalNew.focus();
                 return;
@@ -681,6 +680,24 @@
         const countryCodeSelect = document.getElementById('country_code_select');
         const phoneNumberInput = document.getElementById('phone_number_input');
         const displayText = document.getElementById('phone_display_text');
+        const phoneHiddenInput = document.getElementById('form_phone_input');
+        const countryCodeHiddenInput = document.getElementById('form_country_code_input');
+
+        function syncPhoneFieldsToForm() {
+            const countryCode = countryCodeSelect.value;
+            const phoneNumber = phoneNumberInput.value.trim();
+
+            if (phoneNumber) {
+                phoneHiddenInput.value = countryCode + phoneNumber;
+                countryCodeHiddenInput.value = countryCode;
+                displayText.textContent = formatPhoneDisplay(countryCode, phoneNumber);
+                return;
+            }
+
+            phoneHiddenInput.value = '';
+            countryCodeHiddenInput.value = '';
+            displayText.textContent = 'Not set';
+        }
 
         // Parse current phone value to extract country code and number
         function parsePhone(phone) {
@@ -713,6 +730,21 @@
         const parsed = parsePhone(currentPhone);
         countryCodeSelect.value = parsed.countryCode;
         phoneNumberInput.value = parsed.number;
+        if (currentPhone) {
+            phoneHiddenInput.value = currentPhone;
+            countryCodeHiddenInput.value = parsed.countryCode;
+            displayMode.classList.remove('hidden');
+            editMode.classList.add('hidden');
+        } else {
+            phoneHiddenInput.value = '';
+            countryCodeHiddenInput.value = '';
+            displayMode.classList.add('hidden');
+            editMode.classList.remove('hidden');
+        }
+
+        profileSettingsForm?.addEventListener('submit', function() {
+            syncPhoneFieldsToForm();
+        });
 
         // Edit button click
         editBtn.addEventListener('click', function(e) {
@@ -733,19 +765,15 @@
                 return;
             }
 
-            // Update the hidden form fields for submission
-            const phoneHiddenInput = document.getElementById('form_phone_input');
-            const countryCodeHiddenInput = document.getElementById('form_country_code_input');
-            
-            // Update display
+            syncPhoneFieldsToForm();
+
+            if (profileSettingsForm) {
+                profileSettingsForm.submit();
+                return;
+            }
+
             const formattedPhone = formatPhoneDisplay(countryCode, phoneNumber);
             displayText.textContent = formattedPhone;
-            
-            // Store the combined phone value in hidden inputs
-            phoneHiddenInput.value = countryCode + phoneNumber;
-            countryCodeHiddenInput.value = countryCode;
-
-            // Switch back to display mode
             displayMode.classList.remove('hidden');
             editMode.classList.add('hidden');
         });

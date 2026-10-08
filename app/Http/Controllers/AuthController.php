@@ -79,7 +79,7 @@ class AuthController extends Controller
         $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', 'min:5', 'max:30', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{5,30}$/'],
+            'password' => ['required', 'confirmed', 'min:5', 'max:30'],
         ]);
 
         $email = strtolower($request->email);
@@ -342,7 +342,7 @@ class AuthController extends Controller
         if ($isChangingPassword) {
             $request->validate([
                 'current_password' => ['required', 'string'],
-                'password' => ['required', 'confirmed', 'min:5', 'max:30', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{5,30}$/'],
+                'password' => ['required', 'confirmed', 'min:5', 'max:30'],
                 'password_2fa_otp' => ['nullable', 'digits:6'],
             ]);
 
@@ -453,7 +453,7 @@ class AuthController extends Controller
         if ($isChangingPassword) {
             $request->validate([
                 'current_password' => ['required', 'string'],
-                'password' => ['required', 'confirmed', 'min:5', 'max:30', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{5,30}$/'],
+                'password' => ['required', 'confirmed', 'min:5', 'max:30'],
                 'password_2fa_otp' => ['nullable', 'digits:6'],
             ]);
 
@@ -689,7 +689,13 @@ class AuthController extends Controller
      */
     public function showRegister()
     {
-        return view('auth.register');
+        $googleSignup = session('pending_google_signup');
+
+        return view('auth.register', [
+            'googleSignup' => ! empty($googleSignup),
+            'googleName' => $googleSignup['name'] ?? null,
+            'googleEmail' => $googleSignup['email'] ?? null,
+        ]);
     }
 
     /**
@@ -697,12 +703,19 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
+        $googleSignup = session('pending_google_signup');
+
+        if ($googleSignup) {
+            $request->merge([
+                'name' => $request->input('name', $googleSignup['name'] ?? ''),
+                'email' => $googleSignup['email'] ?? $request->input('email'),
+            ]);
+        }
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255'],
-            'password' => ['required', 'confirmed', 'min:5', 'max:30', 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{5,30}$/'],
-        ], [
-            'password.regex' => 'Password must be 5-30 chars with uppercase, lowercase, number, and special character.',
+            'password' => ['required', 'confirmed', 'min:5', 'max:30'],
         ]);
 
         $emailHash = hash('sha256', strtolower($request->email));
@@ -719,6 +732,7 @@ class AuthController extends Controller
             'profile_picture' => 'profile_pictures/default-avatar.png', // Default avatar
         ]);
 
+        session()->forget('pending_google_signup');
         Auth::login($user);
 
         return redirect('/reserve');
@@ -889,7 +903,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        $request->session()->forget(['pending_2fa_user_id', 'pending_2fa_email', 'show_2fa_modal', 'time_left', 'pending_admin_2fa']);
+        $request->session()->forget(['pending_2fa_user_id', 'pending_2fa_email', 'show_2fa_modal', 'time_left', 'pending_admin_2fa', 'pending_google_signup']);
 
         return redirect('/')->withCookie($this->forgetRememberDeviceCookie());
     }
@@ -926,13 +940,14 @@ class AuthController extends Controller
         $emailHash = hash('sha256', strtolower($googleUser->getEmail()));
         $user = User::where('email_hash', $emailHash)->first();
 
-        // Create user if doesn't exist
+        // New Google users complete the normal signup flow with their own password confirmation.
         if (!$user) {
-            $user = User::create([
+            session()->put('pending_google_signup', [
                 'name' => $googleUser->getName() ?: 'User',
                 'email' => $googleUser->getEmail(),
-                'password' => Hash::make(Str::random(16)), // They logged in with Google, so I create a random password for them
             ]);
+
+            return redirect()->route('register');
         }
 
         if ($user->two_fa_enabled) {

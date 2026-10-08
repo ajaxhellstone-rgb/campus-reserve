@@ -22,6 +22,12 @@
             
             <form method="POST" action="{{ route('register') }}" class="space-y-6">
                 @csrf
+
+                @if(!empty($googleSignup))
+                    <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                        Finish creating your account with a password of your choice.
+                    </div>
+                @endif
                 
                 <div class="space-y-2">
                     <label for="name" class="block text-sm text-gray-700">Full Name</label>
@@ -31,7 +37,7 @@
                         type="text"
                         required
                         class="w-full px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                        value="{{ old('name') }}"
+                        value="{{ old('name', $googleSignup ? $googleName : '') }}"
                     >
                     @error('name')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
@@ -45,8 +51,9 @@
                         name="email"
                         type="email"
                         required
-                        class="w-full px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
-                        value="{{ old('email') }}"
+                        @if($googleSignup) readonly @endif
+                        class="w-full px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent {{ $googleSignup ? 'bg-gray-100 text-gray-600' : '' }}"
+                        value="{{ old('email', $googleSignup ? $googleEmail : '') }}"
                     >
                     @error('email')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
@@ -92,7 +99,7 @@
                         required
                         class="w-full px-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent"
                     >
-                    <p class="text-xs text-gray-500 mt-1 mb-2">Password must be at least 5 characters with uppercase, lowercase, number, and special character.</p>
+                    <p class="text-xs text-gray-500 mt-1 mb-2">Use at least 5 characters. Longer passwords are easier to keep secure.</p>
                 </div>
                 
                 <div class="flex justify-center pt-4">
@@ -116,69 +123,54 @@
 
                 function checkPasswordStrength(password) {
                     let strength = 0;
-                    let feedback = [];
 
-                    // Check length
                     if (password.length >= 5) strength++;
                     if (password.length >= 8) strength++;
                     if (password.length >= 12) strength++;
-
-                    // Check lowercase
                     if (/[a-z]/.test(password)) strength++;
-                    else feedback.push('lowercase');
-
-                    // Check uppercase
                     if (/[A-Z]/.test(password)) strength++;
-                    else feedback.push('uppercase');
-
-                    // Check number
                     if (/\d/.test(password)) strength++;
-                    else feedback.push('number');
-
-                    // Check special character
                     if (/[!@#$%^&*()_+]/.test(password)) strength++;
-                    else feedback.push('special');
 
-                    return { strength, feedback };
+                    return { strength };
                 }
 
                 function updatePasswordUI() {
                     const password = passwordInput.value;
-                    const { strength, feedback } = checkPasswordStrength(password);
+                    const { strength } = checkPasswordStrength(password);
 
-                    // Determine strength level
-                    let level = 'Weak';
-                    let color = '#ef4444'; // Red
-                    let percentage = 25;
+                    let level = 'Start';
+                    let color = '#d1d5db';
+                    let percentage = 0;
 
-                    if (strength >= 6 && strength < 8) {
-                        level = 'Moderate';
-                        color = '#f59e0b'; // Amber
-                        percentage = 50;
-                    } else if (strength >= 8) {
+                    if (!password.length) {
+                        level = 'Start';
+                        color = '#d1d5db';
+                        percentage = 0;
+                    } else if (password.length < 5) {
+                        level = 'Too short';
+                        color = '#f59e0b';
+                        percentage = 25;
+                    } else if (password.length >= 5 && strength < 6) {
+                        level = 'Good';
+                        color = '#10b981';
+                        percentage = 70;
+                    } else {
                         level = 'Strong';
-                        color = '#10b981'; // Green
+                        color = '#10b981';
                         percentage = 100;
                     }
 
-                    // Update bar
                     strengthBar.style.backgroundColor = color;
                     strengthBar.style.width = percentage + '%';
 
-                    // Update text
                     strengthText.textContent = level;
                     strengthText.style.color = color;
 
-                    // Disable submit button if password is weak
-                    if (level === 'Weak') {
-                        submitBtn.disabled = true;
-                        submitBtn.style.opacity = '0.5';
-                        submitBtn.style.cursor = 'not-allowed';
-                    } else {
-                        submitBtn.disabled = false;
-                        submitBtn.style.opacity = '1';
-                        submitBtn.style.cursor = 'pointer';
-                    }
+                    const isValidLength = password.length >= 5;
+                    submitBtn.disabled = !isValidLength;
+                    submitBtn.style.opacity = isValidLength ? '1' : '0.5';
+                    submitBtn.style.cursor = isValidLength ? 'pointer' : 'not-allowed';
                 }
 
                 // Add event listener
@@ -189,10 +181,9 @@
             </script>
             
             <div class="mt-6 text-center">
-                <p class="text-sm text-gray-600 mb-4">Or use below to create account</p>
+                <p class="text-sm text-gray-600 mb-4">Or continue with Google</p>
                 
-                <div class="flex justify-center gap-4">
-                    <!-- Google Login -->
+                <div class="flex justify-center">
                     <a href="{{ route('auth.google') }}" class="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors" title="Sign up with Google">
                         <svg class="w-5 h-5" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -201,20 +192,6 @@
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                         </svg>
                     </a>
-                    
-                    <!-- Facebook -->
-                    <button type="button" class="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="#1877F2">
-                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                        </svg>
-                    </button>
-                    
-                    <!-- LinkedIn -->
-                    <button type="button" class="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="#0A66C2">
-                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                        </svg>
-                    </button>
                 </div>
                 
                 <p class="mt-6 text-sm text-gray-600">

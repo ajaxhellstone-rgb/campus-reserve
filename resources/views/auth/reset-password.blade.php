@@ -19,7 +19,7 @@
             <label class="block">
                 <span class="text-sm text-gray-700">New password</span>
                 <input type="password" name="password" required class="mt-2 w-full rounded-full border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black">
-                <p class="mt-2 text-xs leading-5 text-gray-500">Use 5-30 characters with at least one uppercase letter, one lowercase letter, one number, and one special character: <span class="font-medium text-gray-700">! @ # $ % ^ &amp; * ( ) _ +</span>. For better security, use 12 or more characters.</p>
+                <p class="mt-2 text-xs leading-5 text-gray-500">Use 5-30 characters for a secure password. Longer passwords are easier to keep safe.</p>
             </label>
             <label class="block">
                 <span class="text-sm text-gray-700">Confirm new password</span>

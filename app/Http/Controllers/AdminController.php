@@ -8,6 +8,7 @@ use App\Models\Reservation;
 use App\Notifications\ReservationStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -84,7 +85,22 @@ class AdminController extends Controller
     {
         $this->requireAdmin();
 
-        return view('admin.facilities.create');
+        $facilities = Facility::query()
+            ->orderBy('name')
+            ->get()
+            ->unique(fn ($facility) => strtolower(trim($facility->name)) . '|' . strtolower(trim($facility->building)))
+            ->values()
+            ->map(function ($facility) {
+                $facility->description = $facility->description ?: (
+                    $facility->building
+                        ? $facility->building . ' campus facility.'
+                        : 'Campus facility.'
+                );
+
+                return $facility;
+            });
+
+        return view('admin.facilities.create', compact('facilities'));
     }
 
     public function storeFacility(Request $request)
@@ -92,7 +108,12 @@ class AdminController extends Controller
         $this->requireAdmin();
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('facilities')->where(fn ($query) => $query->where('building', trim($request->input('building', '')))),
+            ],
             'building' => ['required', 'string', 'max:100'],
             'type' => ['required', 'string', 'max:50'],
             'capacity' => ['required', 'integer', 'min:1'],
@@ -113,7 +134,59 @@ class AdminController extends Controller
             'details' => "Created facility {$facility->name} in {$facility->building}.",
         ]);
 
-        return redirect()->route('admin.dashboard')->with('status', 'Facility created successfully.');
+        return redirect()->route('admin.facilities.create')->with('status', 'Facility created successfully.');
+    }
+
+    public function updateFacility(Request $request, Facility $facility)
+    {
+        $this->requireAdmin();
+
+        $validated = $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('facilities')->where(fn ($query) => $query->where('building', trim($request->input('building', ''))))->ignore($facility->id),
+            ],
+            'building' => ['required', 'string', 'max:100'],
+            'type' => ['required', 'string', 'max:50'],
+            'capacity' => ['required', 'integer', 'min:1'],
+            'amenities' => ['nullable', 'string', 'max:2000'],
+            'requires_approval' => ['sometimes', 'boolean'],
+        ]);
+
+        $validated['requires_approval'] = $request->boolean('requires_approval');
+        $validated['amenities'] = isset($validated['amenities'])
+            ? array_values(array_filter(array_map('trim', explode(',', $validated['amenities']))))
+            : null;
+
+        $facility->update($validated);
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'reservation_id' => null,
+            'action' => 'facility_updated',
+            'details' => "Updated facility {$facility->name} in {$facility->building}.",
+        ]);
+
+        return redirect()->route('admin.facilities.create')->with('status', 'Facility updated successfully.');
+    }
+
+    public function destroyFacility(Facility $facility)
+    {
+        $this->requireAdmin();
+
+        $facilityName = $facility->name;
+        $facility->delete();
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'reservation_id' => null,
+            'action' => 'facility_deleted',
+            'details' => "Removed facility {$facilityName}.",
+        ]);
+
+        return redirect()->route('admin.facilities.create')->with('status', 'Facility removed successfully.');
     }
 
     public function approve(Request $request, Reservation $reservation)

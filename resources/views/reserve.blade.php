@@ -192,6 +192,32 @@
         </div>
     </div>
 </div>
+
+<div id="feedback-survey-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4 py-8">
+    <div class="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <p class="text-sm font-medium uppercase tracking-wide text-slate-500">Quick feedback</p>
+                <h3 class="mt-2 text-2xl font-semibold text-slate-900">How was your experience?</h3>
+            </div>
+        </div>
+
+        <p class="mt-3 text-sm text-slate-600">We’d love to hear how Campus Reserve worked for you.</p>
+
+        <div class="mt-5 flex justify-center gap-2" id="feedback-stars" aria-label="Rate your experience">
+            <button type="button" class="feedback-star text-3xl text-slate-300 transition hover:scale-105" data-star="1" aria-label="1 star">★</button>
+            <button type="button" class="feedback-star text-3xl text-slate-300 transition hover:scale-105" data-star="2" aria-label="2 stars">★</button>
+            <button type="button" class="feedback-star text-3xl text-slate-300 transition hover:scale-105" data-star="3" aria-label="3 stars">★</button>
+            <button type="button" class="feedback-star text-3xl text-slate-300 transition hover:scale-105" data-star="4" aria-label="4 stars">★</button>
+            <button type="button" class="feedback-star text-3xl text-slate-300 transition hover:scale-105" data-star="5" aria-label="5 stars">★</button>
+        </div>
+
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" id="feedback-no-thanks" class="rounded-full border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">No thanks</button>
+            <button type="button" id="feedback-send" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800">Send feedback</button>
+        </div>
+    </div>
+</div>
 <script>
     let deleteReservationFormId = null;
     let deleteReservationMode = null;
@@ -235,5 +261,69 @@
             }
         }
     });
+
+    (function () {
+        const storageKey = 'campusreserve_feedback_survey';
+        const now = Date.now();
+        const lastDismissed = Number(localStorage.getItem(`${storageKey}_dismissed_until`) || 0);
+        const wasSubmitted = localStorage.getItem(`${storageKey}_submitted`) === '1';
+
+        if (lastDismissed > now || wasSubmitted) {
+            return;
+        }
+
+        const hasReservation = @json($reservations->isNotEmpty());
+        const randomChance = Math.random() < 0.18;
+
+        if (!hasReservation && !randomChance) {
+            return;
+        }
+
+        const modal = document.getElementById('feedback-survey-modal');
+        if (!modal) {
+            return;
+        }
+
+        let selectedRating = 0;
+        const stars = Array.from(document.querySelectorAll('.feedback-star'));
+
+        stars.forEach((star) => {
+            star.addEventListener('click', function () {
+                selectedRating = Number(this.dataset.star);
+                stars.forEach((item) => {
+                    const itemValue = Number(item.dataset.star);
+                    item.classList.toggle('text-yellow-400', itemValue <= selectedRating);
+                    item.classList.toggle('text-slate-300', itemValue > selectedRating);
+                });
+            });
+        });
+
+        const dismissSurvey = (isSubmit = false) => {
+            const suppressUntil = Date.now() + (1000 * 60 * 60 * 24 * 30);
+            localStorage.setItem(`${storageKey}_dismissed_until`, String(suppressUntil));
+            if (isSubmit) {
+                localStorage.setItem(`${storageKey}_submitted`, '1');
+            }
+            modal.classList.add('hidden');
+        };
+
+        document.getElementById('feedback-no-thanks')?.addEventListener('click', () => dismissSurvey(false));
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                dismissSurvey(false);
+            }
+        });
+        document.getElementById('feedback-send')?.addEventListener('click', () => {
+            if (!selectedRating) {
+                selectedRating = 5;
+            }
+            dismissSurvey(true);
+        });
+
+        setTimeout(() => {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }, 1200);
+    })();
 </script>
 @endsection
