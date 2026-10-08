@@ -683,7 +683,7 @@
         const phoneHiddenInput = document.getElementById('form_phone_input');
         const countryCodeHiddenInput = document.getElementById('form_country_code_input');
 
-        function syncPhoneFieldsToForm() {
+        //function syncPhoneFieldsToForm() {
             const countryCode = countryCodeSelect.value;
             const phoneNumber = phoneNumberInput.value.trim();
 
