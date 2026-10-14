@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Reservation;
 use App\Models\Facility;
+use App\Models\FacilityItem;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
+use App\Services\FacilityItemAvailability;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 
 class CalendarController extends Controller
 {
@@ -53,30 +57,94 @@ class CalendarController extends Controller
     }
 
     // Save a new reservation to the database
-    public function store(Request $request)
+    public function store(Request $request, FacilityItemAvailability $itemAvailability)
     {
         // First, I validate that all the required info is provided
         // Then I check if the room is actually available at that time
-        $request->validate([
+        $hasItemBookings = $request->has('items');
+        $validated = $request->validate([
             'facility' => 'required|string',
             'purpose' => 'required|string|max:255',
             'date' => 'required|date',
-            'start_time' => 'required',
-            'end_time' => 'required',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'items' => $hasItemBookings ? ['required', 'array', 'min:1'] : ['sometimes', 'array'],
+            'items.*.facility_item_id' => ['required', 'integer', 'distinct', 'exists:facility_items,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
-        $facility = Facility::where('name', $request->facility)->firstOrFail();
-        if (!$facility->isAvailable($request->date, $request->start_time, $request->end_time)) {
+
+        $facilityInput = $validated['facility'];
+        $facility = ctype_digit($facilityInput)
+            ? Facility::active()->findOrFail((int) $facilityInput)
+            : Facility::active()->where('name', $facilityInput)->firstOrFail();
+
+        if (!$facility->isAvailable($validated['date'], $validated['start_time'], $validated['end_time'])) {
             return response()->json(['error' => 'Time slot not available'], 409);
         }
-        $reservation = Reservation::create([
-            'user_id' => Auth::id(),
-            'facility_id' => $facility->id,
-            'reservation_date' => $request->date,
-            'start_time' => $request->start_time,
-            'end_time' => $request->end_time,
-            'purpose' => $request->purpose,
-            'status' => 'pending',
-        ]);
+
+        $reservation = DB::transaction(function () use ($validated, $facility, $hasItemBookings, $itemAvailability) {
+            $selectedItems = collect($validated['items'] ?? []);
+
+            if ($hasItemBookings) {
+                $itemIds = $selectedItems->pluck('facility_item_id')->map(fn ($id) => (int) $id)->all();
+                $lockedItems = FacilityItem::query()
+                    ->whereIn('id', $itemIds)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                if ($lockedItems->count() !== count($itemIds)) {
+                    throw ValidationException::withMessages([
+                        'items' => 'One or more selected items are no longer available.',
+                    ]);
+                }
+
+                foreach ($selectedItems as $selection) {
+                    $item = $lockedItems->get((int) $selection['facility_item_id']);
+                    if ($item->facility_id !== $facility->id) {
+                        throw ValidationException::withMessages([
+                            'items' => 'Selected items must belong to the facility being reserved.',
+                        ]);
+                    }
+
+                    $availableQuantity = $itemAvailability->availableQuantity(
+                        $item,
+                        $validated['date'],
+                        $validated['start_time'],
+                        $validated['end_time']
+                    );
+
+                    if ((int) $selection['quantity'] > $availableQuantity) {
+                        return response()->json([
+                            'error' => "{$item->name} has only {$availableQuantity} available for that date and time.",
+                        ], 409);
+                    }
+                }
+            }
+
+            $reservation = Reservation::create([
+                'user_id' => Auth::id(),
+                'facility_id' => $facility->id,
+                'reservation_date' => $validated['date'],
+                'start_time' => $validated['start_time'],
+                'end_time' => $validated['end_time'],
+                'purpose' => $validated['purpose'],
+                'status' => 'pending',
+            ]);
+
+            if ($hasItemBookings) {
+                $reservation->items()->attach($selectedItems->mapWithKeys(fn ($selection) => [
+                    (int) $selection['facility_item_id'] => ['quantity' => (int) $selection['quantity']],
+                ])->all());
+            }
+
+            return $reservation;
+        });
+
+        if ($reservation instanceof \Illuminate\Http\JsonResponse) {
+            return $reservation;
+        }
 
         $admins = User::where('is_admin', true)
             ->orWhere('is_super_admin', true)
@@ -85,6 +153,37 @@ class CalendarController extends Controller
         Notification::send($admins, new ReservationPendingApproval($reservation));
 
         return response()->json(['success' => true, 'reservation' => $reservation]);
+    }
+
+    public function itemAvailability(
+        Request $request,
+        Facility $facility,
+        FacilityItemAvailability $itemAvailability
+    ) {
+        abort_unless($facility->is_active, 404);
+
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+        ]);
+
+        $items = $facility->items()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (FacilityItem $item) => [
+                'id' => $item->id,
+                'name' => $item->name,
+                'stock' => $item->quantity,
+                'available' => $itemAvailability->availableQuantity(
+                    $item,
+                    $validated['date'],
+                    $validated['start_time'],
+                    $validated['end_time']
+                ),
+            ]);
+
+        return response()->json(['items' => $items]);
     }
 
     public function pending(Request $request)
@@ -146,4 +245,3 @@ class CalendarController extends Controller
         return $colors[$colorIndex];
     }
 }
-

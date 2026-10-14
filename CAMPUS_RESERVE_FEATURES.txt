@@ -1,0 +1,31 @@
+CAMPUS RESERVE - MAIN FEATURES
+
+RESERVATIONS
+- Browse rooms, check availability, and request a facility with a purpose.
+- Reserve room equipment by quantity, including use and return times.
+- Track, edit, or cancel your requests. Admins approve or reject them.
+- View reservation schedules on the calendar and receive notifications.
+- Use the chatbot to check availability, submit requests, check status, or cancel.
+
+ADMIN TOOLS
+- Manage facilities, equipment, user roles, and reservation requests.
+- Review recent reservation activity.
+
+ACCOUNT FEATURES
+- Sign up or sign in, including Google sign-in.
+- Reset your password and update your profile.
+- Optionally enable two-factor authentication.
+- Save website credentials in an encrypted vault.
+
+SECURITY
+- Sign-in is required for reservations and personal account features.
+- Users can manage only their own reservations and saved credentials.
+- Admin operations have server-side role checks.
+- Passwords are hashed; selected personal information and saved credentials are encrypted.
+- Rate limits, CSRF protection, and browser security headers are configured.
+
+BEFORE PRODUCTION
+- Increase the minimum password length.
+- Require two-factor authentication for administrators.
+- Remove or harden the admin decrypt utility; it currently logs OTP codes.
+- Protect the Laravel APP_KEY and logs, enable HTTPS, and turn debug mode off.

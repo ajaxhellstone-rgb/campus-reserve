@@ -47,6 +47,7 @@
                 {{ session('error') }}
             </div>
         @endif
+        <div id="property-booking-feedback" class="mb-6 hidden rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900" role="status"></div>
 
         <!-- Quick Stats -->
         <!-- Summary cards showing the user's reservation and facility counts. -->
@@ -95,28 +96,129 @@
 
         </div>
 
-        <!-- Available Facilities -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-            <h2 class="text-xl font-semibold text-gray-900 mb-6">Available Facilities</h2>
-            @if($facilities->isEmpty())
-                <div class="text-center py-12 text-gray-500">
-                    No facilities are available right now.
-                </div>
-            @else
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    @foreach($facilities as $facility)
-                        <div class="border border-gray-200 rounded-xl hover:shadow-md transition-shadow">
-                            <div class="p-4">
-                                <h3 class="font-semibold text-gray-900 text-lg">{{ $facility->name }}</h3>
-                                <p class="text-sm text-gray-600 mt-1">Capacity: {{ $facility->capacity ?? 'N/A' }} people</p>
-                                <a href="/calendar/manage" class="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors">
-                                    Reserve Now
-                                </a>
+        <!-- Facility and property reservation tabs -->
+        <div class="mb-8 overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+            <div class="flex border-b border-gray-200 px-6 pt-5" role="tablist" aria-label="Reservation type">
+                <button id="facility-reservation-tab" type="button" role="tab" aria-selected="true" aria-controls="facility-reservation-panel" data-reservation-tab="facility" class="border-b-2 border-slate-900 px-4 py-3 text-sm font-semibold text-slate-900">
+                    Reserve Facility
+                </button>
+                <button id="property-reservation-tab" type="button" role="tab" aria-selected="false" aria-controls="property-reservation-panel" data-reservation-tab="property" class="border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-slate-500 hover:text-slate-900">
+                    Reserve Property
+                </button>
+            </div>
+
+            <section id="facility-reservation-panel" role="tabpanel" aria-labelledby="facility-reservation-tab" class="p-6">
+                <h2 class="mb-6 text-xl font-semibold text-gray-900">Available Facilities</h2>
+                @if($facilities->isEmpty())
+                    <div class="py-12 text-center text-gray-500">No facilities are available right now.</div>
+                @else
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                        @foreach($facilities as $facility)
+                            <div class="rounded-xl border border-gray-200 transition-shadow hover:shadow-md">
+                                <div class="p-4">
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ $facility->name }}</h3>
+                                    <p class="mt-1 text-sm text-gray-600">Capacity: {{ $facility->capacity ?? 'N/A' }} people</p>
+                                    <a href="/calendar/manage" class="mt-4 inline-flex w-full items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800">
+                                        Reserve Now
+                                    </a>
+                                </div>
                             </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
+                @endif
+            </section>
+
+            <section id="property-reservation-panel" role="tabpanel" aria-labelledby="property-reservation-tab" class="hidden p-6" hidden>
+                <h2 class="mb-2 text-xl font-semibold text-gray-900">Available Room Items</h2>
+                <p class="mb-6 text-sm text-gray-600">Choose a room to see its equipment and reserve item quantities for a date and time.</p>
+                @if($facilities->isEmpty())
+                    <div class="py-12 text-center text-gray-500">No facilities are available right now.</div>
+                @else
+                    <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                        @foreach($facilities as $facility)
+                            <article class="rounded-2xl border border-gray-200 p-5">
+                                <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">{{ $facility->name }}</h3>
+                                        <p class="mt-1 text-sm text-gray-500">{{ $facility->building }}</p>
+                                    </div>
+                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
+                                        {{ $facility->items->count() }} {{ \Illuminate\Support\Str::plural('item', $facility->items->count()) }}
+                                    </span>
+                                </div>
+                                @if($facility->items->isEmpty())
+                                    <p class="mt-4 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-500">No reservable items are listed for this room.</p>
+                                @else
+                                    <ul class="mt-4 divide-y divide-gray-100">
+                                        @foreach($facility->items as $item)
+                                            <li class="flex items-center justify-between gap-3 py-2 text-sm">
+                                                <span class="font-medium text-gray-700">{{ $item->name }}</span>
+                                                <span class="text-gray-500">{{ $item->quantity }} in stock</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                    <button type="button"
+                                        data-property-facility-id="{{ $facility->id }}"
+                                        data-property-facility-name="{{ $facility->building }} — {{ $facility->name }}"
+                                        data-property-items="{{ $facility->items->map(fn ($item) => ['id' => $item->id, 'name' => $item->name, 'quantity' => $item->quantity])->toJson() }}"
+                                        class="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800">
+                                        Reserve Items
+                                    </button>
+                                @endif
+                            </article>
+                        @endforeach
+                    </div>
+                @endif
+            </section>
+        </div>
+
+        <div id="property-booking-modal" class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="property-booking-title">
+            <div class="my-auto w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p class="text-sm font-medium text-slate-500">Property reservation</p>
+                        <h2 id="property-booking-title" class="mt-1 text-2xl font-semibold text-slate-900">Reserve room items</h2>
+                        <p id="property-booking-facility" class="mt-1 text-sm text-slate-600"></p>
+                    </div>
+                    <button type="button" id="property-booking-close" class="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="Close reservation dialog">&times;</button>
                 </div>
-            @endif
+
+                <form id="property-booking-form" class="mt-6 space-y-5">
+                    <input type="hidden" id="property-booking-facility-id">
+                    <div>
+                        <label for="property-booking-purpose" class="block text-sm font-medium text-slate-700">Purpose</label>
+                        <input id="property-booking-purpose" type="text" maxlength="255" required placeholder="e.g. club meeting" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                    </div>
+                    <div class="grid gap-4 sm:grid-cols-3">
+                        <div>
+                            <label for="property-booking-date" class="block text-sm font-medium text-slate-700">Date</label>
+                            <input id="property-booking-date" type="date" required class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                        </div>
+                        <div>
+                            <label for="property-booking-start" class="block text-sm font-medium text-slate-700">Time to use</label>
+                            <input id="property-booking-start" type="time" value="06:00" required class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                        </div>
+                        <div>
+                            <label for="property-booking-end" class="block text-sm font-medium text-slate-700">Time to return</label>
+                            <input id="property-booking-end" type="time" value="07:00" required class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex flex-wrap items-baseline justify-between gap-2">
+                            <h3 class="text-sm font-semibold text-slate-900">Select items and quantities</h3>
+                            <p class="text-xs text-slate-500">Available quantity updates for the selected time.</p>
+                        </div>
+                        <div id="property-booking-items" class="mt-3 max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 p-3"></div>
+                    </div>
+
+                    <p id="property-booking-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert"></p>
+                    <div class="flex justify-end gap-3 border-t border-slate-100 pt-5">
+                        <button type="button" id="property-booking-cancel" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                        <button type="submit" id="property-booking-submit" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Reserve Items</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <!-- My Reservations -->
@@ -132,7 +234,14 @@
                                     <div>
                                         <p class="text-sm text-gray-500">{{ $reservation->facility->name ?? 'Facility' }}</p>
                                         <h3 class="text-lg font-semibold text-gray-900">{{ $reservation->purpose }}</h3>
-                                        <p class="text-sm text-gray-600 mt-2">{{ $reservation->reservation_date->format('M d, Y') }} · {{ $reservation->start_time->format('h:i A') }} - {{ $reservation->end_time->format('h:i A') }}</p>
+                                        <p class="text-sm text-gray-600 mt-2">
+                                            {{ $reservation->reservation_date->format('M d, Y') }} ·
+                                            @if($reservation->items->isNotEmpty())
+                                                Use: {{ $reservation->start_time->format('h:i A') }} · Return: {{ $reservation->end_time->format('h:i A') }}
+                                            @else
+                                                {{ $reservation->start_time->format('h:i A') }} - {{ $reservation->end_time->format('h:i A') }}
+                                            @endif
+                                        </p>
                                     </div>
                                     <div class="flex flex-col items-start sm:items-end gap-3">
                                         <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium {{ $reservation->statusBadge['class'] ?? 'bg-gray-100 text-gray-800' }}">
@@ -146,6 +255,14 @@
                                 </div>
                                 @if($reservation->notes)
                                     <p class="mt-4 text-sm text-gray-600">Notes: {{ $reservation->notes }}</p>
+                                @endif
+                                @if($reservation->items->isNotEmpty())
+                                    <p class="mt-3 text-sm text-gray-600">
+                                        Items requested:
+                                        @foreach($reservation->items as $item)
+                                            {{ $item->name }} × {{ $item->pivot->quantity }}@if(!$loop->last), @endif
+                                        @endforeach
+                                    </p>
                                 @endif
 
                                 <div class="mt-4 flex flex-wrap gap-3">
@@ -219,6 +336,292 @@
     </div>
 </div>
 <script>
+    (() => {
+        const tabButtons = Array.from(document.querySelectorAll('[data-reservation-tab]'));
+        const tabPanels = {
+            facility: document.getElementById('facility-reservation-panel'),
+            property: document.getElementById('property-reservation-panel'),
+        };
+
+        function selectReservationTab(tabName) {
+            tabButtons.forEach((button) => {
+                const selected = button.dataset.reservationTab === tabName;
+                button.setAttribute('aria-selected', String(selected));
+                button.classList.toggle('border-slate-900', selected);
+                button.classList.toggle('text-slate-900', selected);
+                button.classList.toggle('border-transparent', !selected);
+                button.classList.toggle('text-slate-500', !selected);
+            });
+
+            Object.entries(tabPanels).forEach(([name, panel]) => {
+                const selected = name === tabName;
+                panel.hidden = !selected;
+                panel.classList.toggle('hidden', !selected);
+            });
+        }
+
+        tabButtons.forEach((button) => {
+            button.addEventListener('click', () => selectReservationTab(button.dataset.reservationTab));
+        });
+
+        const requestedTab = new URLSearchParams(window.location.search).get('tab');
+        if (requestedTab === 'property') {
+            selectReservationTab('property');
+        }
+
+        const feedback = document.getElementById('property-booking-feedback');
+        const savedFeedback = sessionStorage.getItem('propertyBookingFeedback');
+        if (savedFeedback) {
+            feedback.textContent = savedFeedback;
+            feedback.classList.remove('hidden');
+            sessionStorage.removeItem('propertyBookingFeedback');
+        }
+
+        const modal = document.getElementById('property-booking-modal');
+        const form = document.getElementById('property-booking-form');
+        const itemsContainer = document.getElementById('property-booking-items');
+        const facilityIdInput = document.getElementById('property-booking-facility-id');
+        const facilityLabel = document.getElementById('property-booking-facility');
+        const dateInput = document.getElementById('property-booking-date');
+        const startInput = document.getElementById('property-booking-start');
+        const endInput = document.getElementById('property-booking-end');
+        const submitButton = document.getElementById('property-booking-submit');
+        const errorBox = document.getElementById('property-booking-error');
+        let availabilityRequest = null;
+        let availabilityVersion = 0;
+        let modalItems = [];
+
+        function setBookingError(message) {
+            errorBox.textContent = message;
+            errorBox.classList.toggle('hidden', !message);
+        }
+
+        function setModalOpen(open) {
+            modal.classList.toggle('hidden', !open);
+            modal.classList.toggle('flex', open);
+            document.body.classList.toggle('overflow-hidden', open);
+            if (!open && availabilityRequest) {
+                availabilityRequest.abort();
+                availabilityRequest = null;
+            }
+        }
+
+        function renderItems(availability = modalItems) {
+            const selectedQuantities = new Map(
+                Array.from(itemsContainer.querySelectorAll('[data-item-id]'))
+                    .filter((checkbox) => checkbox.checked)
+                    .map((checkbox) => [
+                        checkbox.dataset.itemId,
+                        Number(itemsContainer.querySelector(`[data-quantity-for="${checkbox.dataset.itemId}"]`).value),
+                    ])
+            );
+            itemsContainer.replaceChildren();
+
+            if (!availability.length) {
+                const emptyMessage = document.createElement('p');
+                emptyMessage.className = 'px-2 py-4 text-sm text-slate-500';
+                emptyMessage.textContent = 'No items are listed for this facility.';
+                itemsContainer.appendChild(emptyMessage);
+                return;
+            }
+
+            availability.forEach((item) => {
+                const row = document.createElement('div');
+                row.className = 'flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5';
+
+                const itemInfo = document.createElement('div');
+                itemInfo.className = 'flex min-w-0 items-center gap-3';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500';
+                checkbox.dataset.itemId = String(item.id);
+                checkbox.disabled = item.available < 1;
+                checkbox.checked = selectedQuantities.has(String(item.id)) && item.available > 0;
+
+                const nameGroup = document.createElement('div');
+                const name = document.createElement('p');
+                name.className = 'text-sm font-medium text-slate-800';
+                name.textContent = item.name;
+
+                const available = document.createElement('p');
+                available.className = 'text-xs text-slate-500';
+                available.dataset.availableFor = String(item.id);
+                available.textContent = `${item.available} available`;
+                nameGroup.append(name, available);
+                itemInfo.append(checkbox, nameGroup);
+
+                const quantity = document.createElement('input');
+                quantity.type = 'number';
+                quantity.min = '1';
+                quantity.max = String(item.available);
+                const previousQuantity = selectedQuantities.get(String(item.id));
+                quantity.value = String(previousQuantity ? Math.min(previousQuantity, item.available) : 1);
+                quantity.disabled = !checkbox.checked;
+                quantity.setAttribute('aria-label', `Quantity of ${item.name}`);
+                quantity.className = 'w-24 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 disabled:bg-slate-100';
+                quantity.dataset.quantityFor = String(item.id);
+
+                checkbox.addEventListener('change', () => {
+                    quantity.disabled = !checkbox.checked || item.available < 1;
+                });
+
+                row.append(itemInfo, quantity);
+                itemsContainer.appendChild(row);
+            });
+        }
+
+        async function refreshAvailability() {
+            availabilityVersion += 1;
+            const version = availabilityVersion;
+            if (availabilityRequest) {
+                availabilityRequest.abort();
+            }
+
+            if (!dateInput.value || !startInput.value || !endInput.value || endInput.value <= startInput.value) {
+                submitButton.disabled = true;
+                setBookingError('Choose a valid date and time range to check item availability.');
+                renderItems(modalItems.map((item) => ({ ...item, available: item.quantity })));
+                return;
+            }
+
+            setBookingError('');
+            submitButton.disabled = true;
+            const controller = new AbortController();
+            availabilityRequest = controller;
+            const query = new URLSearchParams({
+                date: dateInput.value,
+                start_time: startInput.value,
+                end_time: endInput.value,
+            });
+
+            try {
+                const response = await fetch(`/api/facilities/${facilityIdInput.value}/item-availability?${query}`, {
+                    credentials: 'include',
+                    headers: { Accept: 'application/json' },
+                    signal: controller.signal,
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'Could not check item availability.');
+                }
+                if (version !== availabilityVersion) {
+                    return;
+                }
+
+                renderItems(data.items);
+                submitButton.disabled = false;
+            } catch (error) {
+                if (error.name !== 'AbortError' && version === availabilityVersion) {
+                    setBookingError(error.message || 'Could not check item availability. Please try again.');
+                }
+            }
+        }
+
+        document.querySelectorAll('[data-property-facility-id]').forEach((button) => {
+            button.addEventListener('click', () => {
+                facilityIdInput.value = button.dataset.propertyFacilityId;
+                facilityLabel.textContent = button.dataset.propertyFacilityName;
+                modalItems = JSON.parse(button.dataset.propertyItems);
+                form.reset();
+                itemsContainer.replaceChildren();
+                facilityIdInput.value = button.dataset.propertyFacilityId;
+                const now = new Date();
+                dateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                startInput.value = '06:00';
+                endInput.value = '07:00';
+                setBookingError('');
+                renderItems(modalItems.map((item) => ({ ...item, available: item.quantity })));
+                setModalOpen(true);
+                refreshAvailability();
+                document.getElementById('property-booking-purpose').focus();
+            });
+        });
+
+        [dateInput, startInput, endInput].forEach((input) => {
+            input.addEventListener('change', refreshAvailability);
+        });
+
+        document.getElementById('property-booking-close').addEventListener('click', () => setModalOpen(false));
+        document.getElementById('property-booking-cancel').addEventListener('click', () => setModalOpen(false));
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                setModalOpen(false);
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                setModalOpen(false);
+            }
+        });
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            setBookingError('');
+
+            if (endInput.value <= startInput.value) {
+                setBookingError('End time must be later than start time.');
+                return;
+            }
+
+            const selectedItems = Array.from(itemsContainer.querySelectorAll('[data-item-id]:checked')).map((checkbox) => {
+                const quantityInput = itemsContainer.querySelector(`[data-quantity-for="${checkbox.dataset.itemId}"]`);
+                return {
+                    facility_item_id: Number(checkbox.dataset.itemId),
+                    quantity: Number(quantityInput.value),
+                };
+            });
+
+            if (!selectedItems.length) {
+                setBookingError('Select at least one item to reserve.');
+                return;
+            }
+
+            if (selectedItems.some((item) => !Number.isInteger(item.quantity) || item.quantity < 1)) {
+                setBookingError('Enter a quantity of at least one for each selected item.');
+                return;
+            }
+
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+
+            try {
+                const response = await fetch('/api/calendar/reserve', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({
+                        facility: facilityIdInput.value,
+                        purpose: document.getElementById('property-booking-purpose').value,
+                        date: dateInput.value,
+                        start_time: startInput.value,
+                        end_time: endInput.value,
+                        items: selectedItems,
+                    }),
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    const validationError = data.errors ? Object.values(data.errors).flat()[0] : null;
+                    throw new Error(data.error || validationError || data.message || 'Reservation could not be submitted.');
+                }
+
+                sessionStorage.setItem('propertyBookingFeedback', 'Property reservation submitted and is pending approval.');
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', 'property');
+                window.location.assign(url);
+            } catch (error) {
+                setBookingError(error.message || 'Reservation could not be submitted. Please try again.');
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Reserve Items';
+            }
+        });
+    })();
+
     let deleteReservationFormId = null;
     let deleteReservationMode = null;
 

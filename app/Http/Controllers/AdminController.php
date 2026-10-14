@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Facility;
+use App\Models\FacilityItem;
 use App\Models\Reservation;
 use App\Notifications\ReservationStatusChanged;
+use App\Services\FacilityItemAvailability;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
@@ -35,7 +38,7 @@ class AdminController extends Controller
         // Show the admin dashboard with pending requests, recent activity, and user search
         $this->requireAdmin();
 
-        $pendingReservations = Reservation::with(['user', 'facility'])
+        $pendingReservations = Reservation::with(['user', 'facility', 'items'])
             ->where('status', 'pending')
             ->orderBy('reservation_date')
             ->orderBy('start_time')
@@ -189,7 +192,79 @@ class AdminController extends Controller
         return redirect()->route('admin.facilities.create')->with('status', 'Facility removed successfully.');
     }
 
-    public function approve(Request $request, Reservation $reservation)
+    public function propertyManagement()
+    {
+        $this->requireAdmin();
+
+        $facilities = Facility::query()->orderBy('building')->orderBy('name')->get();
+        $items = FacilityItem::with('facility')->orderBy('name')->get();
+
+        return view('admin.property-management', compact('facilities', 'items'));
+    }
+
+    public function storeFacilityItem(Request $request)
+    {
+        $this->requireAdmin();
+
+        $validated = $request->validate([
+            'facility_id' => ['required', 'integer', 'exists:facilities,id'],
+            'name' => ['required', 'string', 'max:100'],
+            'quantity' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $item = FacilityItem::create($validated);
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'reservation_id' => null,
+            'action' => 'facility_item_created',
+            'details' => "Added {$item->name} (quantity: {$item->quantity}) to {$item->facility->name}.",
+        ]);
+
+        return redirect()->route('admin.property-management.index')->with('status', 'Facility item added successfully.');
+    }
+
+    public function updateFacilityItem(Request $request, FacilityItem $item)
+    {
+        $this->requireAdmin();
+
+        $validated = $request->validate([
+            'facility_id' => ['required', 'integer', 'exists:facilities,id'],
+            'name' => ['required', 'string', 'max:100'],
+            'quantity' => ['required', 'integer', 'min:1'],
+        ]);
+
+        $item->update($validated);
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'reservation_id' => null,
+            'action' => 'facility_item_updated',
+            'details' => "Updated {$item->name} (quantity: {$item->quantity}) for {$item->facility->name}.",
+        ]);
+
+        return redirect()->route('admin.property-management.index')->with('status', 'Facility item updated successfully.');
+    }
+
+    public function destroyFacilityItem(FacilityItem $item)
+    {
+        $this->requireAdmin();
+
+        $itemName = $item->name;
+        $facilityName = $item->facility->name;
+        $item->delete();
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'reservation_id' => null,
+            'action' => 'facility_item_deleted',
+            'details' => "Removed {$itemName} from {$facilityName}.",
+        ]);
+
+        return redirect()->route('admin.property-management.index')->with('status', 'Facility item removed successfully.');
+    }
+
+    public function approve(Request $request, Reservation $reservation, FacilityItemAvailability $itemAvailability)
     {
         // Mark the reservation as approved and send the user a notification
         $this->requireAdmin();
@@ -198,34 +273,71 @@ class AdminController extends Controller
             return back()->with('error', 'Only pending reservations can be approved.');
         }
 
-        $conflictingApproved = Reservation::where('facility_id', $reservation->facility_id)
-            ->where('reservation_date', $reservation->reservation_date)
-            ->where('status', 'approved')
-            ->where(function ($q) use ($reservation) {
-                $q->whereBetween('start_time', [$reservation->start_time, $reservation->end_time])
-                    ->orWhereBetween('end_time', [$reservation->start_time, $reservation->end_time])
-                    ->orWhere(function ($q2) use ($reservation) {
-                        $q2->where('start_time', '<=', $reservation->start_time)
-                            ->where('end_time', '>=', $reservation->end_time);
-                    });
-            })
-            ->exists();
+        $approvalError = DB::transaction(function () use ($request, $reservation, $itemAvailability) {
+            $conflictingApproved = Reservation::where('facility_id', $reservation->facility_id)
+                ->where('reservation_date', $reservation->reservation_date)
+                ->where('status', 'approved')
+                ->where(function ($q) use ($reservation) {
+                    $q->whereBetween('start_time', [$reservation->start_time, $reservation->end_time])
+                        ->orWhereBetween('end_time', [$reservation->start_time, $reservation->end_time])
+                        ->orWhere(function ($q2) use ($reservation) {
+                            $q2->where('start_time', '<=', $reservation->start_time)
+                                ->where('end_time', '>=', $reservation->end_time);
+                        });
+                })
+                ->exists();
 
-        if ($conflictingApproved) {
-            return back()->with('error', 'Cannot approve this reservation because an approved booking already occupies the same room and time slot. Please reject or reschedule it first.');
+            if ($conflictingApproved) {
+                return 'Cannot approve this reservation because an approved booking already occupies the same room and time slot. Please reject or reschedule it first.';
+            }
+
+            $reservedItems = $reservation->items()->orderBy('facility_items.id')->get();
+            $lockedItems = FacilityItem::query()
+                ->whereIn('id', $reservedItems->modelKeys())
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            foreach ($reservedItems as $item) {
+                    $lockedItem = $lockedItems->get($item->id);
+                    if (!$lockedItem) {
+                        return 'Cannot approve this reservation because one of its facility items is no longer available.';
+                    }
+                    if ($lockedItem->facility_id !== $reservation->facility_id) {
+                        return 'Cannot approve this reservation because one of its items is no longer assigned to this facility.';
+                    }
+
+                    $availableQuantity = $itemAvailability->availableQuantity(
+                        $lockedItem,
+                        $reservation->reservation_date->format('Y-m-d'),
+                        $reservation->start_time->format('H:i'),
+                        $reservation->end_time->format('H:i')
+                );
+
+                if ($item->pivot->quantity > $availableQuantity) {
+                    return "Cannot approve this reservation because only {$availableQuantity} of {$item->name} remain available for this date and time.";
+                }
+            }
+
+            $reservation->update([
+                'status' => 'approved',
+                'admin_remarks' => $request->input('remarks', 'Approved by admin.'),
+            ]);
+
+            AuditLog::create([
+                'user_id' => Auth::id(),
+                'reservation_id' => $reservation->id,
+                'action' => 'approved',
+                'details' => 'Reservation approved by admin',
+            ]);
+
+            return null;
+        });
+
+        if ($approvalError) {
+            return back()->with('error', $approvalError);
         }
-
-        $reservation->update([
-            'status' => 'approved',
-            'admin_remarks' => $request->input('remarks', 'Approved by admin.'),
-        ]);
-
-        AuditLog::create([
-            'user_id' => Auth::id(),
-            'reservation_id' => $reservation->id,
-            'action' => 'approved',
-            'details' => 'Reservation approved by admin',
-        ]);
 
         if ($reservation->user) {
             $reservation->user->notify(new ReservationStatusChanged($reservation));

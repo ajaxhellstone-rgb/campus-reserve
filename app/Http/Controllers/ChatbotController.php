@@ -3,13 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Facility;
+use App\Models\FacilityItem;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
+use App\Services\FacilityItemAvailability;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 
 class ChatbotController extends Controller
@@ -20,12 +23,13 @@ class ChatbotController extends Controller
             'chatbot_reservation',
             'chatbot_cancellation',
             'chatbot_last_action',
+            'chatbot_last_reservation_type',
         ]);
 
         return response()->json(['success' => true]);
     }
 
-    public function respond(Request $request): JsonResponse
+    public function respond(Request $request, FacilityItemAvailability $itemAvailability): JsonResponse
     {
         $message = trim((string) $request->input('message'));
         $normalized = $this->normalizeMessage($message);
@@ -43,17 +47,40 @@ class ChatbotController extends Controller
             ], 422);
         }
 
-        if (!$this->isSupportedMessage($normalized) && !$this->isFacilityName($normalized)) {
+        $state = session('chatbot_reservation', []);
+        $providedPurpose = false;
+        if ($state['awaiting_purpose'] ?? false) {
+            if ($this->isNegative($normalized)) {
+                session()->forget('chatbot_reservation');
+                return response()->json(['reply' => 'Okay, I cancelled that reservation request.']);
+            }
+
+            if (mb_strlen($message) > 255) {
+                return response()->json(['reply' => 'Please keep the reservation purpose under 255 characters.']);
+            }
+
+            $state['purpose'] = $message;
+            unset($state['awaiting_purpose']);
+            $providedPurpose = true;
+
+            if ($state['confirm_after_purpose'] ?? false) {
+                unset($state['confirm_after_purpose']);
+                $normalized = 'yes';
+            }
+
+            session(['chatbot_reservation' => $state]);
+        }
+
+        if (!$providedPurpose && !$this->isSupportedMessage($normalized) && !$this->isFacilityName($normalized) && !$this->isFacilityItemName($normalized)) {
             return response()->json([
-                'reply' => 'I can only help with Campus Reserve, room availability, schedules, reservations, cancellations, and your booking status.',
+                'reply' => 'I can help with room and item availability, facility or property reservations, reservation status, schedules, and cancellations.',
                 'user_message' => $safeMessage,
             ]);
         }
 
-        $state = session('chatbot_reservation', []);
         $cancellation = session('chatbot_cancellation', []);
         if (($cancellation['awaiting_confirmation'] ?? false) && $this->isConfirmation($normalized)) {
-            $reservation = Reservation::with('facility')
+            $reservation = Reservation::with(['facility', 'items'])
                 ->where('user_id', Auth::id())
                 ->find($cancellation['reservation_id'] ?? null);
 
@@ -63,10 +90,11 @@ class ChatbotController extends Controller
             }
 
             $facilityName = $reservation->facility?->name ?? 'the facility';
+            $itemSummary = $this->reservationItemSummary($reservation);
             $reservation->delete();
             session()->forget('chatbot_cancellation');
 
-            return response()->json(['reply' => "Your reservation for {$facilityName} on " . $reservation->reservation_date->format('F j, Y') . ' was cancelled successfully.']);
+            return response()->json(['reply' => "Your reservation for {$facilityName}{$itemSummary} on " . $reservation->reservation_date->format('F j, Y') . ' was cancelled successfully.']);
         }
 
         if (($cancellation['awaiting_confirmation'] ?? false) && $this->isNegative($normalized)) {
@@ -75,7 +103,7 @@ class ChatbotController extends Controller
         }
 
         if (($cancellation['awaiting_selection'] ?? false)) {
-            $reservation = Reservation::with('facility')
+            $reservation = Reservation::with(['facility', 'items'])
                 ->where('user_id', Auth::id())
                 ->whereIn('status', ['pending', 'approved'])
                 ->get()
@@ -98,6 +126,14 @@ class ChatbotController extends Controller
         }
 
         if (($state['awaiting_confirmation'] ?? false) && $this->isConfirmation($normalized)) {
+            if (empty($state['purpose'])) {
+                $state['awaiting_purpose'] = true;
+                $state['confirm_after_purpose'] = true;
+                session(['chatbot_reservation' => $state]);
+
+                return response()->json(['reply' => 'What is the purpose of this reservation?']);
+            }
+
             $facility = Facility::active()->find($state['facility_id'] ?? null);
             $date = $state['date'] ?? null;
             $startTime = $state['start_time'] ?? null;
@@ -113,39 +149,100 @@ class ChatbotController extends Controller
                 return response()->json(['reply' => 'That time is no longer available. Please choose another time or room.']);
             }
 
-            $reservation = Reservation::create([
-                'user_id' => Auth::id(),
-                'facility_id' => $facility->id,
-                'reservation_date' => $date,
-                'start_time' => $startTime,
-                'end_time' => $endTime,
-                'purpose' => 'Reservation requested through the reservation assistant',
-                'status' => 'pending',
-            ]);
+            $requestedItems = collect($state['items'] ?? []);
+            if (($state['reservation_type'] ?? 'facility') === 'property' && $requestedItems->isEmpty()) {
+                session()->put('chatbot_reservation.awaiting_confirmation', false);
+                return response()->json(['reply' => 'Select at least one item and quantity before I can submit a property reservation. Tell me the item name and quantity.']);
+            }
+
+            $reservation = DB::transaction(function () use ($facility, $date, $startTime, $endTime, $state, $requestedItems, $itemAvailability) {
+                if (($state['reservation_type'] ?? 'facility') === 'property') {
+                    $itemIds = $requestedItems->pluck('facility_item_id')->map(fn ($id) => (int) $id)->all();
+                    $items = FacilityItem::query()
+                        ->whereIn('id', $itemIds)
+                        ->orderBy('id')
+                        ->lockForUpdate()
+                        ->get()
+                        ->keyBy('id');
+
+                    if ($items->count() !== count($itemIds) || $requestedItems->isEmpty()) {
+                        return response()->json(['reply' => 'I could not verify the selected items. Please start the property reservation again.']);
+                    }
+
+                    foreach ($requestedItems as $selection) {
+                        $item = $items->get((int) $selection['facility_item_id']);
+                        if (!$item || $item->facility_id !== $facility->id) {
+                            return response()->json(['reply' => 'A selected item is no longer assigned to this room. Please start the property reservation again.']);
+                        }
+
+                        $available = $itemAvailability->availableQuantity($item, $date, $startTime, $endTime);
+                        if ((int) $selection['quantity'] > $available) {
+                            return response()->json([
+                                'reply' => "{$item->name} has only {$available} available for that date and time. Please choose a smaller quantity or another time.",
+                            ]);
+                        }
+                    }
+                }
+
+                $reservation = Reservation::create([
+                    'user_id' => Auth::id(),
+                    'facility_id' => $facility->id,
+                    'reservation_date' => $date,
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                    'purpose' => $state['purpose'],
+                    'status' => 'pending',
+                ]);
+
+                if (($state['reservation_type'] ?? 'facility') === 'property') {
+                    $reservation->items()->attach($requestedItems->mapWithKeys(fn ($selection) => [
+                        (int) $selection['facility_item_id'] => ['quantity' => (int) $selection['quantity']],
+                    ])->all());
+                }
+
+                return $reservation;
+            });
+
+            if ($reservation instanceof JsonResponse) {
+                return $reservation;
+            }
 
             $admins = User::where('is_admin', true)
                 ->orWhere('is_super_admin', true)
                 ->get();
+            $reservation->load(['facility', 'user', 'items']);
             Notification::send($admins, new ReservationPendingApproval($reservation));
             session()->forget('chatbot_reservation');
-            session(['chatbot_last_action' => 'reservation_submitted']);
+            session([
+                'chatbot_last_action' => 'reservation_submitted',
+                'chatbot_last_reservation_type' => ($state['reservation_type'] ?? 'facility'),
+            ]);
+
+            $requestType = ($state['reservation_type'] ?? 'facility') === 'property' ? 'property reservation' : 'reservation';
+            $itemSummary = $this->reservationItemSummary($reservation);
+
+            $timeSummary = ($state['reservation_type'] ?? 'facility') === 'property'
+                ? ' with use at ' . Carbon::createFromFormat('H:i', $startTime)->format('g:i A') . ' and return at ' . Carbon::createFromFormat('H:i', $endTime)->format('g:i A')
+                : ' from ' . Carbon::createFromFormat('H:i', $startTime)->format('g:i A') . ' to ' . Carbon::createFromFormat('H:i', $endTime)->format('g:i A');
 
             return response()->json([
-                'reply' => "Your reservation request for {$facility->name} on " . Carbon::parse($date)->format('F j, Y') . " from " . Carbon::createFromFormat('H:i', $startTime)->format('g:i A') . ' to ' . Carbon::createFromFormat('H:i', $endTime)->format('g:i A') . ' was sent to the administrators for approval.',
+                'reply' => "Your {$requestType} request for {$facility->name}{$itemSummary} on " . Carbon::parse($date)->format('F j, Y') . "{$timeSummary} was submitted as a pending request for administrator approval.",
             ]);
         }
 
         if (session('chatbot_last_action') === 'reservation_submitted') {
             if ($this->isConfirmation($normalized)) {
-                return response()->json(['reply' => 'Would you like to make another reservation? Tell me the room, date, and time, or reply “no” when you are finished.']);
+                $requestType = session('chatbot_last_reservation_type') === 'property' ? 'property' : 'facility';
+                return response()->json(['reply' => "Would you like to make another {$requestType} reservation? Tell me the room, date, and time" . ($requestType === 'property' ? ', and the items and quantities' : '') . ', or reply “no” when you are finished.']);
             }
 
             if ($this->isNegative($normalized) || preg_match('/^(done|finished|that is all|that\'s all)\b/i', $normalized)) {
-                session()->forget('chatbot_last_action');
-                return response()->json(['reply' => 'Okay. Your reservation request is waiting for administrator approval.']);
+                $requestType = session('chatbot_last_reservation_type') === 'property' ? 'property reservation' : 'reservation';
+                session()->forget(['chatbot_last_action', 'chatbot_last_reservation_type']);
+                return response()->json(['reply' => "Okay. Your {$requestType} request is waiting for administrator approval."]);
             }
 
-            session()->forget('chatbot_last_action');
+            session()->forget(['chatbot_last_action', 'chatbot_last_reservation_type']);
         }
 
         if (preg_match('/\b(new|start over|reset|forget that|different)\b.*\b(reservation|booking|request|room|time)\b/i', $normalized)) {
@@ -153,15 +250,15 @@ class ChatbotController extends Controller
         }
 
         if (preg_match('/^\s*(hello|hi|hey)\s*[!.?]*\s*$/', $normalized)) {
-            return response()->json(['reply' => 'Hi! I can check room availability and help you start a reservation. Try: “Is Room 101 available tomorrow from 9 AM to 11 AM?”']);
+            return response()->json(['reply' => 'Hi! I can check room and item availability, help reserve facilities or property, and check your reservation status. Try: “Reserve 2 projectors in Room 101 tomorrow from 9 AM to 11 AM.”']);
         }
 
         if (preg_match('/\b(help|what can you do|what do you do|website|site|account|login|profile)\b/', $normalized)) {
-            return response()->json(['reply' => 'I can help with Campus Reserve, room availability, schedules, reservations, cancellations, and your booking status.']);
+            return response()->json(['reply' => 'I can check facility and item availability, request facility or property reservations, show your reservation status including requested items, and help cancel bookings. For property, include the room, item name and quantity, date, time to use, and time to return.']);
         }
 
         if ($this->isReservationStatusQuestion($normalized)) {
-            $reservations = Reservation::with('facility')
+            $reservations = Reservation::with(['facility', 'items'])
                 ->where('user_id', Auth::id())
                 ->whereIn('status', ['pending', 'approved', 'rejected'])
                 ->orderByDesc('reservation_date')
@@ -180,9 +277,13 @@ class ChatbotController extends Controller
                 };
                 $facility = $reservation->facility?->name ?? 'Unknown facility';
                 $date = $reservation->reservation_date->format('F j, Y');
-                $time = $reservation->start_time->format('g:i A') . ' to ' . $reservation->end_time->format('g:i A');
+                $time = $reservation->items->isNotEmpty()
+                    ? 'use at ' . $reservation->start_time->format('g:i A') . ', return at ' . $reservation->end_time->format('g:i A')
+                    : $reservation->start_time->format('g:i A') . ' to ' . $reservation->end_time->format('g:i A');
+                $items = $this->reservationItemSummary($reservation);
+                $purpose = $reservation->purpose !== '' ? " (purpose: {$reservation->purpose})" : '';
 
-                return "{$facility} on {$date}, {$time} - {$status}";
+                return "{$facility}{$items}{$purpose} on {$date}, {$time} - {$status}";
             })->join("\n");
 
             return response()->json(['reply' => "Here are your reservations:\n{$summary}"]);
@@ -190,7 +291,7 @@ class ChatbotController extends Controller
 
         if (preg_match('/\b(cancel|remove|delete|get rid of)\b.*\b(reservation|booking|request|it|that)\b/i', $normalized)
             || preg_match('/\b(cancel|remove|delete)\b.*\b(my|the)\b/i', $normalized)) {
-            $reservations = Reservation::with('facility')
+            $reservations = Reservation::with(['facility', 'items'])
                 ->where('user_id', Auth::id())
                 ->whereIn('status', ['pending', 'approved'])
                 ->get()
@@ -199,18 +300,21 @@ class ChatbotController extends Controller
             $requestedReservation = $reservations->first(function (Reservation $reservation) use ($normalized) {
                 $facilityName = preg_replace('/[^a-z0-9]/', '', strtolower($reservation->facility?->name ?? ''));
                 $question = preg_replace('/[^a-z0-9]/', '', $normalized);
+                $itemNames = $reservation->items->map(fn (FacilityItem $item) => preg_replace('/[^a-z0-9]/', '', strtolower($item->name)));
 
-                return $facilityName !== '' && str_contains($question, $facilityName);
+                return ($facilityName !== '' && str_contains($question, $facilityName))
+                    || $itemNames->contains(fn (string $itemName) => $itemName !== '' && str_contains($question, $itemName));
             });
 
             if ($requestedReservation) {
                 $facilityName = $requestedReservation->facility?->name ?? 'the facility';
+                $itemSummary = $this->reservationItemSummary($requestedReservation);
                 session(['chatbot_cancellation' => [
                     'reservation_id' => $requestedReservation->id,
                     'awaiting_confirmation' => true,
                 ]]);
 
-                return response()->json(['reply' => "Do you want to cancel your {$facilityName} reservation on " . $requestedReservation->reservation_date->format('F j, Y') . '? Reply yes to confirm cancellation.']);
+                return response()->json(['reply' => "Do you want to cancel your reservation for {$facilityName}{$itemSummary} on " . $requestedReservation->reservation_date->format('F j, Y') . '? Reply yes to confirm cancellation.']);
             }
 
             if ($reservations->isEmpty()) {
@@ -218,11 +322,53 @@ class ChatbotController extends Controller
             }
 
             $options = $reservations->map(function (Reservation $reservation) {
-                return ($reservation->facility?->name ?? 'Unknown facility') . ' on ' . $reservation->reservation_date->format('F j, Y');
+                return ($reservation->facility?->name ?? 'Unknown facility') . $this->reservationItemSummary($reservation) . ' on ' . $reservation->reservation_date->format('F j, Y');
             })->join('; ');
 
             session(['chatbot_cancellation' => ['awaiting_selection' => true]]);
             return response()->json(['reply' => "Which reservation do you want to cancel? Your cancellable reservations are: {$options}. Reply with the room name, then I will ask you to confirm."]); 
+        }
+
+        $facilities = Facility::active()->with('items')->orderBy('name')->get();
+        $matchedItemFacility = $facilities->first(
+            fn (Facility $facility) => $this->parseRequestedItems($facility, $normalized, [])->isNotEmpty()
+        );
+        $propertyIntent = (bool) preg_match('/\b(property|properties|item|items|equipment|equipments|inventory|asset|assets|supply|supplies)\b/i', $normalized)
+            || ($state['reservation_type'] ?? null) === 'property'
+            || $matchedItemFacility !== null;
+
+        $isItemListRequest = $propertyIntent
+            && (bool) preg_match('/\b(show|list|what|which|available|have)\b/', $normalized)
+            && !(bool) preg_match('/\b(reserve|book|booking)\b/', $normalized)
+            && !$this->hasDateOrTimeRequest($normalized);
+
+        if ($isItemListRequest) {
+            $requestedFacility = $facilities->first(function (Facility $facility) use ($normalized) {
+                return $this->messageMatchesFacility($facility, $normalized);
+            }) ?? $matchedItemFacility;
+
+            if ($requestedFacility) {
+                $items = $requestedFacility->items
+                    ->map(fn (FacilityItem $item) => "{$item->name} ({$item->quantity} in stock)")
+                    ->join(', ');
+                $inventory = $items !== '' ? $items : 'no items are listed yet';
+
+                return response()->json([
+                    'reply' => "{$requestedFacility->name} has {$inventory}. Tell me which item and quantity, plus the date and time, if you would like to reserve property.",
+                ]);
+            }
+
+            $inventory = $facilities->flatMap(fn (Facility $facility) => $facility->items->map(
+                fn (FacilityItem $item) => "{$item->name} in {$facility->name} ({$item->quantity} in stock)"
+            ));
+
+            if ($inventory->isEmpty()) {
+                return response()->json(['reply' => 'There are no facility items listed for reservation yet.']);
+            }
+
+            return response()->json([
+                'reply' => 'Available facility items include: ' . $inventory->join(', ') . '. Name the room, item, quantity, date, and time to request a property reservation.',
+            ]);
         }
 
         $isFacilityListRequest = (
@@ -231,7 +377,6 @@ class ChatbotController extends Controller
         ) || preg_match('/\b(show|list|what) (rooms?|facilit(?:y|ies)|spaces?)\b/', $normalized);
 
         if ($isFacilityListRequest && !$this->hasDateOrTimeRequest($normalized)) {
-            $facilities = Facility::active()->orderBy('name')->get();
             if ($facilities->isEmpty()) {
                 return response()->json(['reply' => 'There are no active facilities available right now.']);
             }
@@ -242,15 +387,8 @@ class ChatbotController extends Controller
 
         $date = $this->parseDate($normalized);
         [$startTime, $endTime] = $this->parseTimeRange($normalized);
-        $facilities = Facility::active()->orderBy('name')->get();
-        $requestedFacility = $facilities->first(function (Facility $facility) use ($normalized) {
-            $facilityName = preg_replace('/[^a-z0-9]/', '', strtolower($facility->name));
-            $roomNumber = preg_replace('/[^a-z0-9]/', '', strtolower((string) $facility->room_number));
-            $question = preg_replace('/[^a-z0-9]/', '', $normalized);
-
-            return ($facilityName !== '' && str_contains($question, $facilityName))
-                || ($roomNumber !== '' && str_contains($question, $roomNumber));
-        });
+        $requestedFacility = $facilities->first(fn (Facility $facility) => $this->messageMatchesFacility($facility, $normalized));
+        $requestedFacility ??= $matchedItemFacility;
 
             $askingForAlternatives = (bool) preg_match('/\b(other|another|different|all)\s+(rooms?|facilit(?:y|ies))\b/i', $normalized);
             if ($askingForAlternatives) {
@@ -263,17 +401,43 @@ class ChatbotController extends Controller
         $startTime ??= $state['start_time'] ?? null;
         $endTime ??= $state['end_time'] ?? null;
         $requestedFacility ??= $facilities->firstWhere('id', $state['facility_id'] ?? null);
+        $previousFacilityId = $state['facility_id'] ?? null;
+        $previousItems = $previousFacilityId && $requestedFacility && (int) $previousFacilityId !== $requestedFacility->id
+            ? []
+            : ($state['items'] ?? []);
+        $requestedItems = $requestedFacility
+            ? $this->parseRequestedItems($requestedFacility, $normalized, $previousItems)
+            : collect();
+        $isReservationRequest = (bool) preg_match('/\b(reserve|book|booking)\b/i', $normalized)
+            || (bool) ($state['reservation_intent'] ?? false);
 
         $state = [
             'date' => $date?->toDateString(),
             'start_time' => $startTime,
             'end_time' => $endTime,
             'facility_id' => $requestedFacility?->id,
+            'reservation_type' => $propertyIntent ? 'property' : 'facility',
+            'items' => $requestedItems->values()->all(),
+            'purpose' => $state['purpose'] ?? null,
+            'reservation_intent' => $isReservationRequest,
         ];
         session(['chatbot_reservation' => $state]);
 
+        if ($isReservationRequest && !$requestedFacility) {
+            return response()->json(['reply' => 'Which room or facility would you like to reserve?']);
+        }
+
+        if ($isReservationRequest && $requestedFacility && empty($state['purpose'])) {
+            $state['awaiting_purpose'] = true;
+            session(['chatbot_reservation' => $state]);
+
+            return response()->json(['reply' => "What is the purpose of your reservation for {$requestedFacility->name}?"]);
+        }
+
         if (!$date) {
-            return response()->json(['reply' => 'What date should I check? You can say “today”, “tomorrow”, or use YYYY-MM-DD.']);
+            return response()->json(['reply' => $propertyIntent
+                ? 'What date should I check for the property reservation? You can say “today”, “tomorrow”, or use YYYY-MM-DD.'
+                : 'What date should I check? You can say “today”, “tomorrow”, or use YYYY-MM-DD.']);
         }
 
         if (!$startTime || !$endTime) {
@@ -281,7 +445,10 @@ class ChatbotController extends Controller
                 return response()->json(['reply' => 'Please provide a valid time range where the end time is later than the start time, such as “9 to 10 AM” or “8 AM to 7 PM”.']);
             }
 
-            return response()->json(['reply' => 'What time range should I check? For example: “from 9 AM to 11 AM”.']);
+            session(['chatbot_reservation' => $state]);
+            return response()->json(['reply' => $propertyIntent
+            ? 'What time will you use the items, and what time will you return them? For example: “use from 9 AM and return at 11 AM”.'
+                : 'What time range should I check? For example: “from 9 AM to 11 AM”.']);
         }
 
         $matches = $requestedFacility ? collect([$requestedFacility]) : $facilities;
@@ -296,7 +463,71 @@ class ChatbotController extends Controller
         }
 
         $names = $available->map(fn (Facility $facility) => $facility->name)->join(', ');
-        $isReservationRequest = (bool) preg_match('/\b(reserve|book|booking)\b/i', $normalized);
+
+        if ($propertyIntent) {
+            if (!$requestedFacility) {
+                return response()->json([
+                    'reply' => "The time is available in {$names}. Which room's items would you like to reserve? You can ask “what items are in {$available->first()->name}?”",
+                    'action_url' => route('reserve', ['tab' => 'property']),
+                    'action_label' => 'Open property reservations',
+                ]);
+            }
+
+            if ($requestedItems->isEmpty()) {
+                $itemAvailabilityList = $requestedFacility->items
+                    ->map(fn (FacilityItem $item) => "{$item->name} (" . $itemAvailability->availableQuantity($item, $date->toDateString(), $startTime, $endTime) . ' available)')
+                    ->join(', ');
+                $inventory = $itemAvailabilityList !== '' ? $itemAvailabilityList : 'no items are listed';
+                session(['chatbot_reservation' => $state]);
+
+                return response()->json([
+                    'reply' => "{$requestedFacility->name} is available on {$dateLabel} from {$timeLabel}, and its items are: {$inventory}. Tell me the item name and quantity to continue.",
+                ]);
+            }
+
+            $itemAvailabilitySummary = [];
+            foreach ($requestedItems as $selection) {
+                $item = $requestedFacility->items->firstWhere('id', (int) $selection['facility_item_id']);
+                if (!$item) {
+                    continue;
+                }
+
+                $availableQuantity = $itemAvailability->availableQuantity($item, $date->toDateString(), $startTime, $endTime);
+                $itemAvailabilitySummary[] = "{$item->name}: {$availableQuantity} available";
+
+                if ((int) $selection['quantity'] > $availableQuantity) {
+                    session(['chatbot_reservation' => $state]);
+                    return response()->json([
+                        'reply' => "{$item->name} has only {$availableQuantity} available on {$dateLabel} from {$timeLabel}. Tell me a smaller quantity or another date and time.",
+                    ]);
+                }
+            }
+
+            if ($isReservationRequest) {
+                session([
+                    'chatbot_reservation' => array_merge($state, [
+                        'facility_id' => $requestedFacility->id,
+                        'awaiting_confirmation' => true,
+                    ]),
+                ]);
+
+                $requestedItemSummary = $this->formatRequestedItems($requestedFacility, $requestedItems);
+                return response()->json([
+                    'reply' => "{$requestedFacility->name} and {$requestedItemSummary} are available on {$dateLabel}. The use time is " . Carbon::createFromFormat('H:i', $startTime)->format('g:i A') . ' and the return time is ' . Carbon::createFromFormat('H:i', $endTime)->format('g:i A') . '. Should I submit this property reservation request to the administrators for approval? Reply yes to confirm.',
+                ]);
+            }
+
+            session([
+                'chatbot_reservation' => array_merge($state, [
+                    'facility_id' => $requestedFacility->id,
+                    'awaiting_confirmation' => true,
+                ]),
+            ]);
+
+            return response()->json([
+                'reply' => "Available on {$dateLabel} at {$requestedFacility->name}: " . implode(', ', $itemAvailabilitySummary) . '. Use time: ' . Carbon::createFromFormat('H:i', $startTime)->format('g:i A') . '; return time: ' . Carbon::createFromFormat('H:i', $endTime)->format('g:i A') . '. Would you like me to submit a property reservation request for those quantities?',
+            ]);
+        }
 
         if ($isReservationRequest && $requestedFacility) {
             session([
@@ -338,6 +569,83 @@ class ChatbotController extends Controller
             'action_url' => route('reserve'),
             'action_label' => 'Open reservation form',
         ]);
+    }
+
+    private function messageMatchesFacility(Facility $facility, string $message): bool
+    {
+        $question = preg_replace('/[^a-z0-9]/', '', strtolower($message));
+        $facilityName = preg_replace('/[^a-z0-9]/', '', strtolower($facility->name));
+        $roomNumber = preg_replace('/[^a-z0-9]/', '', strtolower((string) $facility->room_number));
+
+        return ($facilityName !== '' && str_contains($question, $facilityName))
+            || ($roomNumber !== '' && str_contains($question, $roomNumber));
+    }
+
+    private function parseRequestedItems(Facility $facility, string $message, array $previousItems): \Illuminate\Support\Collection
+    {
+        $requestedItems = collect($previousItems)->keyBy(fn (array $item) => (int) $item['facility_item_id']);
+        $normalizedMessage = strtolower($message);
+
+        foreach ($facility->items as $item) {
+            $itemPattern = str_replace(' ', '\\s+', preg_quote(strtolower($item->name), '/'));
+            $itemPattern = '(?<![a-z0-9])' . $itemPattern . 's?(?![a-z0-9])';
+            $quantity = null;
+
+            if (preg_match('/\b(\d+)\s*(?:x\s*)?' . $itemPattern . '/i', $normalizedMessage, $matches)) {
+                $quantity = (int) $matches[1];
+            } elseif (preg_match('/' . $itemPattern . '\s*(?:x|qty|quantity)\s*(\d+)\b/i', $normalizedMessage, $matches)) {
+                $quantity = (int) $matches[1];
+            } elseif (preg_match('/\b(one|two|three|four|five|six|seven|eight|nine|ten)\s+' . $itemPattern . '/i', $normalizedMessage, $matches)) {
+                $quantity = array_search(strtolower($matches[1]), [
+                    1 => 'one', 2 => 'two', 3 => 'three', 4 => 'four', 5 => 'five',
+                    6 => 'six', 7 => 'seven', 8 => 'eight', 9 => 'nine', 10 => 'ten',
+                ], true);
+            } elseif (preg_match('/' . $itemPattern . '/i', $normalizedMessage)) {
+                $quantity = 1;
+            }
+
+            if ($quantity !== null && $quantity > 0) {
+                $requestedItems->put($item->id, [
+                    'facility_item_id' => $item->id,
+                    'quantity' => $quantity,
+                ]);
+            }
+        }
+
+        return $requestedItems->values();
+    }
+
+    private function isFacilityItemName(string $message): bool
+    {
+        return Facility::active()
+            ->with('items')
+            ->get()
+            ->contains(fn (Facility $facility) => $this->parseRequestedItems($facility, $message, [])->isNotEmpty());
+    }
+
+    private function reservationItemSummary(Reservation $reservation): string
+    {
+        if ($reservation->items->isEmpty()) {
+            return '';
+        }
+
+        $items = $reservation->items
+            ->map(fn (FacilityItem $item) => "{$item->name} × {$item->pivot->quantity}")
+            ->join(', ');
+
+        return " (items: {$items})";
+    }
+
+    private function formatRequestedItems(Facility $facility, \Illuminate\Support\Collection $requestedItems): string
+    {
+        return $requestedItems
+            ->map(function (array $selection) use ($facility) {
+                $item = $facility->items->firstWhere('id', (int) $selection['facility_item_id']);
+
+                return $item ? "{$selection['quantity']} × {$item->name}" : null;
+            })
+            ->filter()
+            ->join(', ');
     }
 
     private function parseDate(string $message): ?Carbon
@@ -459,7 +767,7 @@ class ChatbotController extends Controller
 
     private function isSupportedMessage(string $message): bool
     {
-        return (bool) preg_match('/\b(hello|hi|hey|help|what can you do|website|site|account|login|profile|campus|room|rooms|facility|facilities|available|availability|schedule|reservation|reservations|reserve|reserved|book|booking|bookings|cancel|cancelled|delete|remove|pending|approved|accepted|declined|rejected|status|today|tomorrow|am|pm|noon|yes|yeah|yep|yup|sure|okay|ok|correct|right|confirm|submit|go ahead|do it|no|nope|nah|not now|done|finished|\d{4}-\d{2}-\d{2})\b/i', $message)
+        return (bool) preg_match('/\b(hello|hi|hey|help|what can you do|website|site|account|login|profile|campus|room|rooms|facility|facilities|property|properties|item|items|equipment|equipments|inventory|asset|assets|supply|supplies|available|availability|schedule|reservation|reservations|reserve|reserved|book|booking|bookings|cancel|cancelled|delete|remove|pending|approved|accepted|declined|rejected|status|today|tomorrow|am|pm|noon|yes|yeah|yep|yup|sure|okay|ok|correct|right|confirm|submit|go ahead|do it|no|nope|nah|not now|done|finished|\d{4}-\d{2}-\d{2})\b/i', $message)
             || $this->hasTimeRangeInput($message);
     }
 

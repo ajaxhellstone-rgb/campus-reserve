@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Add Facility - Campus Reserve')
+@section('title', 'Facility Management - Campus Reserve')
 
 @section('content')
 <div class="min-h-screen bg-gray-50 py-10">
@@ -9,7 +9,7 @@
             <a href="{{ route('admin.dashboard') }}" class="mb-4 inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
                 &larr; Back to Admin Dashboard
             </a>
-            <h1 class="text-3xl font-bold text-gray-900">Manage Campus</h1>
+            <h1 class="text-3xl font-bold text-gray-900">Facility Management</h1>
             <p class="mt-2 text-gray-600">Add new facilities and control the website cards shown to visitors.</p>
         </div>
 

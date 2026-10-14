@@ -45,6 +45,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/api/calendar/events', [CalendarController::class, 'events']);
     Route::get('/api/calendar/pending', [CalendarController::class, 'pending']);
+    Route::get('/api/facilities/{facility}/item-availability', [CalendarController::class, 'itemAvailability'])
+        ->name('api.facilities.items.availability');
 });
 
 Route::middleware('auth')->post('/api/calendar/reserve', [CalendarController::class, 'store']);
@@ -107,7 +109,7 @@ Route::middleware('auth')->group(function () {
     // Reserve page (Dashboard) - requires login
     Route::get('/reserve', function () {
         $user = auth()->user();
-        $reservations = Reservation::with('facility')
+        $reservations = Reservation::with(['facility', 'items'])
             ->where('user_id', $user->id)
             ->orderBy('reservation_date')
             ->orderBy('start_time')
@@ -123,7 +125,7 @@ Route::middleware('auth')->group(function () {
                 || $reservation->reservation_date < now()->toDateString();
         })->count();
 
-        $facilities = Facility::active()->orderBy('name')->get();
+        $facilities = Facility::active()->with('items')->orderBy('name')->get();
 
         return view('reserve', compact('reservations', 'upcomingCount', 'completedCount', 'facilities'));
     })->name('reserve');
@@ -151,6 +153,10 @@ Route::middleware('auth')->group(function () {
         ]);
 
         $facility = Facility::findOrFail($request->facility_id);
+        if ($reservation->items()->exists() && $facility->id !== $reservation->facility_id) {
+            return back()->withInput()->with('error', 'Property reservation items must remain assigned to their original facility. Cancel this reservation and create a new one to reserve items in another facility.');
+        }
+
         if (!$facility->isAvailable($request->reservation_date, $request->start_time, $request->end_time, $reservation->id)) {
             return back()->withInput()->with('error', 'Selected time slot is unavailable. Please choose another slot.');
         }
@@ -236,6 +242,10 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
         Route::get('/facilities/create', [AdminController::class, 'createFacility'])->name('admin.facilities.create');
+        Route::get('/property-management', [AdminController::class, 'propertyManagement'])->name('admin.property-management.index');
+        Route::post('/property-management/items', [AdminController::class, 'storeFacilityItem'])->name('admin.property-management.items.store');
+        Route::put('/property-management/items/{item}', [AdminController::class, 'updateFacilityItem'])->name('admin.property-management.items.update');
+        Route::delete('/property-management/items/{item}', [AdminController::class, 'destroyFacilityItem'])->name('admin.property-management.items.destroy');
         Route::post('/facilities', [AdminController::class, 'storeFacility'])->name('admin.facilities.store');
         Route::put('/facilities/{facility}', [AdminController::class, 'updateFacility'])->name('admin.facilities.update');
         Route::delete('/facilities/{facility}', [AdminController::class, 'destroyFacility'])->name('admin.facilities.destroy');

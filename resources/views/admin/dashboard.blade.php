@@ -13,7 +13,8 @@
                     <p class="mt-2 text-gray-600">Approve or reject reservations, manage members, and review audit activity.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
-                    <a href="{{ route('admin.facilities.create') }}" class="inline-flex items-center px-4 py-2 bg-green-700 text-white rounded-full hover:bg-green-800 transition-colors">Add Facility</a>
+                    <a href="{{ route('admin.facilities.create') }}" class="inline-flex items-center px-4 py-2 bg-green-700 text-white rounded-full hover:bg-green-800 transition-colors">Facility Management</a>
+                    <a href="{{ route('admin.property-management.index') }}" class="inline-flex items-center px-4 py-2 bg-green-700 text-white rounded-full hover:bg-green-800 transition-colors">Property Management</a>
                     <a href="/reserve" class="inline-flex items-center px-4 py-2 bg-black text-white rounded-full hover:bg-gray-800 transition-colors">Back to User Portal</a>
                 </div>
             </div>
@@ -65,9 +66,23 @@
                                     <div>
                                         <p class="text-sm text-gray-500">Reservation #{{ $reservation->id }}</p>
                                         <h3 class="text-lg font-semibold text-gray-900">{{ $reservation->facility->name }} — {{ $reservation->reservation_date->format('M d, Y') }}</h3>
-                                        <p class="text-sm text-gray-600">{{ $reservation->start_time->format('H:i') }} — {{ $reservation->end_time->format('H:i') }}</p>
+                                        <p class="text-sm text-gray-600">
+                                            @if($reservation->items->isNotEmpty())
+                                                Use: {{ $reservation->start_time->format('H:i') }} · Return: {{ $reservation->end_time->format('H:i') }}
+                                            @else
+                                                {{ $reservation->start_time->format('H:i') }} — {{ $reservation->end_time->format('H:i') }}
+                                            @endif
+                                        </p>
                                         <p class="text-sm text-gray-600 mt-2">Requested by {{ $reservation->user->name }} ({{ $reservation->user->email }})</p>
                                         <p class="text-sm text-gray-600 mt-1">Purpose: {{ $reservation->purpose }}</p>
+                                        @if($reservation->items->isNotEmpty())
+                                            <p class="mt-2 text-sm text-gray-700">
+                                                Items:
+                                                @foreach($reservation->items as $item)
+                                                    {{ $item->name }} × {{ $item->pivot->quantity }}@if(!$loop->last), @endif
+                                                @endforeach
+                                            </p>
+                                        @endif
                                     </div>
                                     <div class="flex gap-2">
                                         <form method="POST" action="{{ route('admin.reservations.approve', $reservation) }}">

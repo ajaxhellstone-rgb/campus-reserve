@@ -182,7 +182,7 @@
                             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sm font-bold" style="display: flex; flex: 0 0 36px; width: 36px; height: 36px; align-items: center; justify-content: center; border-radius: 12px; background: rgba(255,255,255,.12); color: #fff; font-size: 13px; font-weight: 700;">CR</span>
                             <div>
                                 <h2 class="text-sm font-semibold" style="margin: 0; color: #fff; font-size: 14px; font-weight: 700;">Reservation assistant</h2>
-                                <p class="text-xs text-slate-300" style="margin: 3px 0 0; color: #cbd5e1; font-size: 12px;">Rooms, schedules, and reservations</p>
+                                <p class="text-xs text-slate-300" style="margin: 3px 0 0; color: #cbd5e1; font-size: 12px;">Rooms, items, schedules, and reservations</p>
                             </div>
                         </div>
                     </div>
@@ -194,7 +194,7 @@
                 <div id="chatbot-messages" class="min-h-0 flex-1 space-y-4 overflow-y-auto bg-slate-50 p-5 text-sm" style="min-height: 0; flex: 1 1 auto; overflow-y: auto; scrollbar-width: thin;">
                     <div class="flex gap-3">
                         <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-bold text-white">CR</span>
-                        <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm" style="width: fit-content; max-width: 90%;">Hi! Ask me about room availability, schedules, or reservations.</p>
+                        <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm" style="width: fit-content; max-width: 90%;">Hi! Ask me about room and item availability, property reservations, schedules, or booking status.</p>
                     </div>
                 </div>
                 <form id="chatbot-form" class="pointer-events-auto border-t border-slate-200 bg-white p-4" style="pointer-events: auto; position: relative; z-index: 10002;">
@@ -204,7 +204,7 @@
                         <input id="chatbot-input" type="text" class="pointer-events-auto min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none" style="pointer-events: auto; position: relative; z-index: 10003; cursor: text;" placeholder="Ask about availability..." autocomplete="off">
                         <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Send</button>
                     </div>
-                    <p class="mt-2 px-1 text-[11px] text-slate-400">Check availability, request a reservation, or view your bookings.</p>
+                    <p class="mt-2 px-1 text-[11px] text-slate-400">Check room or item availability, request a reservation, or view booking status.</p>
                 </form>
             </section>
         </div>
@@ -230,7 +230,7 @@
                     messages.innerHTML = `
                         <div class="flex gap-3">
                             <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-bold text-white">CR</span>
-                            <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm">Hi! Ask me about room availability, schedules, or reservations.</p>
+                            <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm">Hi! Ask me about room and item availability, property reservations, schedules, or booking status.</p>
                         </div>
                     `;
                     input.value = '';

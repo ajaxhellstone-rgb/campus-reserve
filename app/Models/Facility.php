@@ -40,6 +40,11 @@ class Facility extends Model
         return $this->hasMany(Reservation::class);
     }
 
+    public function items(): HasMany
+    {
+        return $this->hasMany(FacilityItem::class);
+    }
+
     /**
      * Get a readable name for the facility type.
      */

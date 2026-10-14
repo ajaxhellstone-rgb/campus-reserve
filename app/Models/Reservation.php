@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Reservation extends Model
 {
@@ -46,6 +47,13 @@ class Reservation extends Model
     public function facility(): BelongsTo
     {
         return $this->belongsTo(Facility::class);
+    }
+
+    public function items(): BelongsToMany
+    {
+        return $this->belongsToMany(FacilityItem::class, 'reservation_items')
+            ->withPivot('quantity')
+            ->withTimestamps();
     }
 
     /**

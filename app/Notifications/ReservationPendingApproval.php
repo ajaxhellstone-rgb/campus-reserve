@@ -31,11 +31,19 @@ class ReservationPendingApproval extends Notification
         $date = optional($reservation->reservation_date)?->format('M d, Y') ?? 'a date';
         $start = optional($reservation->start_time)?->format('H:i') ?? '--:--';
         $end = optional($reservation->end_time)?->format('H:i') ?? '--:--';
+        $items = $reservation->items
+            ->map(fn ($item) => "{$item->name} × {$item->pivot->quantity}")
+            ->join(', ');
+        $itemDetails = $items !== '' ? " Items: {$items}." : '';
+        $timeDetails = $items !== ''
+            ? " Use time: {$start}; return time: {$end}."
+            : " from {$start} to {$end}.";
+        $purposeDetails = $reservation->purpose !== '' ? " Purpose: {$reservation->purpose}." : '';
 
         return [
             'reservation_id' => $reservation->id,
             'title' => 'Reservation change request',
-            'message' => "{$userName} requested {$facilityName} on {$date} from {$start} to {$end}.",
+            'message' => "{$userName} requested {$facilityName} on {$date}.{$timeDetails}{$purposeDetails}{$itemDetails}",
             'action_url' => route('admin.dashboard'),
             'status' => $reservation->status,
         ];
