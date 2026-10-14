@@ -25,6 +25,8 @@ services:
         generateValue: true
       - key: APP_URL
         value: https://campus-reserve-demo.onrender.com
+      - key: LOG_CHANNEL
+        value: stderr
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_URL
