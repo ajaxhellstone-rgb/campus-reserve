@@ -22,10 +22,13 @@ WORKDIR /var/www/html
 COPY . .
 COPY --from=assets /app/public/build ./public/build
 COPY docker/apache-vhost.conf /etc/apache2/sites-available/000-default.conf
+COPY docker/entrypoint.sh /usr/local/bin/campus-reserve-entrypoint
 
 RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader \
+    && chmod +x /usr/local/bin/campus-reserve-entrypoint \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 10000
 
+ENTRYPOINT ["/usr/local/bin/campus-reserve-entrypoint"]
 CMD ["sh", "-c", "php artisan migrate --force && php artisan storage:link --force && php artisan config:cache && apache2-foreground"]
