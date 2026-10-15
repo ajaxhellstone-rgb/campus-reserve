@@ -21,6 +21,13 @@ return [
             'key' => env('RESEND_KEY'),
         ],
 
+        'gmail_api' => [
+            'transport' => 'gmail-api',
+            'client_id' => env('GMAIL_MAIL_CLIENT_ID'),
+            'client_secret' => env('GMAIL_MAIL_CLIENT_SECRET'),
+            'refresh_token' => env('GMAIL_MAIL_REFRESH_TOKEN'),
+        ],
+
         'log' => [
             'transport' => 'log',
             'channel' => env('MAIL_LOG_CHANNEL'),

@@ -52,7 +52,13 @@ services:
       - key: QUEUE_CONNECTION
         value: database
       - key: MAIL_MAILER
-        value: resend
+        value: gmail_api
+      - key: GMAIL_MAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_MAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_MAIL_REFRESH_TOKEN
+        sync: false
       - key: RESEND_KEY
         sync: false
       - key: MAIL_FROM_ADDRESS
