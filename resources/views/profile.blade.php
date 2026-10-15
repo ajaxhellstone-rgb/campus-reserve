@@ -80,6 +80,7 @@
                         <!-- Hidden inputs for phone and country code submission -->
                         <input type="hidden" name="phone" id="form_phone_input" value="{{ old('phone', auth()->user()->phone ?? '') }}" />
                         <input type="hidden" name="country_code" id="form_country_code_input" value="" />
+                        <input type="hidden" name="email_notifications" value="0" />
 
                         <div class="grid gap-6 xl:grid-cols-[280px_1fr]">
                             <div class="rounded-3xl border border-gray-200 bg-slate-50 p-6">
@@ -175,6 +176,22 @@
 
                         <div class="grid gap-6 xl:grid-cols-[280px_1fr]">
                             <div class="rounded-3xl border border-gray-200 bg-slate-50 p-6">
+                                <p class="text-sm font-semibold text-gray-900">Email notifications</p>
+                                <p class="mt-2 text-sm text-gray-500">Choose whether to receive reservation updates by email.</p>
+                            </div>
+                            <div class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                                <label class="flex items-start gap-3">
+                                    <input type="checkbox" name="email_notifications" value="1" @checked(old('email_notifications', auth()->user()->email_notifications)) class="mt-1 rounded border-gray-300 text-black focus:ring-black" />
+                                    <span>
+                                        <span class="block text-sm font-semibold text-gray-900">Email me about my reservations</span>
+                                        <span class="mt-1 block text-sm text-gray-500">Receive an email when a reservation is submitted, approved, or denied. In-app notifications are always on.</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="grid gap-6 xl:grid-cols-[280px_1fr]">
+                            <div class="rounded-3xl border border-gray-200 bg-slate-50 p-6">
                                 <p class="text-sm font-semibold text-gray-900">Security</p>
                                 <p class="mt-2 text-sm text-gray-500">Control password access and two-factor authentication.</p>
                             </div>
@@ -205,7 +222,7 @@
                                             <img id="authenticator-qr-image" src="{{ session('authenticator_setup_qr') }}" alt="Authenticator setup QR code" class="mt-3 h-48 w-48 bg-white p-2">
                                             <p class="mt-3 text-sm text-emerald-900">Manual setup key: <strong id="authenticator-secret">{{ session('authenticator_setup_secret') }}</strong></p>
                                             <div class="mt-4 flex flex-col gap-3 sm:flex-row">
-                                                <input type="text" name="authenticator_otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" required class="w-full rounded-3xl border border-emerald-200 bg-white px-4 py-3 text-sm" placeholder="6-digit authenticator code">
+                                                <input type="text" name="authenticator_otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" class="w-full rounded-3xl border border-emerald-200 bg-white px-4 py-3 text-sm" placeholder="6-digit authenticator code">
                                                 <button type="submit" formaction="{{ route('profile.2fa.confirm') }}" formmethod="POST" class="rounded-full bg-emerald-700 px-5 py-3 text-sm font-semibold text-white">Save authenticator</button>
                                             </div>
                                             @error('authenticator_otp')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -283,7 +300,7 @@
                     <input id="password-modal-new" form="profile-settings-form" type="password" name="password" class="w-full rounded-3xl border border-gray-300 px-4 py-3 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-black" autocomplete="new-password">
                     <button type="button" data-password-toggle="password-modal-new" class="absolute inset-y-0 right-3 z-10 bg-transparent px-1 text-xs font-semibold text-gray-600 hover:text-black" aria-label="Show new password">Show</button>
                 </div>
-                <p class="mt-2 text-xs leading-5 text-gray-500">Use 5-30 characters for a secure password. Longer passwords are easier to keep safe.</p>
+                <p class="mt-2 text-xs leading-5 text-gray-500">Use 5-30 characters, including uppercase and lowercase letters, a number, and a symbol.</p>
             </label>
             <label class="block">
                 <span class="text-sm font-semibold text-gray-900">Confirm new password</span>
@@ -456,7 +473,9 @@
                 document.getElementById('authenticator-qr-image').src = data.authenticator_setup_qr;
                 document.getElementById('authenticator-secret').textContent = data.authenticator_setup_secret;
                 document.getElementById('authenticator-qr-result').classList.remove('hidden');
-                document.querySelector('input[name="authenticator_otp"]')?.focus();
+                const authenticatorOtpInput = document.querySelector('input[name="authenticator_otp"]');
+                authenticatorOtpInput.required = true;
+                authenticatorOtpInput.focus();
             } catch (error) {
                 setupError.textContent = error.message;
                 setupError.classList.remove('hidden');
@@ -474,6 +493,7 @@
             const authenticatorOtpInput = document.querySelector('input[name="authenticator_otp"]');
             if (authenticatorOtpInput) {
                 authenticatorOtpInput.value = '';
+                authenticatorOtpInput.required = false;
             }
             document.getElementById('authenticator-qr-result')?.classList.add('hidden');
         });
@@ -580,6 +600,51 @@
                 this.textContent = 'Save password';
             }
 
+            if (!{{ auth()->user()->two_fa_enabled ? 'true' : 'false' }}) {
+                this.disabled = true;
+                this.textContent = 'Saving...';
+
+                try {
+                    const response = await fetch(profileSettingsForm.action, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': profileSettingsForm.querySelector('input[name="_token"]').value,
+                        },
+                        body: new FormData(profileSettingsForm),
+                        credentials: 'same-origin',
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.errors?.password?.[0] || data.errors?.current_password?.[0] || data.message || 'Unable to change password.');
+                    }
+
+                    passwordModal.classList.add('hidden');
+                    passwordModal.classList.remove('flex');
+                    passwordModalCurrent.value = '';
+                    passwordModalNew.value = '';
+                    passwordModalConfirm.value = '';
+                    const profileStatus = document.getElementById('profile-status');
+                    if (profileStatus) {
+                        profileStatus.textContent = data.status || 'Password changed successfully.';
+                        profileStatus.classList.remove('hidden');
+                    }
+                    if (data.password_changed) {
+                        document.getElementById('password-change-alert')?.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    passwordModalError.textContent = error.message;
+                    passwordModalError.classList.remove('hidden');
+                } finally {
+                    this.disabled = false;
+                    this.textContent = 'Save password';
+                }
+
+                return;
+            }
+
             passwordModal.classList.add('hidden');
             passwordModal.classList.remove('flex');
             passwordTwoFactorModal.classList.remove('hidden');
@@ -683,7 +748,7 @@
         const phoneHiddenInput = document.getElementById('form_phone_input');
         const countryCodeHiddenInput = document.getElementById('form_country_code_input');
 
-        //function syncPhoneFieldsToForm() {
+        function syncPhoneFieldsToForm() {
             const countryCode = countryCodeSelect.value;
             const phoneNumber = phoneNumberInput.value.trim();
 

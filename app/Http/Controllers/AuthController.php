@@ -445,6 +445,7 @@ class AuthController extends Controller
             'country_code' => ['nullable', 'string', 'in:+1,+44,+63,+81,+91,+86,+33,+49,+39,+61'],
             'phone' => ['nullable', 'string', 'regex:/^[\+]?[0-9]{7,15}$/'],
             'two_fa_enabled' => ['sometimes', 'boolean'],
+            'email_notifications' => ['sometimes', 'boolean'],
             'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
@@ -546,6 +547,7 @@ class AuthController extends Controller
         $data = [
             'name' => $request->name,
             'two_fa_enabled' => $request->boolean('two_fa_enabled'),
+            'email_notifications' => $request->boolean('email_notifications'),
         ];
 
         if ($request->phone) {

@@ -7,6 +7,7 @@ use App\Models\FacilityItem;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
+use App\Notifications\ReservationStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -64,6 +65,9 @@ class ChatbotPropertyReservationTest extends TestCase
                 && str_contains($message, 'return time: 12:00')
                 && str_contains($message, 'Purpose: Classroom presentation')
                 && str_contains($message, 'Projector × 2');
+        });
+        Notification::assertSentTo($user, ReservationStatusChanged::class, function ($notification, $channels) {
+            return $channels === ['database'];
         });
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))

@@ -29,6 +29,11 @@ class User extends Authenticatable
         'is_admin',
         'is_super_admin',
         'two_fa_secret',
+        'email_notifications',
+    ];
+
+    protected $attributes = [
+        'email_notifications' => false,
     ];
 
     /**
@@ -58,6 +63,7 @@ class User extends Authenticatable
         'two_fa_enabled' => 'boolean',
         'is_admin' => 'boolean',
         'is_super_admin' => 'boolean',
+        'email_notifications' => 'boolean',
     ];
 
     /**

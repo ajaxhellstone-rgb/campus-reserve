@@ -6,8 +6,8 @@ use App\Models\AuditLog;
 use App\Models\Facility;
 use App\Models\FacilityItem;
 use App\Models\Reservation;
-use App\Notifications\ReservationStatusChanged;
 use App\Services\FacilityItemAvailability;
+use App\Services\ReservationNotificationDispatcher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -264,7 +264,12 @@ class AdminController extends Controller
         return redirect()->route('admin.property-management.index')->with('status', 'Facility item removed successfully.');
     }
 
-    public function approve(Request $request, Reservation $reservation, FacilityItemAvailability $itemAvailability)
+    public function approve(
+        Request $request,
+        Reservation $reservation,
+        FacilityItemAvailability $itemAvailability,
+        ReservationNotificationDispatcher $reservationNotifications
+    )
     {
         // Mark the reservation as approved and send the user a notification
         $this->requireAdmin();
@@ -339,14 +344,16 @@ class AdminController extends Controller
             return back()->with('error', $approvalError);
         }
 
-        if ($reservation->user) {
-            $reservation->user->notify(new ReservationStatusChanged($reservation));
-        }
+        $reservationNotifications->notifyBorrower($reservation);
 
         return back()->with('status', 'Reservation approved successfully.');
     }
 
-    public function reject(Request $request, Reservation $reservation)
+    public function reject(
+        Request $request,
+        Reservation $reservation,
+        ReservationNotificationDispatcher $reservationNotifications
+    )
     {
         // Mark the reservation as rejected and let the user know
         $this->requireAdmin();
@@ -367,9 +374,7 @@ class AdminController extends Controller
             'details' => $request->input('remarks', 'Reservation rejected by admin'),
         ]);
 
-        if ($reservation->user) {
-            $reservation->user->notify(new ReservationStatusChanged($reservation));
-        }
+        $reservationNotifications->notifyBorrower($reservation);
 
         return back()->with('status', 'Reservation rejected successfully.');
     }

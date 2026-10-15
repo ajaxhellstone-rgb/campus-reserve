@@ -6,6 +6,7 @@ use App\Models\Facility;
 use App\Models\FacilityItem;
 use App\Models\Reservation;
 use App\Models\User;
+use App\Notifications\ReservationStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -84,6 +85,10 @@ class PropertyReservationTest extends TestCase
 
         $reservation = Reservation::firstOrFail();
         $this->assertSame('pending', $reservation->status);
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_id' => $user->id,
+            'type' => ReservationStatusChanged::class,
+        ]);
         $this->assertDatabaseHas('reservation_items', [
             'reservation_id' => $reservation->id,
             'facility_item_id' => $item->id,

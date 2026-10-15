@@ -8,6 +8,7 @@ use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use App\Services\FacilityItemAvailability;
+use App\Services\ReservationNotificationDispatcher;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,8 +30,11 @@ class ChatbotController extends Controller
         return response()->json(['success' => true]);
     }
 
-    public function respond(Request $request, FacilityItemAvailability $itemAvailability): JsonResponse
-    {
+    public function respond(
+        Request $request,
+        FacilityItemAvailability $itemAvailability,
+        ReservationNotificationDispatcher $reservationNotifications
+    ): JsonResponse {
         $message = trim((string) $request->input('message'));
         $normalized = $this->normalizeMessage($message);
 
@@ -212,6 +216,7 @@ class ChatbotController extends Controller
                 ->get();
             $reservation->load(['facility', 'user', 'items']);
             Notification::send($admins, new ReservationPendingApproval($reservation));
+            $reservationNotifications->notifyBorrower($reservation);
             session()->forget('chatbot_reservation');
             session([
                 'chatbot_last_action' => 'reservation_submitted',

@@ -5,6 +5,7 @@ use App\Models\Facility;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
+use App\Services\ReservationNotificationDispatcher;
 use Illuminate\Support\Facades\Notification;
 
 // Calendar management subpage (not in navbar)
@@ -157,7 +158,11 @@ Route::middleware('auth')->group(function () {
         return view('reservations.edit', compact('reservation', 'facilities'));
     })->name('reservations.edit');
 
-    Route::put('/reserve/reservations/{reservation}', function (Illuminate\Http\Request $request, Reservation $reservation) {
+    Route::put('/reserve/reservations/{reservation}', function (
+        Illuminate\Http\Request $request,
+        Reservation $reservation,
+        ReservationNotificationDispatcher $reservationNotifications
+    ) {
         $reservation = Reservation::where('user_id', auth()->id())->findOrFail($reservation->id);
 
         $request->validate([
@@ -192,6 +197,7 @@ Route::middleware('auth')->group(function () {
             ->orWhere('is_super_admin', true)
             ->get();
         Notification::send($admins, new ReservationPendingApproval($reservation));
+        $reservationNotifications->notifyBorrower($reservation);
 
         return redirect()->route('reserve')->with('success', 'Reservation updated and resubmitted for approval.');
     })->name('reservations.update');

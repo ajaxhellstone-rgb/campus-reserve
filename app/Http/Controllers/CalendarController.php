@@ -9,6 +9,7 @@ use App\Models\FacilityItem;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use App\Services\FacilityItemAvailability;
+use App\Services\ReservationNotificationDispatcher;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -57,7 +58,11 @@ class CalendarController extends Controller
     }
 
     // Save a new reservation to the database
-    public function store(Request $request, FacilityItemAvailability $itemAvailability)
+    public function store(
+        Request $request,
+        FacilityItemAvailability $itemAvailability,
+        ReservationNotificationDispatcher $reservationNotifications
+    )
     {
         // First, I validate that all the required info is provided
         // Then I check if the room is actually available at that time
@@ -151,6 +156,7 @@ class CalendarController extends Controller
             ->get();
 
         Notification::send($admins, new ReservationPendingApproval($reservation));
+        $reservationNotifications->notifyBorrower($reservation);
 
         return response()->json(['success' => true, 'reservation' => $reservation]);
     }
