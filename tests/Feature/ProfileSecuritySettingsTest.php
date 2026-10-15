@@ -3,11 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Notifications\PasswordResetLink;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\SendQueuedNotifications;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use OTPHP\TOTP;
 use Tests\TestCase;
@@ -26,8 +26,11 @@ class ProfileSecuritySettingsTest extends TestCase
             ->assertSee('function syncPhoneFieldsToForm()', false)
             ->assertSee('open-password-modal', false)
             ->assertSee('Forgot password?', false)
+            ->assertSee('Resend email', false)
+            ->assertSee('resend-password-reset-link', false)
             ->assertSee('generate-authenticator-qr', false)
             ->assertSee('authenticator_otp', false)
+            ->assertSee('AbortSignal.timeout(20000)', false)
             ->assertDontSee('name="setup_current_password" required', false)
             ->assertDontSee('name="authenticator_otp" required', false)
             ->assertSee('Finish authenticator setup and verify a code', false)
@@ -79,15 +82,7 @@ class ProfileSecuritySettingsTest extends TestCase
 
     public function test_authenticated_user_can_request_password_reset_link_to_account_email(): void
     {
-        Mail::shouldReceive('raw')
-            ->once()
-            ->withArgs(function (string $body, callable $callback): bool {
-                $message = new \Illuminate\Mail\Message(new \Symfony\Component\Mime\Email);
-                $callback($message);
-
-                return str_contains($body, '/reset-password/')
-                    && $message->getSymfonyMessage()->getTo()[0]->getAddress() === 'profile.user@example.com';
-            });
+        Queue::fake();
 
         $user = User::factory()->create([
             'email' => 'profile.user@example.com',
@@ -96,18 +91,36 @@ class ProfileSecuritySettingsTest extends TestCase
         $this->actingAs($user)
             ->postJson(route('profile.password.reset-link'))
             ->assertOk()
-            ->assertJsonPath('status', 'A password reset link was sent to your account email address.');
+            ->assertJsonPath('status', 'A password reset email was queued for your account address. Check your inbox and spam folder shortly.');
 
         $this->assertDatabaseHas('password_reset_tokens', [
             'email' => 'profile.user@example.com',
         ]);
 
-        $this->assertNotEmpty(DB::table('password_reset_tokens')->where('email', 'profile.user@example.com')->value('token'));
+        Queue::assertPushed(SendQueuedNotifications::class, function (SendQueuedNotifications $job): bool {
+            return $job->notification instanceof PasswordResetLink
+                && str_contains($job->notification->resetUrl, '/reset-password/')
+                && str_contains($job->notification->resetUrl, 'email=profile.user%40example.com');
+        });
+        $notification = Queue::pushed(SendQueuedNotifications::class)[0]->notification;
+        parse_str((string) parse_url($notification->resetUrl, PHP_URL_QUERY), $link);
+        $link['token'] = basename((string) parse_url($notification->resetUrl, PHP_URL_PATH));
+        $tokenHash = DB::table('password_reset_tokens')->where('email', 'profile.user@example.com')->value('token');
+        $this->assertNotEmpty($tokenHash);
+        $this->assertTrue(Hash::check($link['token'], $tokenHash));
 
-        $this->get(route('password.reset', [
-            'token' => 'reset-token',
+        $this->get($notification->resetUrl)->assertOk();
+        $this->post(route('password.update'), [
+            'email' => $link['email'],
+            'token' => $link['token'],
+            'password' => 'ResetPass2!',
+            'password_confirmation' => 'ResetPass2!',
+        ])->assertRedirect(route('login'));
+
+        $this->assertTrue(Hash::check('ResetPass2!', $user->fresh()->password));
+        $this->assertDatabaseMissing('password_reset_tokens', [
             'email' => 'profile.user@example.com',
-        ]))->assertOk();
+        ]);
     }
 
     public function test_authenticator_setup_is_enabled_only_after_valid_code_is_saved(): void

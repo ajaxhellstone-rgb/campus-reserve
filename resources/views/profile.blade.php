@@ -295,7 +295,10 @@
                 <span class="text-sm font-semibold text-gray-900">Current password</span>
                 <input id="password-modal-current" form="profile-settings-form" type="password" name="current_password" class="mt-2 w-full rounded-3xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black" autocomplete="current-password">
                 <button type="button" id="forgot-password-link" class="mt-2 text-sm font-medium text-blue-700 hover:underline">Forgot password?</button>
-                <p id="forgot-password-status" class="mt-2 hidden text-sm" role="status" aria-live="polite"></p>
+                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <p id="forgot-password-status" class="hidden flex-1 text-sm" role="status" aria-live="polite"></p>
+                    <button type="button" id="resend-password-reset-link" class="hidden text-sm font-medium text-blue-700 hover:underline">Resend email</button>
+                </div>
             </label>
             <label class="block">
                 <span class="text-sm font-semibold text-gray-900">New password</span>
@@ -598,14 +601,22 @@
             resetPasswordVisibility();
         });
 
-        document.getElementById('forgot-password-link')?.addEventListener('click', async function() {
-            const button = this;
-            const status = document.getElementById('forgot-password-status');
-            button.disabled = true;
-            button.textContent = 'Sending reset link...';
+        const forgotPasswordButton = document.getElementById('forgot-password-link');
+        const resendPasswordResetButton = document.getElementById('resend-password-reset-link');
+        const forgotPasswordStatus = document.getElementById('forgot-password-status');
+
+        async function requestPasswordResetEmail(isResend) {
+            const activeButton = isResend ? resendPasswordResetButton : forgotPasswordButton;
+            const status = forgotPasswordStatus;
+            const originalText = activeButton.textContent;
+            forgotPasswordButton.disabled = true;
+            resendPasswordResetButton.disabled = true;
+            activeButton.textContent = isResend ? 'Resending...' : 'Sending reset link...';
             status.classList.remove('hidden');
-            status.textContent = 'Sending a secure password reset link to your account email...';
-            status.className = 'mt-2 text-sm text-gray-600';
+            status.textContent = isResend
+                ? 'Queuing another password reset email...'
+                : 'Queuing a secure password reset email to your account address...';
+            status.className = 'flex-1 text-sm text-gray-600';
 
             try {
                 const response = await fetch('{{ route('profile.password.reset-link') }}', {
@@ -615,6 +626,7 @@
                         'X-CSRF-TOKEN': profileSettingsForm.querySelector('input[name="_token"]').value,
                     },
                     credentials: 'same-origin',
+                    signal: AbortSignal.timeout(20000),
                 });
                 const data = await response.json();
 
@@ -622,15 +634,29 @@
                     throw new Error(data.message || 'Unable to send the reset link. Please try again shortly.');
                 }
 
-                status.textContent = data.status || 'A password reset link was sent to your account email address.';
-                status.className = 'mt-2 text-sm text-emerald-700';
+                status.textContent = isResend
+                    ? 'Another password reset email was queued. Check your inbox and spam folder.'
+                    : data.status;
+                status.className = 'flex-1 text-sm text-emerald-700';
+                resendPasswordResetButton.classList.remove('hidden');
             } catch (error) {
-                status.textContent = error.message;
-                status.className = 'mt-2 text-sm text-red-600';
+                status.textContent = error.name === 'TimeoutError' || error.name === 'AbortError'
+                    ? 'The request timed out. The server did not confirm that a reset email was queued. Please try again, or contact an administrator.'
+                    : error.message;
+                status.className = 'flex-1 text-sm text-red-600';
             } finally {
-                button.disabled = false;
-                button.textContent = 'Forgot password?';
+                forgotPasswordButton.disabled = false;
+                resendPasswordResetButton.disabled = false;
+                activeButton.textContent = originalText;
             }
+        }
+
+        forgotPasswordButton?.addEventListener('click', function() {
+            requestPasswordResetEmail(false);
+        });
+
+        resendPasswordResetButton?.addEventListener('click', function() {
+            requestPasswordResetEmail(true);
         });
 
         document.getElementById('save-password-modal')?.addEventListener('click', async function() {

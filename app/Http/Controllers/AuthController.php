@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Otp;
 use App\Models\User;
 use App\Notifications\PasswordChanged;
+use App\Notifications\PasswordResetLink;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\SvgWriter;
 use GuzzleHttp\Client;
@@ -63,7 +64,7 @@ class AuthController extends Controller
         $this->sendPasswordResetLinkToEmail(strtolower($user->email));
 
         return response()->json([
-            'status' => 'A password reset link was sent to your account email address.',
+            'status' => 'A password reset email was queued for your account address. Check your inbox and spam folder shortly.',
         ]);
     }
 
@@ -76,9 +77,8 @@ class AuthController extends Controller
         );
 
         $resetUrl = route('password.reset', ['token' => $token, 'email' => $email]);
-        Mail::raw("Reset your Campus Reserve password using this link:\n\n{$resetUrl}\n\nThis link expires in 60 minutes. If you did not request a reset, ignore this email.", function ($message) use ($email): void {
-            $message->to($email)->subject('Reset your Campus Reserve password');
-        });
+        $user = User::where('email_hash', hash('sha256', $email))->firstOrFail();
+        $user->notify(new PasswordResetLink($resetUrl));
     }
 
     public function showResetPassword(Request $request, string $token)
