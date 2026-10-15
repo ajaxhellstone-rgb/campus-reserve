@@ -26,5 +26,8 @@ return [
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URL', env('APP_URL').'/auth/google/callback'),
     ],
-];
 
+    'resend' => [
+        'key' => env('RESEND_KEY'),
+    ],
+];

@@ -16,6 +16,11 @@ return [
             'local_domain' => env('MAIL_EHLO_DOMAIN'),
         ],
 
+        'resend' => [
+            'transport' => 'resend',
+            'key' => env('RESEND_KEY'),
+        ],
+
         'log' => [
             'transport' => 'log',
             'channel' => env('MAIL_LOG_CHANNEL'),
