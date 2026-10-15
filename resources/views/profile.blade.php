@@ -211,7 +211,7 @@
                                             <p class="text-sm font-semibold text-blue-900">Use an authenticator app</p>
                                             <p class="mt-1 text-sm text-blue-800">Set up Google Authenticator or Microsoft Authenticator to generate login codes.</p>
                                             <div class="mt-4 flex flex-col gap-3 sm:flex-row">
-                                                <input id="setup-current-password" type="password" name="setup_current_password" class="w-full rounded-3xl border border-blue-200 bg-white px-4 py-3 text-sm" placeholder="Current password">
+                                                <input id="setup-current-password" type="password" name="setup_current_password" class="w-full rounded-3xl border border-blue-200 bg-white px-4 py-3 text-sm" placeholder="Current password" autocomplete="current-password">
                                                 <button type="button" id="generate-authenticator-qr" class="rounded-md bg-black px-5 py-3 text-sm font-semibold whitespace-nowrap text-white hover:bg-gray-800">Generate QR code</button>
                                                 <button type="button" id="cancel-authenticator-setup" class="rounded-md bg-red-600 px-5 py-3 text-sm font-semibold whitespace-nowrap text-white hover:bg-red-700">Cancel</button>
                                             </div>
@@ -223,7 +223,7 @@
                                             <img id="authenticator-qr-image" src="{{ session('authenticator_setup_qr') }}" alt="Authenticator setup QR code" class="mt-3 h-48 w-48 bg-white p-2">
                                             <p class="mt-3 text-sm text-emerald-900">Manual setup key: <strong id="authenticator-secret">{{ session('authenticator_setup_secret') }}</strong></p>
                                             <div class="mt-4 flex flex-col gap-3 sm:flex-row">
-                                                <input type="text" name="authenticator_otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" class="w-full rounded-3xl border border-emerald-200 bg-white px-4 py-3 text-sm" placeholder="6-digit authenticator code">
+                                                <input type="text" name="authenticator_otp" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" class="w-full rounded-3xl border border-emerald-200 bg-white px-4 py-3 text-sm" placeholder="6-digit authenticator code" autocomplete="one-time-code">
                                                 <button type="submit" formaction="{{ route('profile.2fa.confirm') }}" formmethod="POST" class="rounded-full bg-emerald-700 px-5 py-3 text-sm font-semibold text-white">Save authenticator</button>
                                             </div>
                                             @error('authenticator_otp')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -441,7 +441,7 @@
             const isEnabling = this.checked && {{ auth()->user()->two_fa_enabled ? 'false' : 'true' }};
             authenticatorSetupPanel?.classList.toggle('hidden', !isEnabling);
             if (setupCurrentPassword) {
-                setupCurrentPassword.required = isEnabling;
+                setupCurrentPassword.required = false;
             }
 
             if (isEnabling) {
@@ -512,7 +512,8 @@
                 document.getElementById('authenticator-secret').textContent = data.authenticator_setup_secret;
                 document.getElementById('authenticator-qr-result').classList.remove('hidden');
                 const authenticatorOtpInput = document.querySelector('input[name="authenticator_otp"]');
-                authenticatorOtpInput.required = true;
+                authenticatorOtpInput.required = false;
+                setupCurrentPassword.value = '';
                 authenticatorOtpInput.focus();
             } catch (error) {
                 setupError.textContent = error.message;
@@ -533,6 +534,7 @@
                 authenticatorOtpInput.value = '';
                 authenticatorOtpInput.required = false;
             }
+            document.getElementById('authenticator-setup-error')?.classList.add('hidden');
             document.getElementById('authenticator-qr-result')?.classList.add('hidden');
         });
 
@@ -550,8 +552,14 @@
             if (!isAuthenticatorAction && !{{ auth()->user()->two_fa_enabled ? 'true' : 'false' }} && twoFactorToggle.checked) {
                 event.preventDefault();
                 authenticatorSetupPanel?.classList.remove('hidden');
-                setupCurrentPassword.required = true;
-                setupCurrentPassword?.focus();
+                const setupError = document.getElementById('authenticator-setup-error');
+                setupError.textContent = 'Finish authenticator setup and verify a code before enabling two-factor authentication. Your other profile settings have not been saved yet.';
+                setupError.classList.remove('hidden');
+                if (document.getElementById('authenticator-qr-result').classList.contains('hidden')) {
+                    setupCurrentPassword?.focus();
+                } else {
+                    document.querySelector('input[name="authenticator_otp"]')?.focus();
+                }
                 return;
             }
 
@@ -609,86 +617,64 @@
                 return;
             }
 
+            if ({{ auth()->user()->two_fa_enabled ? 'true' : 'false' }}) {
+                passwordModal.classList.add('hidden');
+                passwordModal.classList.remove('flex');
+                passwordTwoFactorModal.classList.remove('hidden');
+                passwordTwoFactorModal.classList.add('flex');
+                passwordTwoFactorAttempts.textContent = 'You have 3 attempts remaining.';
+                passwordAuthenticatorCode.focus();
+                return;
+            }
+
             this.disabled = true;
-            this.textContent = 'Checking...';
+            this.textContent = 'Saving...';
+
             try {
-                const response = await fetch('{{ route('profile.password.verify') }}', {
+                const response = await fetch(profileSettingsForm.action, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
                         'X-CSRF-TOKEN': profileSettingsForm.querySelector('input[name="_token"]').value,
                     },
-                    body: new URLSearchParams({ current_password: passwordModalCurrent.value }),
+                    body: new FormData(profileSettingsForm),
                     credentials: 'same-origin',
                 });
                 const data = await response.json();
+
                 if (!response.ok) {
-                    passwordModalError.textContent = data.message || 'The current password is incorrect.';
-                    passwordModalError.classList.remove('hidden');
-                    passwordModalCurrent.focus();
-                    return;
+                    if (data.errors?.current_password) {
+                        passwordModalError.textContent = data.errors.current_password[0];
+                        passwordModalError.classList.remove('hidden');
+                        passwordModalCurrent.focus();
+                        return;
+                    }
+
+                    throw new Error(data.errors?.password?.[0] || data.message || 'Unable to change password.');
+                }
+
+                passwordModal.classList.add('hidden');
+                passwordModal.classList.remove('flex');
+                passwordModalCurrent.value = '';
+                passwordModalNew.value = '';
+                passwordModalConfirm.value = '';
+                resetPasswordVisibility();
+                const profileStatus = document.getElementById('profile-status');
+                if (profileStatus) {
+                    profileStatus.textContent = data.status || 'Password changed successfully.';
+                    profileStatus.classList.remove('hidden');
+                }
+                if (data.password_changed) {
+                    document.getElementById('password-change-alert')?.classList.remove('hidden');
                 }
             } catch (error) {
-                passwordModalError.textContent = 'Unable to verify the current password. Please try again.';
+                passwordModalError.textContent = error.message;
                 passwordModalError.classList.remove('hidden');
-                return;
             } finally {
                 this.disabled = false;
                 this.textContent = 'Save password';
             }
-
-            if (!{{ auth()->user()->two_fa_enabled ? 'true' : 'false' }}) {
-                this.disabled = true;
-                this.textContent = 'Saving...';
-
-                try {
-                    const response = await fetch(profileSettingsForm.action, {
-                        method: 'POST',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRF-TOKEN': profileSettingsForm.querySelector('input[name="_token"]').value,
-                        },
-                        body: new FormData(profileSettingsForm),
-                        credentials: 'same-origin',
-                    });
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(data.errors?.password?.[0] || data.errors?.current_password?.[0] || data.message || 'Unable to change password.');
-                    }
-
-                    passwordModal.classList.add('hidden');
-                    passwordModal.classList.remove('flex');
-                    passwordModalCurrent.value = '';
-                    passwordModalNew.value = '';
-                    passwordModalConfirm.value = '';
-                    const profileStatus = document.getElementById('profile-status');
-                    if (profileStatus) {
-                        profileStatus.textContent = data.status || 'Password changed successfully.';
-                        profileStatus.classList.remove('hidden');
-                    }
-                    if (data.password_changed) {
-                        document.getElementById('password-change-alert')?.classList.remove('hidden');
-                    }
-                } catch (error) {
-                    passwordModalError.textContent = error.message;
-                    passwordModalError.classList.remove('hidden');
-                } finally {
-                    this.disabled = false;
-                    this.textContent = 'Save password';
-                }
-
-                return;
-            }
-
-            passwordModal.classList.add('hidden');
-            passwordModal.classList.remove('flex');
-            passwordTwoFactorModal.classList.remove('hidden');
-            passwordTwoFactorModal.classList.add('flex');
-            passwordTwoFactorAttempts.textContent = 'You have 3 attempts remaining.';
-            passwordAuthenticatorCode.focus();
         });
 
         document.getElementById('confirm-password-2fa')?.addEventListener('click', async function() {
@@ -701,7 +687,7 @@
 
             passwordTwoFactorOtp.value = passwordAuthenticatorCode.value;
             this.disabled = true;
-            this.textContent = 'Checking...';
+            this.textContent = 'Saving...';
 
             try {
                 const response = await fetch(profileSettingsForm.action, {
@@ -724,6 +710,16 @@
                     return;
                 }
                 if (!response.ok) {
+                    if (data.errors?.current_password) {
+                        passwordTwoFactorModal.classList.add('hidden');
+                        passwordTwoFactorModal.classList.remove('flex');
+                        passwordModal.classList.remove('hidden');
+                        passwordModal.classList.add('flex');
+                        passwordModalError.textContent = data.errors.current_password[0];
+                        passwordModalError.classList.remove('hidden');
+                        passwordModalCurrent.focus();
+                        return;
+                    }
                     if (data.errors?.password) {
                         passwordTwoFactorModal.classList.add('hidden');
                         passwordTwoFactorModal.classList.remove('flex');
