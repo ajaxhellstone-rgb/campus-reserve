@@ -76,8 +76,6 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
     Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.request');
     Route::post('/forgot-password', [AuthController::class, 'sendPasswordResetLink'])->name('password.email')->middleware('throttle:5,1');
-    Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
-    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update')->middleware('throttle:5,1');
 
     // Register
     Route::get('/signup', [AuthController::class, 'showRegister'])->name('register');
@@ -87,6 +85,9 @@ Route::middleware('guest')->group(function () {
     Route::get('/auth/google', [AuthController::class, 'redirectToGoogle'])->name('auth.google');
     Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 });
+
+Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.update')->middleware('throttle:5,1');
 
 // Admin secret login
 Route::middleware('guest')->group(function () {
@@ -241,6 +242,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [AuthController::class, 'showProfile'])->name('profile.show');
     Route::post('/profile/picture', [AuthController::class, 'uploadProfilePicture'])->name('profile.picture.upload');
     Route::post('/profile/password/verify', [AuthController::class, 'verifyCurrentPassword'])->name('profile.password.verify');
+    Route::post('/profile/password/reset-link', [AuthController::class, 'sendAuthenticatedPasswordResetLink'])
+        ->name('profile.password.reset-link')
+        ->middleware('throttle:3,1');
     Route::post('/profile/email-notifications', [AuthController::class, 'updateEmailNotifications'])
         ->name('profile.email-notifications.update');
     Route::post('/profile', [AuthController::class, 'updateProfile'])->name('profile.update');

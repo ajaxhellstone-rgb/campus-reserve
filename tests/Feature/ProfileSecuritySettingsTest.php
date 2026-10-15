@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\SendQueuedNotifications;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use OTPHP\TOTP;
 use Tests\TestCase;
@@ -23,6 +25,7 @@ class ProfileSecuritySettingsTest extends TestCase
             ->assertOk()
             ->assertSee('function syncPhoneFieldsToForm()', false)
             ->assertSee('open-password-modal', false)
+            ->assertSee('Forgot password?', false)
             ->assertSee('generate-authenticator-qr', false)
             ->assertSee('authenticator_otp', false)
             ->assertDontSee('name="setup_current_password" required', false)
@@ -72,6 +75,39 @@ class ProfileSecuritySettingsTest extends TestCase
 
         $this->assertFalse($user->fresh()->two_fa_enabled);
         $this->assertNotEmpty(session('pending_authenticator_secret'));
+    }
+
+    public function test_authenticated_user_can_request_password_reset_link_to_account_email(): void
+    {
+        Mail::shouldReceive('raw')
+            ->once()
+            ->withArgs(function (string $body, callable $callback): bool {
+                $message = new \Illuminate\Mail\Message(new \Symfony\Component\Mime\Email);
+                $callback($message);
+
+                return str_contains($body, '/reset-password/')
+                    && $message->getSymfonyMessage()->getTo()[0]->getAddress() === 'profile.user@example.com';
+            });
+
+        $user = User::factory()->create([
+            'email' => 'profile.user@example.com',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('profile.password.reset-link'))
+            ->assertOk()
+            ->assertJsonPath('status', 'A password reset link was sent to your account email address.');
+
+        $this->assertDatabaseHas('password_reset_tokens', [
+            'email' => 'profile.user@example.com',
+        ]);
+
+        $this->assertNotEmpty(DB::table('password_reset_tokens')->where('email', 'profile.user@example.com')->value('token'));
+
+        $this->get(route('password.reset', [
+            'token' => 'reset-token',
+            'email' => 'profile.user@example.com',
+        ]))->assertOk();
     }
 
     public function test_authenticator_setup_is_enabled_only_after_valid_code_is_saved(): void

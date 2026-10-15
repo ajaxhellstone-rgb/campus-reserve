@@ -51,19 +51,34 @@ class AuthController extends Controller
         $user = User::where('email_hash', hash('sha256', $email))->first();
 
         if ($user) {
-            $token = Str::random(64);
-            DB::table('password_reset_tokens')->updateOrInsert(
-                ['email' => $email],
-                ['token' => Hash::make($token), 'created_at' => now()]
-            );
-
-            $resetUrl = route('password.reset', ['token' => $token, 'email' => $email]);
-            Mail::raw("Reset your Campus Reserve password using this link:\n\n{$resetUrl}\n\nThis link expires in 60 minutes. If you did not request a reset, ignore this email.", function ($message) use ($email): void {
-                $message->to($email)->subject('Reset your Campus Reserve password');
-            });
+            $this->sendPasswordResetLinkToEmail($email);
         }
 
         return back()->with('status', 'If an account exists for that email, a password reset link has been sent.');
+    }
+
+    public function sendAuthenticatedPasswordResetLink(Request $request)
+    {
+        $user = Auth::user();
+        $this->sendPasswordResetLinkToEmail(strtolower($user->email));
+
+        return response()->json([
+            'status' => 'A password reset link was sent to your account email address.',
+        ]);
+    }
+
+    private function sendPasswordResetLinkToEmail(string $email): void
+    {
+        $token = Str::random(64);
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $email],
+            ['token' => Hash::make($token), 'created_at' => now()]
+        );
+
+        $resetUrl = route('password.reset', ['token' => $token, 'email' => $email]);
+        Mail::raw("Reset your Campus Reserve password using this link:\n\n{$resetUrl}\n\nThis link expires in 60 minutes. If you did not request a reset, ignore this email.", function ($message) use ($email): void {
+            $message->to($email)->subject('Reset your Campus Reserve password');
+        });
     }
 
     public function showResetPassword(Request $request, string $token)
