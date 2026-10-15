@@ -125,9 +125,23 @@ Route::middleware('auth')->group(function () {
                 || $reservation->reservation_date < now()->toDateString();
         })->count();
 
+        $borrowedItemCount = $reservations
+            ->where('status', 'approved')
+            ->sum(fn ($reservation) => $reservation->items->sum(fn ($item) => $item->pivot->quantity));
+        $returnedItemCount = $reservations
+            ->where('status', 'completed')
+            ->sum(fn ($reservation) => $reservation->items->sum(fn ($item) => $item->pivot->quantity));
+
         $facilities = Facility::active()->with('items')->orderBy('name')->get();
 
-        return view('reserve', compact('reservations', 'upcomingCount', 'completedCount', 'facilities'));
+        return view('reserve', compact(
+            'reservations',
+            'upcomingCount',
+            'completedCount',
+            'borrowedItemCount',
+            'returnedItemCount',
+            'facilities'
+        ));
     })->name('reserve');
 
     Route::get('/reserve/reservations/{reservation}/edit', function (Reservation $reservation) {

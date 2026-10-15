@@ -33,6 +33,31 @@ class PropertyReservationTest extends TestCase
             ->assertSee('Reserve Items');
     }
 
+    public function test_reserve_page_shows_property_item_quantity_statistics(): void
+    {
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        $item = FacilityItem::create([
+            'facility_id' => $facility->id,
+            'name' => 'Projector',
+            'quantity' => 5,
+        ]);
+
+        $borrowed = $this->createReservation($user, $facility, 'approved', '10:00', '12:00');
+        $borrowed->items()->attach($item, ['quantity' => 2]);
+        $returned = $this->createReservation($user, $facility, 'completed', '12:00', '13:00');
+        $returned->items()->attach($item, ['quantity' => 3]);
+        $pending = $this->createReservation($user, $facility, 'pending', '13:00', '14:00');
+        $pending->items()->attach($item, ['quantity' => 1]);
+
+        $this->actingAs($user)
+            ->get(route('reserve'))
+            ->assertOk()
+            ->assertSee('Borrowed Items')
+            ->assertSee('Returned Items')
+            ->assertSeeInOrder(['Borrowed Items', '2</p>', 'Returned Items', '3</p>']);
+    }
+
     public function test_user_can_reserve_facility_items_with_date_and_time(): void
     {
         $user = User::factory()->create();

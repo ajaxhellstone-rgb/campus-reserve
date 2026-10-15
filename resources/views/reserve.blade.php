@@ -51,7 +51,7 @@
 
         <!-- Quick Stats -->
         <!-- Summary cards showing the user's reservation and facility counts. -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div id="facility-reservation-statistics" data-reservation-statistics="facility" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <div class="flex items-center">
                     <div class="p-3 bg-blue-100 rounded-lg">
@@ -94,6 +94,34 @@
                 </div>
             </div>
 
+        </div>
+        <div id="property-reservation-statistics" data-reservation-statistics="property" class="hidden grid grid-cols-1 gap-6 mb-8 sm:grid-cols-2" hidden>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <div class="flex items-center">
+                    <div class="p-3 bg-amber-100 rounded-lg">
+                        <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Borrowed Items</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $borrowedItemCount ?? 0 }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <div class="flex items-center">
+                    <div class="p-3 bg-green-100 rounded-lg">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-gray-600">Returned Items</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ $returnedItemCount ?? 0 }}</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Facility and property reservation tabs -->
@@ -342,6 +370,10 @@
             facility: document.getElementById('facility-reservation-panel'),
             property: document.getElementById('property-reservation-panel'),
         };
+        const tabStatistics = {
+            facility: document.getElementById('facility-reservation-statistics'),
+            property: document.getElementById('property-reservation-statistics'),
+        };
 
         function selectReservationTab(tabName) {
             tabButtons.forEach((button) => {
@@ -357,6 +389,12 @@
                 const selected = name === tabName;
                 panel.hidden = !selected;
                 panel.classList.toggle('hidden', !selected);
+            });
+
+            Object.entries(tabStatistics).forEach(([name, statistics]) => {
+                const selected = name === tabName;
+                statistics.hidden = !selected;
+                statistics.classList.toggle('hidden', !selected);
             });
         }
 
