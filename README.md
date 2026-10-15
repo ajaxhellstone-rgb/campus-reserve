@@ -56,9 +56,9 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 ## Render demo deployment
 
-This repository includes a Render Blueprint (`render.yaml`) and Dockerfile. In Render, create a new Blueprint and connect `ajaxhellstone-rgb/campus-reserve` on the `main` branch. The Blueprint creates a free web service and a free PostgreSQL database; database migrations run when the container starts. The container adapts Render's generated 256-bit `APP_KEY` to Laravel's expected format and connects to PostgreSQL on port 5432.
+This repository includes a Render Blueprint (`render.yaml`) and Dockerfile. In Render, create a new Blueprint and connect `ajaxhellstone-rgb/campus-reserve` on the `main` branch. The web service must be configured with the intended PostgreSQL connection (`DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSLMODE`) and the same Laravel `APP_KEY` used to encrypt existing user data. These values are intentionally not synchronized from the Blueprint. Database migrations run when the container starts.
 
-This configuration is for a demo only. Render's free web service can sleep, its filesystem is temporary (including profile picture uploads), and the free PostgreSQL database expires 30 days after creation. Upgrade the database before that deadline to retain its data. Add Google OAuth credentials in the Render environment to enable Google sign-in. Email is logged, not delivered, by default, so email OTP and password-reset messages will not reach users unless you configure an email provider.
+The container runs Laravel's scheduler alongside Apache for due property-return reminders. Render's free web service can sleep, so scheduled reminders may be delayed until the service wakes; use an always-on service or external scheduler for punctual reminders. The filesystem is temporary (including profile picture uploads). Add Google OAuth credentials in the Render environment to enable Google sign-in. Email is logged, not delivered, by default, so email OTP and password-reset messages will not reach users unless you configure an email provider.
 
 ## License
 

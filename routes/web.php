@@ -1,25 +1,28 @@
 <?php
+
 // ...existing code...
-use App\Models\Reservation;
 use App\Models\Facility;
+use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use Illuminate\Support\Facades\Notification;
+
 // Calendar management subpage (not in navbar)
 Route::middleware('auth')->get('/calendar/manage', function () {
     return view('calendar-manage');
 });
-use App\Http\Controllers\FacilityController;
 use App\Http\Controllers\DebugController;
+use App\Http\Controllers\FacilityController;
+
 // API endpoint for facility dropdown
 Route::get('/api/facilities', [FacilityController::class, 'list']);
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\CredentialController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\ChatbotController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,8 +36,8 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-
 use App\Http\Controllers\CalendarController;
+
 // Static pages and protected views that require authentication.
 Route::middleware('auth')->group(function () {
     Route::post('/api/chatbot', [ChatbotController::class, 'respond'])->name('chatbot.respond');
@@ -171,7 +174,7 @@ Route::middleware('auth')->group(function () {
             return back()->withInput()->with('error', 'Property reservation items must remain assigned to their original facility. Cancel this reservation and create a new one to reserve items in another facility.');
         }
 
-        if (!$facility->isAvailable($request->reservation_date, $request->start_time, $request->end_time, $reservation->id)) {
+        if (! $facility->isAvailable($request->reservation_date, $request->start_time, $request->end_time, $reservation->id)) {
             return back()->withInput()->with('error', 'Selected time slot is unavailable. Please choose another slot.');
         }
 
@@ -242,6 +245,8 @@ Route::middleware('auth')->group(function () {
         ->name('notifications.unreadSummary');
     Route::post('/notifications/mark-read', [NotificationController::class, 'markAllRead'])->name('notifications.markRead');
     Route::post('/notifications/delete-selected', [NotificationController::class, 'destroySelected'])->name('notifications.destroySelected');
+    Route::post('/notifications/property-return/{reservation}', [NotificationController::class, 'respondToPropertyReturn'])
+        ->name('notifications.propertyReturn.respond');
 
     // Debug utility: simple developer decrypt page for Laravel encrypted strings.
     // Requires OTP verification for security.

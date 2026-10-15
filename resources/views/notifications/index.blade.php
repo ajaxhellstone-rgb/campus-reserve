@@ -28,33 +28,48 @@
             </div>
         </div>
 
+        @if(session('success'))
+            <div class="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900" role="status">
+                {{ session('success') }}
+            </div>
+        @elseif(session('error'))
+            <div class="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900" role="alert">
+                {{ session('error') }}
+            </div>
+        @elseif(session('info'))
+            <div class="mb-6 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sky-900" role="status">
+                {{ session('info') }}
+            </div>
+        @endif
+
         @if($notifications->isEmpty())
             <div class="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600 shadow-sm">
                 <p class="text-lg font-medium">No notifications yet.</p>
                 <p class="mt-2 text-sm">You will receive reservation approval or rejection updates here.</p>
             </div>
         @else
-            <form id="notificationsDeleteForm" method="POST" action="{{ route('notifications.destroySelected') }}">
+            <form id="notificationsDeleteForm" method="POST" action="{{ route('notifications.destroySelected') }}" class="hidden">
                 @csrf
-                <div class="space-y-4">
-                    @foreach($notifications as $notification)
-                        <div class="rounded-3xl border p-5 shadow-sm {{ is_null($notification->read_at) ? 'border-indigo-200 bg-white' : 'border-slate-200 bg-slate-50' }}">
-                            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                                @php $isApprovalRequest = $notification->type === \App\Notifications\ReservationPendingApproval::class; @endphp
-                                <div class="flex items-start gap-3">
-                                    <label class="inline-flex items-center">
-                                        <input type="checkbox" name="selected_notifications[]" value="{{ $notification->id }}" data-approval-request="{{ $isApprovalRequest ? '1' : '0' }}" class="notification-checkbox h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500">
-                                    </label>
-                                    <div>
-                                        <div class="flex items-center gap-2">
-                                            <p class="text-sm font-semibold text-slate-900">{{ $notification->data['title'] ?? 'Notification' }}</p>
-                                            @if($isApprovalRequest)
-                                                <span class="rounded-full bg-amber-100 px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-amber-900">Request</span>
-                                            @endif
-                                        </div>
-                                        <p class="mt-2 text-sm leading-6 text-slate-700">{{ $notification->data['message'] ?? '' }}</p>
+            </form>
+            <div class="space-y-4">
+                @foreach($notifications as $notification)
+                    <div class="rounded-3xl border p-5 shadow-sm {{ is_null($notification->read_at) ? 'border-indigo-200 bg-white' : 'border-slate-200 bg-slate-50' }}">
+                        @php $isApprovalRequest = $notification->type === \App\Notifications\ReservationPendingApproval::class; @endphp
+                        <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div class="flex items-start gap-3">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" form="notificationsDeleteForm" name="selected_notifications[]" value="{{ $notification->id }}" data-approval-request="{{ $isApprovalRequest ? '1' : '0' }}" class="notification-checkbox h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500">
+                                </label>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <p class="text-sm font-semibold text-slate-900">{{ $notification->data['title'] ?? 'Notification' }}</p>
+                                        @if($isApprovalRequest)
+                                            <span class="rounded-full bg-amber-100 px-2 py-1 text-[11px] uppercase tracking-[0.2em] text-amber-900">Request</span>
+                                        @endif
                                     </div>
+                                    <p class="mt-2 text-sm leading-6 text-slate-700">{{ $notification->data['message'] ?? '' }}</p>
                                 </div>
+                            </div>
                             <div class="flex flex-col items-start gap-2 text-right text-xs text-slate-500 md:items-end">
                                 <span>{{ $notification->created_at->diffForHumans() }}</span>
                                 @if(isset($notification->data['status']))
@@ -64,6 +79,28 @@
                                 @endif
                             </div>
                         </div>
+                        @if($notification->type === \App\Notifications\PropertyReturnDue::class && empty($notification->data['response']))
+                            <div class="mt-4 flex flex-wrap gap-3">
+                                <form method="POST" action="{{ route('notifications.propertyReturn.respond', $notification->data['reservation_id']) }}">
+                                    @csrf
+                                    <input type="hidden" name="notification_id" value="{{ $notification->id }}">
+                                    <button type="submit" name="response" value="returned" class="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800">
+                                        Yes, returned
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ route('notifications.propertyReturn.respond', $notification->data['reservation_id']) }}">
+                                    @csrf
+                                    <input type="hidden" name="notification_id" value="{{ $notification->id }}">
+                                    <button type="submit" name="response" value="not_returned" class="rounded-full border border-rose-300 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50">
+                                        No, not returned
+                                    </button>
+                                </form>
+                            </div>
+                        @elseif($notification->type === \App\Notifications\PropertyReturnDue::class && !empty($notification->data['response']))
+                            <p class="mt-4 text-sm font-medium text-slate-600">
+                                Your response: {{ $notification->data['response'] === 'returned' ? 'Items returned' : 'Items not returned' }}.
+                            </p>
+                        @endif
                         @if(!empty($notification->data['action_url']))
                             <div class="mt-4">
                                 <a href="{{ $notification->data['action_url'] }}" class="text-sm font-semibold text-indigo-600 transition hover:text-indigo-800">View details</a>
@@ -76,7 +113,6 @@
             <div class="mt-8">
                 {{ $notifications->links() }}
             </div>
-            </form>
         @endif
     </div>
 </div>
