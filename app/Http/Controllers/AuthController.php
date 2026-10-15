@@ -2,23 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use App\Models\Otp;
+use App\Models\User;
 use App\Notifications\PasswordChanged;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cookie;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Illuminate\Support\Carbon;
-use Laravel\Socialite\Facades\Socialite;
-use GuzzleHttp\Client;
-use OTPHP\TOTP;
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\SvgWriter;
+use GuzzleHttp\Client;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
+use OTPHP\TOTP;
 
 class AuthController extends Controller
 {
@@ -156,6 +156,7 @@ class AuthController extends Controller
             logger()->debug('Admin login user has 2FA disabled', ['user_id' => $user->id]);
             Auth::login($user);
             $request->session()->regenerate();
+
             return redirect('/admin/dashboard');
         }
 
@@ -206,7 +207,7 @@ class AuthController extends Controller
         $emailHash = hash('sha256', strtolower($request->email));
         $user = User::where('email_hash', $emailHash)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             logger()->debug('Login request failed credentials', [
                 'email' => $request->email,
                 'user_exists' => $user !== null,
@@ -234,7 +235,7 @@ class AuthController extends Controller
             return redirect('/reserve')->withCookie($this->refreshRememberDeviceCookie($user));
         }
 
-        if (!$user->two_fa_enabled) {
+        if (! $user->two_fa_enabled) {
             logger()->debug('Login user has 2FA disabled', ['user_id' => $user->id]);
             Auth::login($user);
             $request->session()->regenerate();
@@ -316,6 +317,7 @@ class AuthController extends Controller
                 'authenticator_2fa_attempts' => 0,
                 'two_fa_attempts_remaining' => 3,
             ]);
+
             return;
         }
 
@@ -390,7 +392,7 @@ class AuthController extends Controller
 
         $setup = [
             'authenticator_setup_uri' => $totp->getProvisioningUri(),
-            'authenticator_setup_qr' => (new SvgWriter())->write(new QrCode($totp->getProvisioningUri()))->getDataUri(),
+            'authenticator_setup_qr' => (new SvgWriter)->write(new QrCode($totp->getProvisioningUri()))->getDataUri(),
             'authenticator_setup_secret' => $totp->getSecret(),
         ];
 
@@ -417,7 +419,6 @@ class AuthController extends Controller
         return back()->with('status', 'Authenticator app 2FA is now enabled.');
     }
 
-    
     public function showProfile()
     {
         return view('profile');
@@ -434,6 +435,23 @@ class AuthController extends Controller
         }
 
         return response()->json(['valid' => true]);
+    }
+
+    public function updateEmailNotifications(Request $request)
+    {
+        $validated = $request->validate([
+            'email_notifications' => ['required', 'boolean'],
+        ]);
+
+        Auth::user()->update([
+            'email_notifications' => $validated['email_notifications'],
+        ]);
+
+        return response()->json([
+            'status' => $validated['email_notifications']
+                ? 'Email notifications enabled.'
+                : 'Email notifications disabled.',
+        ]);
     }
 
     public function updateProfile(Request $request)
@@ -474,10 +492,12 @@ class AuthController extends Controller
                 $attempts = (int) session('password_2fa_attempts', 0) + 1;
                 if ($attempts >= 3) {
                     session()->forget('password_2fa_attempts');
+
                     return response()->json(['message' => 'Too many invalid authenticator codes. Try again.'], 429);
                 }
 
                 session(['password_2fa_attempts' => $attempts]);
+
                 return response()->json(['message' => 'Invalid Authenticator Code', 'attempts_remaining' => 3 - $attempts], 422);
             }
 
@@ -527,6 +547,7 @@ class AuthController extends Controller
                 }
 
                 $user->update(['two_fa_enabled' => false]);
+
                 return back()->with('status', 'Two-factor authentication has been disabled.');
             }
 
@@ -557,7 +578,7 @@ class AuthController extends Controller
                 $data['phone'] = $request->phone;
             } else {
                 $countryCode = $request->country_code ?? '+63';
-                $data['phone'] = $countryCode . $request->phone;
+                $data['phone'] = $countryCode.$request->phone;
             }
         }
 
@@ -573,7 +594,7 @@ class AuthController extends Controller
 
         if ($isChangingPassword) {
             try {
-                $user->notify(new PasswordChanged());
+                $user->notify(new PasswordChanged);
             } catch (\Throwable $exception) {
                 logger()->error('Password change security email could not be sent.', [
                     'user_id' => $user->id,
@@ -746,7 +767,7 @@ class AuthController extends Controller
     public function show2faVerify(Request $request)
     {
         $userId = session('pending_2fa_user_id');
-        if (!$userId) {
+        if (! $userId) {
             return redirect('/login');
         }
 
@@ -764,6 +785,7 @@ class AuthController extends Controller
                 'show_2fa_modal',
                 'time_left',
             ]);
+
             return redirect('/login')->with('error', '2FA code expired. Please login again.');
         }
 
@@ -796,6 +818,7 @@ class AuthController extends Controller
                 if ($request->expectsJson()) {
                     return response()->json(['message' => 'Too many invalid authenticator codes. Please log in again.', 'redirect' => route('login')], 429);
                 }
+
                 return redirect()->route('login')->withErrors(['email' => 'Too many invalid authenticator codes. Please log in again.']);
             }
 
@@ -806,6 +829,7 @@ class AuthController extends Controller
                     if ($request->expectsJson()) {
                         return response()->json(['message' => 'Too many invalid authenticator codes. Please log in again.', 'redirect' => route('login')], 429);
                     }
+
                     return redirect()->route('login')->withErrors(['email' => 'Too many invalid authenticator codes. Please log in again.']);
                 }
 
@@ -816,6 +840,7 @@ class AuthController extends Controller
                 if ($request->expectsJson()) {
                     return response()->json(['message' => 'Invalid Authenticator Code', 'attempts_remaining' => 3 - $attempts], 422);
                 }
+
                 return back()->with(['show_2fa_modal' => true, 'two_fa_attempts_remaining' => 3 - $attempts])->withErrors(['otp' => 'Invalid Authenticator Code']);
             }
 
@@ -827,6 +852,7 @@ class AuthController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['redirect' => $redirectUrl ?? ($isAdminLogin ? url('/admin/dashboard') : url('/reserve'))]);
             }
+
             return redirect($redirectUrl ?? ($isAdminLogin ? '/admin/dashboard' : '/reserve'));
         }
 
@@ -855,6 +881,7 @@ class AuthController extends Controller
         }
 
         $otp->incrementAttempts();
+
         return back()->with([
             'show_2fa_modal' => true,
         ])->withErrors(['otp' => 'Invalid code. Try again.']);
@@ -873,6 +900,7 @@ class AuthController extends Controller
             if ($request->wantsJson()) {
                 return response()->json(['error' => 'Session expired. Login again.'], 440);
             }
+
             return redirect('/login')->with('error', 'Session expired. Login again.');
         }
 
@@ -915,7 +943,8 @@ class AuthController extends Controller
      */
     public function redirectToGoogle(Request $request)
     {
-        $redirectUrl = $request->getSchemeAndHttpHost() . '/auth/google/callback';
+        $redirectUrl = $request->getSchemeAndHttpHost().'/auth/google/callback';
+
         return Socialite::driver('google')
             ->redirectUrl($redirectUrl)
             ->redirect();
@@ -934,7 +963,8 @@ class AuthController extends Controller
                 ->user();
         } catch (\Exception $e) {
             // Record the error for debugging
-            \Log::error('Google OAuth Error: ' . $e->getMessage());
+            \Log::error('Google OAuth Error: '.$e->getMessage());
+
             return redirect('/login')->with('error', 'Failed to authenticate with Google.');
         }
 
@@ -943,7 +973,7 @@ class AuthController extends Controller
         $user = User::where('email_hash', $emailHash)->first();
 
         // New Google users complete the normal signup flow with their own password confirmation.
-        if (!$user) {
+        if (! $user) {
             session()->put('pending_google_signup', [
                 'name' => $googleUser->getName() ?: 'User',
                 'email' => $googleUser->getEmail(),
@@ -988,5 +1018,4 @@ class AuthController extends Controller
 
         return redirect('/reserve');
     }
-
 }

@@ -42,6 +42,28 @@ class ReservationEmailNotificationsTest extends TestCase
         $this->assertFalse($user->fresh()->email_notifications);
     }
 
+    public function test_email_notification_toggle_saves_immediately_without_submitting_the_profile_form(): void
+    {
+        $user = User::factory()->create(['email_notifications' => false]);
+
+        $this->actingAs($user)
+            ->postJson(route('profile.email-notifications.update'), [
+                'email_notifications' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'Email notifications enabled.');
+
+        $this->assertTrue($user->fresh()->email_notifications);
+
+        $this->postJson(route('profile.email-notifications.update'), [
+            'email_notifications' => false,
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'Email notifications disabled.');
+
+        $this->assertFalse($user->fresh()->email_notifications);
+    }
+
     public function test_reservation_update_notifications_use_database_only_when_email_is_disabled(): void
     {
         Notification::fake();

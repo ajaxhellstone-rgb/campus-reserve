@@ -241,6 +241,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [AuthController::class, 'showProfile'])->name('profile.show');
     Route::post('/profile/picture', [AuthController::class, 'uploadProfilePicture'])->name('profile.picture.upload');
     Route::post('/profile/password/verify', [AuthController::class, 'verifyCurrentPassword'])->name('profile.password.verify');
+    Route::post('/profile/email-notifications', [AuthController::class, 'updateEmailNotifications'])
+        ->name('profile.email-notifications.update');
     Route::post('/profile', [AuthController::class, 'updateProfile'])->name('profile.update');
     Route::view('/security/account-compromised', 'security.compromised')->name('security.compromised');
     Route::post('/profile/2fa/setup', [AuthController::class, 'setupAuthenticator'])->name('profile.2fa.setup');

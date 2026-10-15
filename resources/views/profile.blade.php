@@ -181,12 +181,13 @@
                             </div>
                             <div class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
                                 <label class="flex items-start gap-3">
-                                    <input type="checkbox" name="email_notifications" value="1" @checked(old('email_notifications', auth()->user()->email_notifications)) class="mt-1 rounded border-gray-300 text-black focus:ring-black" />
+                                    <input id="email-notifications-toggle" type="checkbox" name="email_notifications" value="1" @checked(old('email_notifications', auth()->user()->email_notifications)) class="mt-1 rounded border-gray-300 text-black focus:ring-black" />
                                     <span>
                                         <span class="block text-sm font-semibold text-gray-900">Email me about my reservations</span>
                                         <span class="mt-1 block text-sm text-gray-500">Receive an email when a reservation is submitted, approved, or denied. In-app notifications are always on.</span>
                                     </span>
                                 </label>
+                                <p id="email-notifications-status" class="mt-3 text-sm text-gray-600" role="status" aria-live="polite"></p>
                             </div>
                         </div>
 
@@ -325,6 +326,8 @@
         const setupCurrentPassword = document.getElementById('setup-current-password');
         const disableTwoFactorModal = document.getElementById('disable-2fa-modal');
         const profileSettingsForm = document.getElementById('profile-settings-form');
+        const emailNotificationsToggle = document.getElementById('email-notifications-toggle');
+        const emailNotificationsStatus = document.getElementById('email-notifications-status');
         const profilePictureInput = profileSettingsForm?.querySelector('input[name="profile_picture"]');
         const profilePictureUploadStatus = document.getElementById('profile-picture-upload-status');
         const disableCurrentPassword = document.getElementById('disable-current-password');
@@ -378,6 +381,41 @@
         const passwordRequirement = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+])[A-Za-z\d!@#$%^&*()_+]{5,30}$/;
         let passwordTwoFactorConfirmed = false;
         let disableConfirmed = false;
+
+        emailNotificationsToggle?.addEventListener('change', async function() {
+            const toggle = this;
+            const previousValue = !toggle.checked;
+            toggle.disabled = true;
+            emailNotificationsStatus.textContent = 'Saving preference...';
+            emailNotificationsStatus.className = 'mt-3 text-sm text-gray-600';
+
+            try {
+                const response = await fetch('{{ route('profile.email-notifications.update') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': profileSettingsForm.querySelector('input[name="_token"]').value,
+                    },
+                    body: JSON.stringify({ email_notifications: toggle.checked }),
+                    credentials: 'same-origin',
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.errors?.email_notifications?.[0] || data.message || 'Unable to save this preference.');
+                }
+
+                emailNotificationsStatus.textContent = data.status || 'Email notification preference saved.';
+                emailNotificationsStatus.className = 'mt-3 text-sm text-emerald-700';
+            } catch (error) {
+                toggle.checked = previousValue;
+                emailNotificationsStatus.textContent = `${error.message} Your previous setting has been restored.`;
+                emailNotificationsStatus.className = 'mt-3 text-sm text-red-600';
+            } finally {
+                toggle.disabled = false;
+            }
+        });
 
         document.querySelectorAll('[data-password-toggle]').forEach(function(toggle) {
             toggle.addEventListener('click', function() {
