@@ -17,7 +17,6 @@ class Facility extends Model
         'type',
         'capacity',
         'description',
-        'amenities',
         'image',
         'is_active',
         'requires_approval',
@@ -27,7 +26,6 @@ class Facility extends Model
      * Tell Laravel what type each field is (arrays, booleans, etc.)
      */
     protected $casts = [
-        'amenities' => 'array',
         'is_active' => 'boolean',
         'requires_approval' => 'boolean',
     ];

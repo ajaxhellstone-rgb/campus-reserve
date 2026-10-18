@@ -59,6 +59,35 @@ class PropertyReservationTest extends TestCase
             ->assertSeeInOrder(['Borrowed Items', '2</p>', 'Returned Items', '3</p>']);
     }
 
+    public function test_calendar_shows_all_approved_reservations_but_only_exposes_owner_purpose(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $facility = $this->createFacility();
+        $ownReservation = $this->createReservation($user, $facility, 'approved', '10:00', '11:00');
+        $otherReservation = $this->createReservation($otherUser, $facility, 'approved', '11:00', '12:00');
+        $hiddenPendingReservation = $this->createReservation($otherUser, $facility, 'pending', '12:00', '13:00');
+
+        $ownReservation->update(['purpose' => 'My meeting']);
+        $otherReservation->update(['purpose' => 'Private meeting']);
+
+        $this->actingAs($user)
+            ->getJson('/api/calendar/events')
+            ->assertOk()
+            ->assertJsonCount(2)
+            ->assertJsonFragment([
+                'id' => $ownReservation->id,
+                'purpose' => 'My meeting',
+                'is_owner' => true,
+            ])
+            ->assertJsonFragment([
+                'id' => $otherReservation->id,
+                'purpose' => null,
+                'is_owner' => false,
+            ])
+            ->assertJsonMissing(['id' => $hiddenPendingReservation->id]);
+    }
+
     public function test_user_can_reserve_facility_items_with_date_and_time(): void
     {
         $user = User::factory()->create();
@@ -94,6 +123,40 @@ class PropertyReservationTest extends TestCase
             'facility_item_id' => $item->id,
             'quantity' => 2,
         ]);
+    }
+
+    public function test_user_cannot_reserve_items_assigned_to_another_facility(): void
+    {
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        $otherFacility = Facility::create([
+            'name' => 'Conference Room',
+            'building' => 'Main Building',
+            'type' => 'Conference Room',
+            'capacity' => 20,
+            'is_active' => true,
+        ]);
+        $item = FacilityItem::create([
+            'facility_id' => $otherFacility->id,
+            'name' => 'Projector',
+            'quantity' => 2,
+        ]);
+
+        $this->actingAs($user)
+            ->postJson('/api/calendar/reserve', [
+                'facility' => (string) $facility->id,
+                'purpose' => 'Club meeting',
+                'date' => '2030-05-01',
+                'start_time' => '10:00',
+                'end_time' => '12:00',
+                'items' => [
+                    ['facility_item_id' => $item->id, 'quantity' => 1],
+                ],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('items');
+
+        $this->assertDatabaseCount('reservations', 0);
     }
 
     public function test_item_availability_counts_only_overlapping_approved_reservations(): void

@@ -10,7 +10,7 @@
                 &larr; Back to Admin Dashboard
             </a>
             <h1 class="text-3xl font-bold text-gray-900">Facility Management</h1>
-            <p class="mt-2 text-gray-600">Add new facilities and control the website cards shown to visitors.</p>
+            <p class="mt-2 text-gray-600">Add facilities and control the website cards shown to visitors. Manage facility items and quantities in Property Management.</p>
         </div>
 
         @if(session('status'))
@@ -56,13 +56,6 @@
                         </div>
                     </div>
 
-                    <div>
-                        <label for="amenities" class="mb-2 block text-sm font-medium text-gray-700">Amenities</label>
-                        <textarea id="amenities" name="amenities" rows="3" class="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-black focus:outline-none focus:ring-1 focus:ring-black" placeholder="Separate amenities with commas">{{ old('amenities') }}</textarea>
-                        <p class="mt-1 text-xs text-gray-500">Optional. Separate each amenity with a comma.</p>
-                        @error('amenities')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                    </div>
-
                     <div class="flex justify-end gap-3 border-t border-gray-100 pt-4">
                         <button type="button" id="facility-reset-form" class="rounded-full px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100">Cancel</button>
                         <button id="facility-submit-button" type="submit" class="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800">Save Facility</button>
@@ -101,7 +94,6 @@
                                         data-building="{{ $facility->building }}"
                                         data-type="{{ $facility->type }}"
                                         data-capacity="{{ $facility->capacity }}"
-                                        data-amenities="{{ is_array($facility->amenities) ? implode(', ', $facility->amenities) : ($facility->amenities ?? '') }}"
                                         class="rounded-full border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">
                                         Edit
                                     </button>
@@ -183,7 +175,6 @@
         document.getElementById('building').value = button.dataset.building || '';
         document.getElementById('type').value = button.dataset.type || '';
         document.getElementById('capacity').value = button.dataset.capacity || '';
-        document.getElementById('amenities').value = button.dataset.amenities || '';
 
         const formTop = form.getBoundingClientRect().top + window.scrollY - 80;
         window.scrollTo({ top: formTop, behavior: 'smooth' });

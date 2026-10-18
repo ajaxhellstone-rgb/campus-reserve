@@ -13,7 +13,10 @@ class FacilityController extends Controller
      */
     public function list()
     {
-        $facilities = Facility::active()->get(['name']);
+        $facilities = Facility::active()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
         return response()->json($facilities);
     }
 }

@@ -42,6 +42,40 @@ class FacilityItemManagementTest extends TestCase
             ->assertSee('Main Building');
     }
 
+    public function test_facility_management_omits_amenities_and_facility_booking_shows_item_options(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+            'is_super_admin' => false,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.facilities.create'))
+            ->assertOk()
+            ->assertDontSee('Amenities');
+
+        $this->get('/calendar/manage')
+            ->assertOk()
+            ->assertSee('Items included with this facility')
+            ->assertSee('facilityItemOptions');
+    }
+
+    public function test_facilities_api_returns_identifiers_for_item_availability_lookup(): void
+    {
+        $facility = Facility::create([
+            'name' => 'Lecture Room 1',
+            'building' => 'Main Building',
+            'type' => 'Classroom',
+            'capacity' => 30,
+            'is_active' => true,
+        ]);
+
+        $this->getJson('/api/facilities')
+            ->assertOk()
+            ->assertJsonPath('0.id', $facility->id)
+            ->assertJsonPath('0.name', $facility->name);
+    }
+
     public function test_admin_can_add_update_and_remove_facility_items(): void
     {
         $admin = User::factory()->create([

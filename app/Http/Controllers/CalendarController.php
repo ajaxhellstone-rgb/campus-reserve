@@ -20,10 +20,10 @@ class CalendarController extends Controller
     // Get all reservations and format them as calendar events
     public function events(Request $request)
     {
-        // The public calendar should only show approved reservations.
+        // The shared calendar shows approved facility bookings, while keeping
+        // each user's reservation purpose private from other users.
         $facilityName = $request->query('facility');
         $query = Reservation::with('facility')
-            ->where('user_id', Auth::id())
             ->where('status', 'approved');
         
         if ($facilityName) {
@@ -47,10 +47,11 @@ class CalendarController extends Controller
                 'end' => $end,
                 'color' => $this->getReservationColor($reservation->id),
                 'extendedProps' => [
-                    'purpose' => $reservation->purpose,
+                    'purpose' => $reservation->user_id === Auth::id() ? $reservation->purpose : null,
                     'status' => $reservation->status,
                     'room' => $reservation->facility->name,
                     'date' => $dateStr,
+                    'is_owner' => $reservation->user_id === Auth::id(),
                 ],
             ];
         });

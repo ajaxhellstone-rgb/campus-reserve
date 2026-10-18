@@ -195,23 +195,37 @@
 
             function renderSearchSuggestions(filteredEvents) {
                 if (!suggestionsEl) return;
+                suggestionsEl.replaceChildren();
                 if (!filteredEvents.length || !currentSearch) {
-                    suggestionsEl.innerHTML = '';
                     suggestionsEl.classList.add('hidden');
                     return;
                 }
 
-                var listHtml = filteredEvents.map(function(item) {
+                filteredEvents.forEach(function(item) {
                     var date = new Date(item.start);
                     var time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    return '<button type="button" class="w-full text-left px-4 py-3 hover:bg-slate-100 transition-colors" data-event-id="' + item.id + '">'
-                        + '<div class="font-semibold text-slate-900">' + item.title + '</div>'
-                        + '<div class="text-xs text-slate-500">' + item.extendedProps.room + ' • ' + item.extendedProps.purpose + '</div>'
-                        + '<div class="text-xs text-slate-500 mt-1">' + date.toLocaleDateString() + ' • ' + time + '</div>'
-                        + '</button>';
-                }).join('');
+                    var button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'w-full text-left px-4 py-3 hover:bg-slate-100 transition-colors';
+                    button.dataset.eventId = item.id;
 
-                suggestionsEl.innerHTML = listHtml;
+                    var title = document.createElement('div');
+                    title.className = 'font-semibold text-slate-900';
+                    title.textContent = item.title;
+
+                    var details = document.createElement('div');
+                    details.className = 'text-xs text-slate-500';
+                    details.textContent = (item.extendedProps.room || '') + (
+                        item.extendedProps.purpose ? ' • ' + item.extendedProps.purpose : ''
+                    );
+
+                    var schedule = document.createElement('div');
+                    schedule.className = 'mt-1 text-xs text-slate-500';
+                    schedule.textContent = date.toLocaleDateString() + ' • ' + time;
+
+                    button.append(title, details, schedule);
+                    suggestionsEl.appendChild(button);
+                });
                 suggestionsEl.classList.remove('hidden');
             }
 
@@ -259,11 +273,12 @@
                 eventInfoStatus.className = statusClasses;
                 eventInfoDate.textContent = props.date || date.toLocaleDateString();
                 eventInfoTime.textContent = startTime + ' - ' + endTime;
-                eventInfoPurpose.textContent = props.purpose || '—';
+                eventInfoPurpose.textContent = props.purpose || (
+                    props.is_owner ? '—' : 'Details are only visible to the reservation owner.'
+                );
                 if (eventInfoEditBtn) {
                     eventInfoEditBtn.href = '/reserve/reservations/' + sourceEvent.id + '/edit';
-                    // Since we now only fetch current user's reservations, show edit for pending/approved/rejected
-                    if (['approved', 'rejected', 'pending'].includes(props.status)) {
+                    if (props.is_owner && ['approved', 'rejected', 'pending'].includes(props.status)) {
                         eventInfoEditBtn.classList.remove('hidden');
                     } else {
                         eventInfoEditBtn.classList.add('hidden');
@@ -271,7 +286,7 @@
                 }
                 if (eventInfoDeleteForm) {
                     eventInfoDeleteForm.action = '/reserve/reservations/' + sourceEvent.id;
-                    if (status === 'rejected' || status === 'pending') {
+                    if (props.is_owner && (status === 'rejected' || status === 'pending')) {
                         eventInfoDeleteForm.classList.remove('hidden');
                     } else {
                         eventInfoDeleteForm.classList.add('hidden');
@@ -334,11 +349,12 @@
                 eventInfoStatus.className = statusClasses;
                 eventInfoDate.textContent = props.date || (event.start ? event.start.toLocaleDateString() : '—');
                 eventInfoTime.textContent = startTime + ' - ' + endTime;
-                eventInfoPurpose.textContent = props.purpose || '—';
+                eventInfoPurpose.textContent = props.purpose || (
+                    props.is_owner ? '—' : 'Details are only visible to the reservation owner.'
+                );
                 if (eventInfoEditBtn) {
                     eventInfoEditBtn.href = '/reserve/reservations/' + event.id + '/edit';
-                    // Since we now only fetch current user's reservations, show edit for pending/approved/rejected
-                    if (['approved', 'rejected', 'pending'].includes(props.status)) {
+                    if (props.is_owner && ['approved', 'rejected', 'pending'].includes(props.status)) {
                         eventInfoEditBtn.classList.remove('hidden');
                     } else {
                         eventInfoEditBtn.classList.add('hidden');
@@ -346,7 +362,7 @@
                 }
                 if (eventInfoDeleteForm) {
                     eventInfoDeleteForm.action = '/reserve/reservations/' + event.id;
-                    if (status === 'rejected' || status === 'pending') {
+                    if (props.is_owner && (status === 'rejected' || status === 'pending')) {
                         eventInfoDeleteForm.classList.remove('hidden');
                     } else {
                         eventInfoDeleteForm.classList.add('hidden');

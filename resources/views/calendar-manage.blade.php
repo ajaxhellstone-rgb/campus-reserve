@@ -84,7 +84,7 @@
 </div>
 
 <div id="reservationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/10 backdrop-blur-sm p-4 opacity-0 pointer-events-none transition-opacity duration-200" aria-hidden="true">
-    <div class="w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl transform transition-transform duration-200">
+    <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-8 shadow-2xl transform transition-transform duration-200">
         <h2 class="text-2xl font-semibold text-slate-900 mb-3">Reserve a facility on <span id="modalDate"></span></h2>
         <form id="reservationForm" action="/api/calendar/reserve" method="POST" class="space-y-5">
             @csrf
@@ -107,6 +107,15 @@
                     <input type="time" id="endTime" name="endTime" value="07:00" class="mt-2 w-full h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm leading-6 text-slate-700" required />
                 </div>
             </div>
+            <section class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4" aria-labelledby="facility-items-heading">
+                <div>
+                    <h3 id="facility-items-heading" class="text-sm font-semibold text-slate-900">Items included with this facility</h3>
+                    <p class="mt-1 text-xs text-slate-600">Select any items you need for this reservation and choose the quantity.</p>
+                </div>
+                <div id="facilityItemOptions" class="space-y-2" aria-live="polite">
+                    <p class="text-sm text-slate-500">Choose a facility to see its items.</p>
+                </div>
+            </section>
             <div class="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                 <div id="reservationValidationMessage" class="min-h-5 text-sm font-semibold text-rose-600"></div>
                 <div class="flex gap-3">
@@ -170,6 +179,10 @@
         var errorMessage = document.getElementById('errorMessage');
         var modalDate = document.getElementById('modalDate');
         var facilitySelectModal = document.getElementById('facilitySelectModal');
+        var facilityItemOptions = document.getElementById('facilityItemOptions');
+        var facilityItemsRequest = null;
+        var facilityItemsRequestVersion = 0;
+        var facilityItemSelections = new Map();
         var selectedDate = null;
         var viewButtons = document.querySelectorAll('[data-view]');
 
@@ -185,17 +198,26 @@
 
         function populateFacilities(selected) {
             fetch('/api/facilities', { credentials: 'include' })
-                .then(function(response) { return response.json(); })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Could not load available facilities.');
+                    }
+                    return response.json();
+                })
                 .then(function(facilities) {
                     facilitySelectModal.innerHTML = '';
 
                     facilities.forEach(function(fac) {
                         var option = document.createElement('option');
-                        option.value = fac.name;
+                        option.value = fac.id;
                         option.textContent = fac.name;
                         if (selected && fac.name === selected) option.selected = true;
                         facilitySelectModal.appendChild(option);
                     });
+                    refreshFacilityItems();
+                })
+                .catch(function() {
+                    facilityItemOptions.textContent = 'Could not load facilities. Please close and try again.';
                 });
         }
 
@@ -208,9 +230,13 @@
             dateClick: function(info) {
                 selectedDate = info.dateStr.split('T')[0];
                 modalDate.textContent = selectedDate;
+                reservationForm.reset();
+                resetFacilityItemSelection();
                 if (reservationDateInput) {
                     reservationDateInput.value = selectedDate;
                 }
+                setDefaultReservationTimes();
+                resetReservationValidation();
                 populateFacilities();
                 toggleModal(true);
             }
@@ -331,15 +357,161 @@
             if (reservationValidationMessage) reservationValidationMessage.textContent = message;
         }
 
+        function resetFacilityItemSelection() {
+            facilityItemsRequestVersion++;
+            if (facilityItemsRequest) {
+                facilityItemsRequest.abort();
+                facilityItemsRequest = null;
+            }
+            facilityItemSelections.clear();
+            facilityItemOptions.textContent = 'Choose a facility to see its items.';
+        }
+
+        function renderFacilityItems(items) {
+            facilityItemOptions.innerHTML = '';
+
+            if (!items.length) {
+                facilityItemOptions.textContent = 'No items are listed for this facility. You can still reserve the room.';
+                return;
+            }
+
+            items.forEach(function(item) {
+                var available = Number(item.available);
+                var row = document.createElement('div');
+                row.className = 'flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between';
+
+                var label = document.createElement('label');
+                label.className = 'flex min-w-0 items-start gap-3';
+                var checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'mt-1 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-700';
+                checkbox.dataset.facilityItemId = String(item.id);
+                checkbox.checked = facilityItemSelections.has(String(item.id)) && available > 0;
+                checkbox.disabled = available < 1;
+                if (available < 1) {
+                    facilityItemSelections.delete(String(item.id));
+                }
+
+                var description = document.createElement('span');
+                description.className = 'min-w-0';
+                var name = document.createElement('span');
+                name.className = 'block text-sm font-medium text-slate-800';
+                name.textContent = item.name;
+                var stock = document.createElement('span');
+                stock.className = 'block text-xs text-slate-500';
+                stock.textContent = available + ' available for this time (' + item.stock + ' total)';
+                description.append(name, stock);
+                label.append(checkbox, description);
+
+                var quantityLabel = document.createElement('label');
+                quantityLabel.className = 'flex items-center gap-2 text-xs font-medium text-slate-600';
+                quantityLabel.textContent = 'Quantity';
+                var quantity = document.createElement('input');
+                quantity.type = 'number';
+                quantity.min = '1';
+                quantity.max = String(available);
+                quantity.value = Math.min(Number(facilityItemSelections.get(String(item.id)) || 1), Math.max(available, 1));
+                quantity.disabled = !checkbox.checked;
+                quantity.className = 'w-20 rounded-lg border border-slate-200 px-2 py-1.5 text-sm text-slate-800 disabled:bg-slate-100';
+                quantity.dataset.facilityItemQuantity = String(item.id);
+                quantityLabel.appendChild(quantity);
+                row.append(label, quantityLabel);
+                facilityItemOptions.appendChild(row);
+
+                checkbox.addEventListener('change', function() {
+                    quantity.disabled = !checkbox.checked;
+                    if (checkbox.checked) {
+                        facilityItemSelections.set(String(item.id), quantity.value);
+                    } else {
+                        facilityItemSelections.delete(String(item.id));
+                    }
+                });
+                quantity.addEventListener('change', function() {
+                    if (checkbox.checked) {
+                        facilityItemSelections.set(String(item.id), quantity.value);
+                    }
+                });
+            });
+        }
+
+        function refreshFacilityItems(preserveSelections) {
+            var version = ++facilityItemsRequestVersion;
+            if (preserveSelections !== false) {
+                facilityItemOptions.querySelectorAll('[data-facility-item-id]:checked').forEach(function(checkbox) {
+                    var quantityInput = facilityItemOptions.querySelector('[data-facility-item-quantity="' + checkbox.dataset.facilityItemId + '"]');
+                    if (quantityInput) {
+                        facilityItemSelections.set(checkbox.dataset.facilityItemId, quantityInput.value);
+                    }
+                });
+            }
+            if (facilityItemsRequest) {
+                facilityItemsRequest.abort();
+            }
+
+            if (!facilitySelectModal.value) {
+                facilityItemOptions.textContent = 'Choose a facility to see its items.';
+                return;
+            }
+
+            var startTime = document.getElementById('startTime').value;
+            var endTime = document.getElementById('endTime').value;
+            if (!selectedDate || !startTime || !endTime || endTime <= startTime) {
+                facilityItemOptions.textContent = 'Choose a valid date and time range to check item availability.';
+                return;
+            }
+
+            facilityItemOptions.textContent = 'Checking item availability...';
+            facilityItemsRequest = new AbortController();
+            var query = new URLSearchParams({
+                date: selectedDate,
+                start_time: startTime,
+                end_time: endTime
+            });
+
+            fetch('/api/facilities/' + encodeURIComponent(facilitySelectModal.value) + '/item-availability?' + query, {
+                credentials: 'include',
+                headers: { Accept: 'application/json' },
+                signal: facilityItemsRequest.signal
+            })
+                .then(function(response) {
+                    return response.json().then(function(data) {
+                        if (!response.ok) {
+                            throw new Error(data.message || 'Could not check item availability.');
+                        }
+                        return data;
+                    });
+                })
+                .then(function(data) {
+                    if (version === facilityItemsRequestVersion) {
+                        renderFacilityItems(data.items);
+                    }
+                })
+                .catch(function(error) {
+                    if (error.name !== 'AbortError' && version === facilityItemsRequestVersion) {
+                        facilityItemOptions.textContent = error.message || 'Could not check item availability. Please try again.';
+                    }
+                });
+        }
+
+        facilitySelectModal.addEventListener('change', function() {
+            facilityItemSelections.clear();
+            refreshFacilityItems(false);
+        });
+        ['startTime', 'endTime'].forEach(function(id) {
+            document.getElementById(id).addEventListener('change', refreshFacilityItems);
+        });
+
         openModalBtn.addEventListener('click', function() {
             selectedDate = calendar.getDate().toISOString().split('T')[0];
             modalDate.textContent = selectedDate;
+            reservationForm.reset();
+            resetFacilityItemSelection();
             if (reservationDateInput) {
                 reservationDateInput.value = selectedDate;
             }
-            populateFacilities();
             resetReservationValidation();
             setDefaultReservationTimes();
+            populateFacilities();
             toggleModal(true);
         });
 
@@ -357,13 +529,34 @@
             var purpose = document.getElementById('purpose').value;
             var startTime = document.getElementById('startTime').value;
             var endTime = document.getElementById('endTime').value;
+            var selectedItems = Array.from(facilityItemOptions.querySelectorAll('[data-facility-item-id]:checked')).map(function(checkbox) {
+                var quantityInput = facilityItemOptions.querySelector('[data-facility-item-quantity="' + checkbox.dataset.facilityItemId + '"]');
+                return {
+                    facility_item_id: Number(checkbox.dataset.facilityItemId),
+                    quantity: Number(quantityInput.value)
+                };
+            });
 
             resetReservationValidation();
             if (startTime && endTime && endTime <= startTime) {
                 setReservationValidationError("End time can't be earlier than start");
                 return;
             }
+            if (selectedItems.some(function(item) { return !Number.isInteger(item.quantity) || item.quantity < 1; })) {
+                setReservationValidationError('Enter a valid quantity for each selected item.');
+                return;
+            }
 
+            var reservationPayload = {
+                facility: facility,
+                purpose: purpose,
+                date: selectedDate,
+                start_time: startTime,
+                end_time: endTime
+            };
+            if (selectedItems.length) {
+                reservationPayload.items = selectedItems;
+            }
             fetch('/api/calendar/reserve', {
                 method: 'POST',
                 credentials: 'include',
@@ -372,22 +565,13 @@
                     'Accept': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 },
-                body: JSON.stringify({
-                    facility: facility,
-                    purpose: purpose,
-                    date: selectedDate,
-                    start_time: startTime,
-                    end_time: endTime
-                })
+                body: JSON.stringify(reservationPayload)
             })
             .then(function(response) {
                 return response.text().then(function(text) {
                     var data = text ? JSON.parse(text) : {};
                     if (!response.ok) {
-                        var errorMsg = data.error || data.message || 'Reservation failed';
-                        if (response.status === 409) {
-                            errorMsg = 'This time slot is already reserved. Please select a different time or facility.';
-                        }
+                        var errorMsg = data.error || data.message || (data.errors ? Object.values(data.errors).flat()[0] : null) || 'Reservation failed';
                         throw { error: errorMsg, status: response.status };
                     }
                     return data;
@@ -395,7 +579,7 @@
                     if (!response.ok) {
                         var errorMsg = 'Reservation failed';
                         if (response.status === 409) {
-                            errorMsg = 'This time slot is already reserved. Please select a different time or facility.';
+                            errorMsg = 'This time slot or one of the selected items is no longer available. Please check availability and try again.';
                         } else {
                             errorMsg = 'Reservation failed (' + response.status + ')';
                         }
@@ -418,7 +602,7 @@
                 
                 if (err && err.error) {
                     if (err.status === 409) {
-                        title = 'Time slot unavailable';
+                        title = 'Reservation unavailable';
                         message = err.error;
                     } else {
                         message = err.error;

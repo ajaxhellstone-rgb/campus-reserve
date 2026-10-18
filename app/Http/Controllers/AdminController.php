@@ -120,14 +120,10 @@ class AdminController extends Controller
             'building' => ['required', 'string', 'max:100'],
             'type' => ['required', 'string', 'max:50'],
             'capacity' => ['required', 'integer', 'min:1'],
-            'amenities' => ['nullable', 'string', 'max:2000'],
             'requires_approval' => ['sometimes', 'boolean'],
         ]);
 
         $validated['requires_approval'] = $request->boolean('requires_approval');
-        $validated['amenities'] = isset($validated['amenities'])
-            ? array_values(array_filter(array_map('trim', explode(',', $validated['amenities']))))
-            : null;
         $facility = Facility::create($validated);
 
         AuditLog::create([
@@ -154,14 +150,10 @@ class AdminController extends Controller
             'building' => ['required', 'string', 'max:100'],
             'type' => ['required', 'string', 'max:50'],
             'capacity' => ['required', 'integer', 'min:1'],
-            'amenities' => ['nullable', 'string', 'max:2000'],
             'requires_approval' => ['sometimes', 'boolean'],
         ]);
 
         $validated['requires_approval'] = $request->boolean('requires_approval');
-        $validated['amenities'] = isset($validated['amenities'])
-            ? array_values(array_filter(array_map('trim', explode(',', $validated['amenities']))))
-            : null;
 
         $facility->update($validated);
 
