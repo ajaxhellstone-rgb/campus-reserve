@@ -170,16 +170,16 @@
     @if(auth()->check() && !request()->routeIs('profile.show', 'security.compromised', 'login', 'register', 'password.*', '2fa.*', 'admin.*'))
         <div id="chatbot-widget" class="fixed inset-0 z-50 pointer-events-none" style="position: fixed; inset: 0; z-index: 9999; pointer-events: none;">
             <div id="chatbot-backdrop" class="invisible pointer-events-none absolute inset-0 bg-slate-950/20 opacity-0 transition-opacity duration-300" aria-hidden="true"></div>
-            <button id="chatbot-toggle" type="button" class="pointer-events-auto fixed bottom-5 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-black text-white shadow-xl transition hover:bg-gray-800" style="position: fixed; right: 20px; bottom: 20px; z-index: 10001; display: flex; width: 56px; height: 56px; border-radius: 9999px; background: #000; color: #fff; pointer-events: auto; cursor: pointer;" aria-label="Open reservation assistant" title="Open reservation assistant">
+            <button id="chatbot-toggle" type="button" class="pointer-events-auto fixed bottom-5 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-700 via-violet-700 to-cyan-600 text-white shadow-xl shadow-indigo-900/25 transition hover:-translate-y-0.5 hover:shadow-2xl" style="position: fixed; right: 20px; bottom: 20px; z-index: 10001; display: flex; width: 56px; height: 56px; border-radius: 9999px; background: linear-gradient(135deg, #4338ca, #7c3aed 58%, #0891b2); color: #fff; pointer-events: auto; cursor: pointer;" aria-label="Open reservation assistant" title="Open reservation assistant">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h8m-8 4h5m7-2a8 8 0 01-8 8 8.4 8.4 0 01-3.7-.85L4 20l.85-3.3A8 8 0 1112 20" />
                 </svg>
             </button>
-            <section id="chatbot-panel" class="invisible pointer-events-none fixed right-0 top-0 flex h-full translate-x-full flex-col border-l border-slate-200 bg-white opacity-0 shadow-2xl transition duration-300 ease-out" style="position: fixed; top: 0; right: 0; bottom: 0; z-index: 10000; display: flex; width: min(440px, 100vw); height: 100%;" aria-label="Reservation assistant">
-                <div class="flex items-center justify-between border-b border-slate-800 bg-slate-950 px-5 py-4 text-white" style="display: flex; align-items: center; justify-content: space-between; min-height: 78px; padding: 16px 20px; background: #0f172a; color: #fff;">
+            <section id="chatbot-panel" class="invisible pointer-events-none fixed right-0 top-0 flex h-full translate-x-full flex-col border-l border-indigo-100 bg-white opacity-0 shadow-2xl shadow-indigo-950/20 transition duration-300 ease-out sm:my-3 sm:mr-3 sm:h-[calc(100%-1.5rem)] sm:rounded-3xl sm:border" style="position: fixed; top: 0; right: 0; bottom: 0; z-index: 10000; display: flex; width: min(440px, 100vw); height: 100%;" aria-label="Reservation assistant">
+                <div class="flex items-center justify-between border-b border-white/15 bg-gradient-to-r from-indigo-800 via-violet-700 to-cyan-700 px-5 py-4 text-white sm:rounded-t-3xl" style="display: flex; align-items: center; justify-content: space-between; min-height: 78px; padding: 16px 20px; background: linear-gradient(110deg, #3730a3, #6d28d9 58%, #0e7490); color: #fff;">
                     <div>
                         <div class="flex items-center gap-3" style="display: flex; align-items: center; gap: 12px;">
-                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-sm font-bold" style="display: flex; flex: 0 0 36px; width: 36px; height: 36px; align-items: center; justify-content: center; border-radius: 12px; background: rgba(255,255,255,.12); color: #fff; font-size: 13px; font-weight: 700;">CR</span>
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/15 text-sm font-bold shadow-inner" style="display: flex; flex: 0 0 40px; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 16px; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.15); color: #fff; font-size: 13px; font-weight: 700;">CR</span>
                             <div>
                                 <h2 class="text-sm font-semibold" style="margin: 0; color: #fff; font-size: 14px; font-weight: 700;">Reservation assistant</h2>
                                 <p class="text-xs text-slate-300" style="margin: 3px 0 0; color: #cbd5e1; font-size: 12px;">Rooms, items, schedules, and reservations</p>
@@ -187,24 +187,24 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-3">
-                        <button id="chatbot-new" type="button" class="text-xs font-semibold text-slate-300 hover:text-white" aria-label="Start a new chat">New chat</button>
-                        <button id="chatbot-close" type="button" class="rounded-lg px-2 py-1 text-xl leading-none text-slate-300 hover:bg-white/10 hover:text-white" style="padding: 4px 8px; border: 0; border-radius: 8px; background: transparent; color: #cbd5e1; font-size: 22px; line-height: 1; cursor: pointer;" aria-label="Close reservation assistant">&times;</button>
+                        <button id="chatbot-new" type="button" class="rounded-full border border-white/25 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20" aria-label="Start a new chat">New chat</button>
+                        <button id="chatbot-close" type="button" class="rounded-full px-2 py-1 text-xl leading-none text-white/80 transition hover:bg-white/15 hover:text-white" style="padding: 4px 8px; border: 0; border-radius: 9999px; background: transparent; color: rgba(255,255,255,.8); font-size: 22px; line-height: 1; cursor: pointer;" aria-label="Close reservation assistant">&times;</button>
                     </div>
                 </div>
-                <div id="chatbot-messages" class="min-h-0 flex-1 space-y-4 overflow-y-auto bg-slate-50 p-5 text-sm" style="min-height: 0; flex: 1 1 auto; overflow-y: auto; scrollbar-width: thin;">
+                <div id="chatbot-messages" class="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gradient-to-br from-purple-50/80 via-slate-50 to-cyan-50/70 p-5 text-sm" style="min-height: 0; flex: 1 1 auto; overflow-y: auto; scrollbar-width: thin;">
                     <div class="flex gap-3">
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-bold text-white">CR</span>
-                        <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm" style="width: fit-content; max-width: 90%;">Hi! Ask me about room and item availability, property reservations, schedules, or booking status.</p>
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-700 text-[10px] font-bold text-white shadow-sm">CR</span>
+                        <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-indigo-100 bg-white/95 px-3.5 py-2.5 text-slate-700 shadow-sm" style="width: fit-content; max-width: 90%;">Hi! Ask me about room and item availability, property reservations, schedules, or booking status.</p>
                     </div>
                 </div>
-                <form id="chatbot-form" class="pointer-events-auto border-t border-slate-200 bg-white p-4" style="pointer-events: auto; position: relative; z-index: 10002;">
+                <form id="chatbot-form" class="pointer-events-auto border-t border-indigo-100 bg-white/95 p-4 sm:rounded-b-3xl" style="pointer-events: auto; position: relative; z-index: 10002;">
                     @csrf
-                    <div class="flex items-center gap-2 rounded-2xl border border-slate-300 bg-slate-50 p-1.5 focus-within:border-slate-900 focus-within:bg-white">
+                    <div class="flex items-center gap-2 rounded-2xl border border-slate-300 bg-white p-1.5 shadow-sm transition focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100">
                         <label for="chatbot-input" class="sr-only">Ask the reservation assistant</label>
-                        <input id="chatbot-input" type="text" class="pointer-events-auto min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none" style="pointer-events: auto; position: relative; z-index: 10003; cursor: text;" placeholder="Ask about availability..." autocomplete="off">
-                        <button type="submit" class="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Send</button>
+                        <input id="chatbot-input" type="text" class="pointer-events-auto min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400" style="pointer-events: auto; position: relative; z-index: 10003; cursor: text;" placeholder="Ask about availability..." autocomplete="off">
+                        <button type="submit" class="rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-800">Send</button>
                     </div>
-                    <p class="mt-2 px-1 text-[11px] text-slate-400">Check room or item availability, request a reservation, or view booking status.</p>
+                    <p class="mt-2 px-1 text-[11px] text-slate-500">Check room or item availability, request a reservation, or view booking status.</p>
                 </form>
             </section>
         </div>
@@ -229,8 +229,8 @@
                 function resetVisibleChat() {
                     messages.innerHTML = `
                         <div class="flex gap-3">
-                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-bold text-white">CR</span>
-                            <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-3 py-2 text-slate-700 shadow-sm">Hi! Ask me about room and item availability, property reservations, schedules, or booking status.</p>
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-700 text-[10px] font-bold text-white shadow-sm">CR</span>
+                            <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-indigo-100 bg-white/95 px-3.5 py-2.5 text-slate-700 shadow-sm">Hi! Ask me about room and item availability, property reservations, schedules, or booking status.</p>
                         </div>
                     `;
                     input.value = '';
@@ -314,7 +314,7 @@
                     if (!message) return;
 
                     const escapedMessage = message.replace(/[&<>]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[character]));
-                    messages.insertAdjacentHTML('beforeend', `<p style="width: fit-content; max-width: 90%; margin-left: auto;" class="rounded-2xl bg-black px-3 py-2 text-white">${escapedMessage}</p>`);
+                    messages.insertAdjacentHTML('beforeend', `<p style="width: fit-content; max-width: 90%; margin-left: auto;" class="rounded-2xl rounded-tr-sm bg-indigo-700 px-3.5 py-2.5 text-white shadow-sm">${escapedMessage}</p>`);
                     input.value = '';
                     messages.scrollTop = messages.scrollHeight;
 
@@ -331,7 +331,7 @@
                         });
                         const data = await response.json();
                         const reply = document.createElement('p');
-                        reply.className = 'rounded-2xl bg-slate-100 px-3 py-2 text-slate-700';
+                        reply.className = 'rounded-2xl rounded-tl-sm border border-indigo-100 bg-white/95 px-3.5 py-2.5 text-slate-700 shadow-sm';
                         reply.style.width = 'fit-content';
                         reply.style.maxWidth = '90%';
                         reply.textContent = data.reply || 'I could not understand that request.';
@@ -346,14 +346,14 @@
                             const action = document.createElement('a');
                             action.href = data.action_url;
                             action.textContent = data.action_label || 'Continue';
-                            action.className = 'block rounded-xl bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800';
+                            action.className = 'block rounded-xl bg-gradient-to-r from-indigo-700 to-violet-700 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:from-indigo-800 hover:to-violet-800';
                             action.style.width = 'fit-content';
                             messages.appendChild(action);
                         }
                         messages.scrollTop = messages.scrollHeight;
                     } catch (error) {
                         const reply = document.createElement('p');
-                        reply.className = 'w-fit max-w-[90%] rounded-2xl bg-red-50 px-3 py-2 text-red-700';
+                        reply.className = 'w-fit max-w-[90%] rounded-2xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-rose-700 shadow-sm';
                         reply.style.width = 'fit-content';
                         reply.style.maxWidth = '90%';
                         reply.textContent = 'The reservation assistant is temporarily unavailable.';

@@ -38,25 +38,7 @@
 @section('content')
 <!-- Profile settings page for updating user account details, profile picture, and phone information. -->
 <main class="min-h-[calc(100vh-73px)] bg-gradient-to-br from-purple-50 via-slate-50 to-cyan-50 px-4 py-10 md:px-8 xl:px-16">
-    <div class="mx-auto grid w-full max-w-7xl gap-8 xl:grid-cols-[280px_1fr]">
-        <aside class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm shadow-indigo-950/5">
-            <div class="mb-8">
-                <h2 class="text-lg font-semibold text-gray-900">Settings</h2>
-                <p class="mt-2 text-sm text-gray-500">Manage your account settings from one place.</p>
-            </div>
-
-            <div class="space-y-3">
-                <div class="rounded-3xl border border-indigo-100 bg-indigo-50/70 px-4 py-4 text-sm font-semibold text-indigo-900">Account</div>
-            </div>
-
-            <div class="mt-10 border-t border-gray-200 pt-8">
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">System</p>
-                <div class="mt-4 space-y-3">
-                    <a href="{{ route('notifications.index') }}" class="block w-full rounded-3xl border border-slate-200 bg-white px-4 py-4 text-left text-sm text-slate-600 transition hover:border-indigo-300 hover:text-indigo-800">Notifications</a>
-                </div>
-            </div>
-        </aside>
-
+    <div class="mx-auto w-full max-w-5xl">
         <section class="space-y-8">
             <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-indigo-950/5">
                 <div class="bg-gradient-to-r from-indigo-700 via-violet-700 to-cyan-700 px-8 py-8 text-white">
