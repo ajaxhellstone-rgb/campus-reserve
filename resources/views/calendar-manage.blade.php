@@ -49,7 +49,7 @@
                             </div>
                             <div class="rounded-3xl bg-white p-4 border border-slate-200">
                                 <h3 class="text-sm font-semibold text-slate-900 mb-3">Ready to reserve</h3>
-                                <p class="text-sm text-slate-600 mb-4">Click a date on the calendar, then complete your booking in the popup form.</p>
+                                <p class="text-sm text-slate-600 mb-4">Click a date or time slot on the calendar, then complete your booking in the popup form.</p>
                                 <button id="openModalBtn" type="button" class="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition">Reserve selected day</button>
                             </div>
                         </div>
@@ -57,7 +57,7 @@
                     <div class="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
                         <h2 class="text-lg font-semibold text-slate-900 mb-3">Booking tips</h2>
                         <ul class="space-y-3 text-sm text-slate-600">
-                            <li>Click any date to start a new reservation.</li>
+                            <li>Click a date or time slot to start a new reservation.</li>
                             <li>Use the left panel to choose month and year.</li>
                             <li>Reserve as early as possible to keep rooms available.</li>
                         </ul>
@@ -68,7 +68,7 @@
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div>
                             <p class="text-sm font-semibold text-slate-900">Reservation calendar</p>
-                            <p class="text-sm text-slate-500">Select a date to open the booking form.</p>
+                            <p class="text-sm text-slate-500">Select a date or time slot to open the booking form.</p>
                         </div>
                         <div class="flex flex-wrap gap-3">
                             <button data-view="dayGridMonth" class="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 hover:bg-slate-200 transition">Month</button>
@@ -254,7 +254,8 @@
                 if (reservationDateInput) {
                     reservationDateInput.value = selectedDate;
                 }
-                setDefaultReservationTimes();
+                var clickedTime = info.allDay ? null : (info.dateStr.match(/T(\d{2}:\d{2})/) || [])[1];
+                setDefaultReservationTimes(clickedTime);
                 resetReservationValidation();
                 populateFacilities();
                 toggleModal(true);
@@ -362,11 +363,15 @@
         var reservationForm = document.getElementById('reservationForm');
         var reservationValidationMessage = document.getElementById('reservationValidationMessage');
 
-        function setDefaultReservationTimes() {
+        function setDefaultReservationTimes(startTime) {
             var startInput = document.getElementById('startTime');
             var endInput = document.getElementById('endTime');
-            if (startInput) startInput.value = '06:00';
-            if (endInput) endInput.value = '07:00';
+            var selectedStart = startTime || '06:00';
+            var parts = selectedStart.split(':').map(Number);
+            var endHour = (parts[0] + 1) % 24;
+            var endTime = String(endHour).padStart(2, '0') + ':' + String(parts[1]).padStart(2, '0');
+            if (startInput) startInput.value = selectedStart;
+            if (endInput) endInput.value = endTime;
         }
 
         function resetReservationValidation() {
