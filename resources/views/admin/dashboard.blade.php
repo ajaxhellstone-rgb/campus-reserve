@@ -190,26 +190,30 @@
                                     </td>
                                     <td class="px-4 py-4 text-sm text-gray-500">{{ $user->created_at->format('M d, Y') }}</td>
                                     <td class="px-4 py-4 text-right text-sm font-medium space-x-2">
-                                        @if(! $user->isSuperAdmin())
-                                            <form method="POST" action="{{ route('admin.users.role', $user) }}" class="inline-flex">
-                                                @csrf
-                                                <input type="hidden" name="return_search" value="{{ $search ?? '' }}">
-                                                <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
-                                                <select name="role" class="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                                                    <option value="user" {{ ! $user->is_admin ? 'selected' : '' }}>Member</option>
-                                                    <option value="admin" {{ $user->is_admin ? 'selected' : '' }}>Admin</option>
-                                                </select>
-                                                <button type="submit" class="ml-2 rounded-full bg-indigo-700 px-3 py-2 text-xs text-white transition hover:bg-indigo-800">Save</button>
-                                            </form>
-                                            <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline-flex" onsubmit="return confirm('Delete this user? This cannot be undone.');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <input type="hidden" name="return_search" value="{{ $search ?? '' }}">
-                                                <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
-                                                <button type="submit" class="rounded-full bg-red-600 px-3 py-2 text-xs text-white hover:bg-red-700 transition">Delete</button>
-                                            </form>
+                                        @if(auth()->user()->isSuperAdmin())
+                                            @if(! $user->isSuperAdmin())
+                                                <form method="POST" action="{{ route('admin.users.role', $user) }}" class="inline-flex">
+                                                    @csrf
+                                                    <input type="hidden" name="return_search" value="{{ $search ?? '' }}">
+                                                    <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
+                                                    <select name="role" class="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                                                        <option value="user" {{ ! $user->is_admin ? 'selected' : '' }}>Member</option>
+                                                        <option value="admin" {{ $user->is_admin ? 'selected' : '' }}>Admin</option>
+                                                    </select>
+                                                    <button type="submit" class="ml-2 rounded-full bg-indigo-700 px-3 py-2 text-xs text-white transition hover:bg-indigo-800">Save</button>
+                                                </form>
+                                                <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline-flex" onsubmit="return confirm('Delete this user? This cannot be undone.');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <input type="hidden" name="return_search" value="{{ $search ?? '' }}">
+                                                    <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
+                                                    <button type="submit" class="rounded-full bg-red-600 px-3 py-2 text-xs text-white hover:bg-red-700 transition">Delete</button>
+                                                </form>
+                                            @else
+                                                <span class="text-xs text-gray-500">Protected</span>
+                                            @endif
                                         @else
-                                            <span class="text-xs text-gray-500">Protected</span>
+                                            <span class="text-xs text-gray-500">Head admin only</span>
                                         @endif
                                     </td>
                                 </tr>
