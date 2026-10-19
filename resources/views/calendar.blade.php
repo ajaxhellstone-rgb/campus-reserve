@@ -90,7 +90,7 @@
     </div>
 </div>
 
-<div id="eventInfoModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-40 p-4">
+<div id="eventInfoModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
     <div class="w-full max-w-xl rounded-3xl bg-white p-8 shadow-2xl">
         <div class="flex items-start justify-between gap-4 mb-6">
             <div>
