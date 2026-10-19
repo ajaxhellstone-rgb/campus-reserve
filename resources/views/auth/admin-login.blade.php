@@ -102,7 +102,7 @@
     </div>
 
     <div class="hidden md:block w-1/2 relative overflow-hidden h-full min-h-[calc(100vh-73px)]">
-        <div class="absolute inset-0" style="background: linear-gradient(135deg, #c4b5fd 0%, #fbcfe8 45%, #fb923c 100%);"></div>
+        <div class="absolute inset-0" style="background: linear-gradient(135deg, #14532d 0%, #15803d 55%, #facc15 100%);"></div>
     </div>
 </main>
 

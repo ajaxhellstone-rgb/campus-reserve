@@ -81,7 +81,7 @@
                 <div class="flex justify-center pt-4">
                     <button
                         type="submit"
-                        class="w-full rounded-xl bg-gradient-to-r from-indigo-700 via-violet-700 to-cyan-700 px-8 py-3 font-semibold text-white shadow-lg shadow-indigo-900/15 transition hover:-translate-y-0.5 hover:from-indigo-800 hover:via-violet-800 hover:to-cyan-800 focus:outline-none focus:ring-4 focus:ring-indigo-200"
+                        class="w-full rounded-xl bg-gradient-to-r from-indigo-700 via-violet-700 to-amber-400 px-8 py-3 font-semibold text-white shadow-lg shadow-indigo-900/15 transition hover:-translate-y-0.5 hover:from-indigo-800 hover:via-violet-800 hover:to-amber-500 focus:outline-none focus:ring-4 focus:ring-indigo-200"
                     >
                         Log In
                     </button>
@@ -92,23 +92,23 @@
 <div id="2faModal" class="fixed inset-0 {{ session('show_2fa_modal') && session('pending_2fa_user_id') ? 'flex' : 'hidden' }} items-center justify-center z-50 p-4 animate-in fade-in zoom-in duration-200" style="background: rgba(0, 0, 0, 0.18); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
                 <div class="w-full max-w-sm rounded-3xl border border-indigo-100 bg-white/95 p-8 shadow-2xl shadow-indigo-950/20 backdrop-blur-xl animate-in slide-in-from-bottom-4 duration-300">
                     <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-bold text-gray-900">Verify Your Login</h2>
+                        <h2 class="text-2xl font-bold text-slate-900">Verify Your Login</h2>
                         <button onclick="close2faModal()" class="rounded-full p-1 text-xl text-slate-500 transition-all hover:bg-indigo-50 hover:text-indigo-900">&times;</button>
                     </div>
                     
                     <div id="two-factor-instructions">
                         @if (session('pending_2fa_method') === 'authenticator')
-                            <p class="text-gray-700 mb-2 text-lg font-medium">Enter your authenticator code.</p>
-                            <p class="text-sm text-gray-500 mb-4">Open Google Authenticator or Microsoft Authenticator and enter the current 6-digit code.</p>
+                            <p class="mb-2 text-lg font-medium text-slate-800">Enter your authenticator code.</p>
+                            <p class="mb-4 text-sm text-slate-500">Open Google Authenticator or Microsoft Authenticator and enter the current 6-digit code.</p>
                         @else
-                            <p class="text-gray-700 mb-2 text-lg font-medium">Enter the code sent to your email.</p>
-                            <p class="text-sm text-gray-500 mb-4">This code expires in 30 seconds.</p>
+                            <p class="mb-2 text-lg font-medium text-slate-800">Enter the code sent to your email.</p>
+                            <p class="mb-4 text-sm text-slate-500">This code expires in 30 seconds.</p>
                         @endif
                     </div>
                     
                     <div class="text-center mb-8">
                         <div class="mb-2 rounded-xl border border-indigo-100 bg-indigo-50 p-4 font-mono text-lg text-indigo-950">{{ session('pending_2fa_email') }}</div>
-                        <p id="two-factor-attempts-warning" class="text-sm font-medium text-amber-700">You have {{ session('two_fa_attempts_remaining', 3) }} attempts remaining.</p>
+                        <p id="two-factor-attempts-warning" class="text-sm font-medium text-indigo-700">You have {{ session('two_fa_attempts_remaining', 3) }} attempts remaining.</p>
                     </div>
                     
                     <form id="verify2faForm" method="POST" action="{{ route('2fa.verify') }}" class="space-y-6">
@@ -147,19 +147,19 @@
                         </div>
                     </form>
                     
-                    <div class="flex items-center justify-center gap-2 mt-6 pt-6 border-t border-gray-200">
+                    <div class="mt-6 flex items-center justify-center gap-2 border-t border-indigo-100 pt-6">
                         <div id="two-factor-resend" class="{{ session('pending_2fa_method') === 'authenticator' ? 'hidden' : '' }}">
                             <form id="resendOtpForm" method="POST" action="{{ route('2fa.resend') }}" class="inline-flex items-center">
                                 @csrf
-                                <button type="submit" class="text-sm text-blue-600 hover:text-blue-700 font-medium hover:underline transition-colors">
+                                <button type="submit" class="text-sm font-medium text-indigo-700 transition-colors hover:text-violet-700 hover:underline">
                                     Resend Code
                                 </button>
                             </form>
-                            <span class="text-xs text-gray-500">| Code expires quickly.</span>
+                            <span class="text-xs text-slate-500">| Code expires quickly.</span>
                         </div>
-                        <span id="authenticator-refresh-message" class="{{ session('pending_2fa_method') === 'authenticator' ? '' : 'hidden' }} text-xs text-gray-500">Your authenticator code refreshes automatically.</span>
+                        <span id="authenticator-refresh-message" class="{{ session('pending_2fa_method') === 'authenticator' ? '' : 'hidden' }} text-xs text-slate-500">Your authenticator code refreshes automatically.</span>
                     </div>
-                    <div id="otpStatusMessage" class="text-center text-sm text-green-700 mt-3"></div>
+                    <div id="otpStatusMessage" class="mt-3 text-center text-sm text-emerald-700"></div>
                     
                     <button onclick="location.href='{{ route('login') }}'" class="mt-6 w-full rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2 font-medium text-indigo-900 transition-all hover:bg-indigo-100">
                         Cancel
@@ -168,7 +168,7 @@
             </div>
             
             <div class="mt-6 text-center">
-                <p class="text-sm text-gray-600 mb-4">Or use below to login to your account</p>
+                <p class="mb-4 text-sm text-slate-600">Or use below to login to your account</p>
 
                 <div class="flex justify-center gap-4 mb-4">
                     <!-- Google Login -->
@@ -197,7 +197,7 @@
     </div>
     
     <!-- Right side - Gradient -->
-    <div aria-hidden="true" class="relative hidden min-h-[calc(100vh-73px)] w-1/2 overflow-hidden bg-gradient-to-br from-indigo-700 via-violet-600 to-cyan-600 md:block">
+    <div aria-hidden="true" class="relative hidden min-h-[calc(100vh-73px)] w-1/2 overflow-hidden bg-gradient-to-br from-indigo-700 via-violet-600 to-amber-400 md:block">
         <div class="absolute -right-32 -top-28 h-[32rem] w-[32rem] rounded-full bg-pink-300/35 blur-3xl"></div>
         <div class="absolute -bottom-40 -left-32 h-[34rem] w-[34rem] rounded-full bg-cyan-200/35 blur-3xl"></div>
         <div class="absolute inset-0 opacity-20" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 28px 28px;"></div>
@@ -249,8 +249,8 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
             const refreshMessage = document.getElementById('authenticator-refresh-message');
             document.getElementById('2faModal').querySelector('.text-lg.font-mono').textContent = data.email;
             instructions.innerHTML = data.method === 'authenticator'
-                ? '<p class="text-gray-700 mb-2 text-lg font-medium">Enter your authenticator code.</p><p class="text-sm text-gray-500 mb-4">Open Google Authenticator or Microsoft Authenticator and enter the current 6-digit code.</p>'
-                : '<p class="text-gray-700 mb-2 text-lg font-medium">Enter the code sent to your email.</p><p class="text-sm text-gray-500 mb-4">This code expires in 30 seconds.</p>';
+                ? '<p class="mb-2 text-lg font-medium text-slate-800">Enter your authenticator code.</p><p class="mb-4 text-sm text-slate-500">Open Google Authenticator or Microsoft Authenticator and enter the current 6-digit code.</p>'
+                : '<p class="mb-2 text-lg font-medium text-slate-800">Enter the code sent to your email.</p><p class="mb-4 text-sm text-slate-500">This code expires in 30 seconds.</p>';
             resend.classList.toggle('hidden', data.method === 'authenticator');
             refreshMessage.classList.toggle('hidden', data.method !== 'authenticator');
             document.getElementById('two-factor-attempts-warning').textContent = 'You have 3 attempts remaining.';

@@ -30,7 +30,7 @@
         max-height: 32rem;
         overflow-y: auto;
         padding-right: 0.5rem;
-        scrollbar-color: #a5b4fc #eef2ff;
+        scrollbar-color: #fbbf24 #fffbeb;
         scrollbar-width: thin;
     }
 
@@ -39,12 +39,12 @@
     }
 
     .reservation-options-scroll::-webkit-scrollbar-track {
-        background: #eef2ff;
+        background: #fffbeb;
         border-radius: 9999px;
     }
 
     .reservation-options-scroll::-webkit-scrollbar-thumb {
-        background: #a5b4fc;
+        background: #fbbf24;
         border-radius: 9999px;
     }
 </style>

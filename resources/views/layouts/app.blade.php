@@ -20,19 +20,19 @@
     <!-- Application header and global navigation bar -->
     <header class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 transition-colors duration-200">
         <a href="/" class="flex items-center">
-            <div class="flex items-center border border-black px-2 py-1">
+            <div class="flex items-center rounded-xl border border-amber-300 bg-white px-2 py-1 shadow-sm">
                 <span class="text-xs font-medium tracking-wide">CAMPUS</span>
-                <span class="bg-black text-white text-xs font-medium px-1 ml-1">RESERVE</span>
+                <span class="ml-1 rounded-md bg-green-800 px-1 text-xs font-medium text-white">RESERVE</span>
             </div>
         </a>
 
         <nav class="hidden md:flex items-center gap-8">
             <!-- Main site navigation links. The active route is highlighted dynamically. -->
-            <a href="/" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('/') ? 'text-black' : 'text-gray-700' }}">HOME</a>
+            <a href="/" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('/') ? 'text-green-900' : 'text-gray-700' }}">HOME</a>
             <a href="/reserve" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('reserve') ? 'text-black' : 'text-gray-700' }}">RESERVE</a>
-            <a href="/calendar" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('calendar') ? 'text-black' : 'text-gray-700' }}">CALENDAR</a>
-            <a href="/about" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('about') ? 'text-black' : 'text-gray-700' }}">ABOUT US</a>
-            <a href="/contact" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('contact') ? 'text-black' : 'text-gray-700' }}">CONTACT</a>
+            <a href="/calendar" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('calendar') ? 'text-green-900' : 'text-gray-700' }}">CALENDAR</a>
+            <a href="/about" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('about') ? 'text-green-900' : 'text-gray-700' }}">ABOUT US</a>
+            <a href="/contact" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('contact') ? 'text-green-900' : 'text-gray-700' }}">CONTACT</a>
         </nav>
 
         <div class="flex items-center gap-3">
@@ -171,13 +171,13 @@
     @if(auth()->check() && !request()->routeIs('profile.show', 'security.compromised', 'login', 'register', 'password.*', '2fa.*', 'admin.*'))
         <div id="chatbot-widget" class="fixed inset-0 z-50 pointer-events-none" style="position: fixed; inset: 0; z-index: 9999; pointer-events: none;">
             <div id="chatbot-backdrop" class="invisible pointer-events-none absolute inset-0 bg-slate-950/20 opacity-0 transition-opacity duration-300" aria-hidden="true"></div>
-            <button id="chatbot-toggle" type="button" class="pointer-events-auto fixed bottom-5 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-700 via-violet-700 to-cyan-600 text-white shadow-xl shadow-indigo-900/25 transition hover:-translate-y-0.5 hover:shadow-2xl" style="position: fixed; right: 20px; bottom: 20px; z-index: 10001; display: flex; width: 56px; height: 56px; border-radius: 9999px; background: linear-gradient(135deg, #4338ca, #7c3aed 58%, #0891b2); color: #fff; pointer-events: auto; cursor: pointer;" aria-label="Open Arcee" title="Open Arcee">
+            <button id="chatbot-toggle" type="button" class="pointer-events-auto fixed bottom-5 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-green-800 via-green-700 to-amber-400 text-white shadow-xl shadow-green-900/25 transition hover:-translate-y-0.5 hover:shadow-2xl" style="position: fixed; right: 20px; bottom: 20px; z-index: 10001; display: flex; width: 56px; height: 56px; border-radius: 9999px; background: linear-gradient(135deg, #166534, #15803d 58%, #facc15); color: #fff; pointer-events: auto; cursor: pointer;" aria-label="Open Arcee" title="Open Arcee">
                 <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 10h8m-8 4h5m7-2a8 8 0 01-8 8 8.4 8.4 0 01-3.7-.85L4 20l.85-3.3A8 8 0 1112 20" />
                 </svg>
             </button>
             <section id="chatbot-panel" class="invisible pointer-events-none fixed right-0 top-0 flex h-full translate-x-full flex-col border-l border-indigo-100 bg-white opacity-0 shadow-2xl shadow-indigo-950/20 transition duration-300 ease-out sm:my-3 sm:mr-3 sm:h-[calc(100%-1.5rem)] sm:rounded-3xl sm:border" style="position: fixed; top: 0; right: 0; bottom: 0; z-index: 10000; display: flex; width: min(440px, 100vw); height: 100%;" aria-label="Arcee chatbot">
-                <div class="flex items-center justify-between border-b border-white/15 bg-gradient-to-r from-indigo-800 via-violet-700 to-cyan-700 px-5 py-4 text-white sm:rounded-t-3xl" style="display: flex; align-items: center; justify-content: space-between; min-height: 78px; padding: 16px 20px; background: linear-gradient(110deg, #3730a3, #6d28d9 58%, #0e7490); color: #fff;">
+                <div class="flex items-center justify-between border-b border-white/15 bg-gradient-to-r from-green-900 via-green-800 to-amber-400 px-5 py-4 text-white sm:rounded-t-3xl" style="display: flex; align-items: center; justify-content: space-between; min-height: 78px; padding: 16px 20px; background: linear-gradient(110deg, #14532d, #166534 58%, #facc15); color: #fff;">
                     <div>
                         <div class="flex items-center gap-3" style="display: flex; align-items: center; gap: 12px;">
                             <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/15 text-sm font-bold shadow-inner" style="display: flex; flex: 0 0 40px; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 16px; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.15); color: #fff; font-size: 13px; font-weight: 700;">AC</span>

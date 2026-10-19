@@ -253,12 +253,12 @@ class CalendarController extends Controller
     private function getReservationColor($reservationId)
     {
         $colors = [
-            '#4F46E5', '#7C3AED', '#9333EA', '#6D28D9',
-            '#C026D3', '#A21CAF', '#DB2777', '#BE185D',
-            '#0891B2', '#0E7490', '#0284C7', '#0369A1',
-            '#4338CA', '#5B21B6', '#86198F', '#7E22CE',
-            '#9D174D', '#A21CAF', '#155E75', '#1D4ED8',
-            '#3730A3', '#6B21A8', '#9D174D', '#0F766E',
+            '#166534', '#15803D', '#16A34A', '#14532D',
+            '#B45309', '#D97706', '#92400E', '#F59E0B',
+            '#166534', '#15803D', '#16A34A', '#14532D',
+            '#B45309', '#D97706', '#92400E', '#F59E0B',
+            '#166534', '#15803D', '#16A34A', '#14532D',
+            '#B45309', '#D97706', '#92400E', '#F59E0B',
         ];
         
         // I cycle through the colors based on the reservation ID so each one gets a different color

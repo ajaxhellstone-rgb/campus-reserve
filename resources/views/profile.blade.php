@@ -8,7 +8,7 @@
         margin-right: 0.75rem;
         border: 0;
         border-radius: 9999px;
-        background: #4338ca;
+        background: #15803d;
         padding: 0.5rem 1rem;
         color: #fff;
         font-size: 0.875rem;
@@ -18,14 +18,14 @@
     }
 
     .profile-picture-input::file-selector-button:hover {
-        background: #3730a3;
+        background: #14532d;
     }
 
     .profile-picture-input::-webkit-file-upload-button {
         margin-right: 0.75rem;
         border: 0;
         border-radius: 9999px;
-        background: #4338ca;
+        background: #15803d;
         padding: 0.5rem 1rem;
         color: #fff;
         font-size: 0.875rem;
@@ -41,7 +41,7 @@
     <div class="mx-auto w-full max-w-5xl">
         <section class="space-y-8">
             <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-indigo-950/5">
-                <div class="bg-gradient-to-r from-indigo-700 via-violet-700 to-cyan-700 px-8 py-8 text-white">
+                <div class="bg-gradient-to-r from-indigo-700 via-violet-700 to-amber-400 px-8 py-8 text-white">
                     <h1 class="text-3xl font-semibold">Account</h1>
                     <p class="mt-2 max-w-2xl text-sm text-slate-300">Update your profile, security preferences, and manage how people see your account.</p>
                 </div>

@@ -163,7 +163,7 @@
             @if($users->isEmpty())
                 <p class="text-gray-500">No users found.</p>
             @else
-                <div class="rounded-3xl border border-slate-200" style="height: 32rem; overflow: auto; scrollbar-width: auto; scrollbar-color: #a5b4fc #eef2ff;" tabindex="0" aria-label="Scrollable member list">
+                <div class="rounded-3xl border border-slate-200" style="height: 32rem; overflow: auto; scrollbar-width: auto; scrollbar-color: #fbbf24 #fffbeb;" tabindex="0" aria-label="Scrollable member list">
                     <table class="min-w-full divide-y divide-slate-200 bg-white">
                         <thead class="sticky top-0 z-10 bg-indigo-50/80">
                             <tr>

@@ -39,8 +39,8 @@
                 <p class="mt-2 text-sm leading-6 text-slate-600">View up-to-date availability through an integrated calendar. Users can instantly see open time slots, helping schools prevent double-bookings and scheduling conflicts.</p>
             </article>
 
-            <article class="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-rose-200 hover:shadow-lg hover:shadow-rose-950/5">
-                <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-700 transition group-hover:bg-rose-100">
+            <article class="group rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:border-amber-200 hover:shadow-lg hover:shadow-amber-950/5">
+                <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 transition group-hover:bg-amber-100">
                     <svg aria-hidden="true" class="h-6 w-6" viewBox="0 0 24 24" fill="none">
                         <path d="M5 20V9l7-5 7 5v11M9 20v-6h6v6M3 20h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>

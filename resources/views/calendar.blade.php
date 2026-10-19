@@ -140,20 +140,20 @@
         --fc-border-color: #e2e8f0;
         --fc-page-bg-color: transparent;
         --fc-neutral-bg-color: #f8fafc;
-        --fc-today-bg-color: #eef2ff;
-        --fc-button-bg-color: #4338ca;
-        --fc-button-border-color: #4338ca;
-        --fc-button-hover-bg-color: #3730a3;
-        --fc-button-hover-border-color: #3730a3;
-        --fc-button-active-bg-color: #312e81;
-        --fc-button-active-border-color: #312e81;
-        --fc-event-border-color: #818cf8;
-        --fc-event-bg-color: #6366f1;
+        --fc-today-bg-color: #fffbeb;
+        --fc-button-bg-color: #166534;
+        --fc-button-border-color: #166534;
+        --fc-button-hover-bg-color: #14532d;
+        --fc-button-hover-border-color: #14532d;
+        --fc-button-active-bg-color: #052e16;
+        --fc-button-active-border-color: #052e16;
+        --fc-event-border-color: #b45309;
+        --fc-event-bg-color: #15803d;
         --fc-event-text-color: #fff;
     }
 
     #calendar .fc-toolbar-title {
-        color: #1e1b4b;
+        color: #14532d;
         font-weight: 600;
     }
 
@@ -161,7 +161,7 @@
         max-height: 18rem;
         overflow-y: scroll;
         padding-right: 0.5rem;
-        scrollbar-color: #a5b4fc #eef2ff;
+        scrollbar-color: #fbbf24 #fffbeb;
         scrollbar-width: thin;
     }
 
@@ -170,12 +170,12 @@
     }
 
     #pendingReservationsList::-webkit-scrollbar-track {
-        background: #eef2ff;
+        background: #fffbeb;
         border-radius: 9999px;
     }
 
     #pendingReservationsList::-webkit-scrollbar-thumb {
-        background: #a5b4fc;
+        background: #fbbf24;
         border-radius: 9999px;
     }
 </style>
