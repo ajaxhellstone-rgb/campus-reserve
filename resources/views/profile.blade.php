@@ -8,7 +8,7 @@
         margin-right: 0.75rem;
         border: 0;
         border-radius: 9999px;
-        background: #0f172a;
+        background: #4338ca;
         padding: 0.5rem 1rem;
         color: #fff;
         font-size: 0.875rem;
@@ -18,14 +18,14 @@
     }
 
     .profile-picture-input::file-selector-button:hover {
-        background: #334155;
+        background: #3730a3;
     }
 
     .profile-picture-input::-webkit-file-upload-button {
         margin-right: 0.75rem;
         border: 0;
         border-radius: 9999px;
-        background: #0f172a;
+        background: #4338ca;
         padding: 0.5rem 1rem;
         color: #fff;
         font-size: 0.875rem;
@@ -37,29 +37,29 @@
 
 @section('content')
 <!-- Profile settings page for updating user account details, profile picture, and phone information. -->
-<main class="min-h-[calc(100vh-73px)] bg-slate-50 py-10 px-4 md:px-8 xl:px-16">
+<main class="min-h-[calc(100vh-73px)] bg-gradient-to-br from-purple-50 via-slate-50 to-cyan-50 px-4 py-10 md:px-8 xl:px-16">
     <div class="mx-auto grid w-full max-w-7xl gap-8 xl:grid-cols-[280px_1fr]">
-        <aside class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <aside class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm shadow-indigo-950/5">
             <div class="mb-8">
                 <h2 class="text-lg font-semibold text-gray-900">Settings</h2>
                 <p class="mt-2 text-sm text-gray-500">Manage your account settings from one place.</p>
             </div>
 
             <div class="space-y-3">
-                <div class="rounded-3xl border border-gray-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-900">Account</div>
+                <div class="rounded-3xl border border-indigo-100 bg-indigo-50/70 px-4 py-4 text-sm font-semibold text-indigo-900">Account</div>
             </div>
 
             <div class="mt-10 border-t border-gray-200 pt-8">
                 <p class="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">System</p>
                 <div class="mt-4 space-y-3">
-                    <a href="{{ route('notifications.index') }}" class="w-full block rounded-3xl border border-gray-200 bg-white px-4 py-4 text-left text-sm text-gray-600 transition hover:border-black hover:text-black">Notifications</a>
+                    <a href="{{ route('notifications.index') }}" class="block w-full rounded-3xl border border-slate-200 bg-white px-4 py-4 text-left text-sm text-slate-600 transition hover:border-indigo-300 hover:text-indigo-800">Notifications</a>
                 </div>
             </div>
         </aside>
 
         <section class="space-y-8">
-            <div class="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
-                <div class="bg-linear-to-r from-slate-900 via-slate-800 to-black px-8 py-8 text-white">
+            <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-indigo-950/5">
+                <div class="bg-gradient-to-r from-indigo-700 via-violet-700 to-cyan-700 px-8 py-8 text-white">
                     <h1 class="text-3xl font-semibold">Account</h1>
                     <p class="mt-2 max-w-2xl text-sm text-slate-300">Update your profile, security preferences, and manage how people see your account.</p>
                 </div>
@@ -83,12 +83,12 @@
                         <input type="hidden" name="email_notifications" value="0" />
 
                         <div class="grid gap-6 xl:grid-cols-[280px_1fr]">
-                            <div class="rounded-3xl border border-gray-200 bg-slate-50 p-6">
+                            <div class="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-6">
                                 <p class="text-sm font-semibold text-gray-900">Profile</p>
                                 <p class="mt-2 text-sm text-gray-500">Your avatar, name, and contact details.</p>
                             </div>
 
-                            <div class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <div class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
                                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
                                     <div class="relative h-24 w-24 overflow-hidden rounded-3xl border border-gray-200 bg-gray-100">
                                         <img
@@ -110,7 +110,7 @@
                                 <div class="grid gap-6 md:grid-cols-2">
                                     <label class="block">
                                         <span class="text-sm font-semibold text-gray-900">Full name</span>
-                                        <input type="text" name="name" value="{{ old('name', auth()->user()->name) }}" required class="mt-2 w-full rounded-3xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-black" />
+                                        <input type="text" name="name" value="{{ old('name', auth()->user()->name) }}" required class="mt-2 w-full rounded-3xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
                                         @error('name')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                                     </label>
 
@@ -125,7 +125,7 @@
                                     
                                     <!-- Display Mode -->
                                     <div id="phone_display_mode" class="mt-2 hidden">
-                                        <div class="flex items-center justify-between rounded-3xl border border-gray-300 bg-slate-50 px-4 py-3">
+                                        <div class="flex items-center justify-between rounded-3xl border border-slate-300 bg-slate-50 px-4 py-3">
                                             <span class="text-sm text-gray-900" id="phone_display_text">
                                                 @if(auth()->user()->phone)
                                                     {{ auth()->user()->phone }}
@@ -165,7 +165,7 @@
                                             </label>
                                         </div>
                                         <div class="flex gap-2">
-                                            <button type="button" id="phone_save_btn" class="flex-1 rounded-3xl bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900 transition">Save</button>
+                                            <button type="button" id="phone_save_btn" class="flex-1 rounded-3xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-800">Save</button>
                                             <button type="button" id="phone_cancel_btn" class="flex-1 rounded-3xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 transition">Cancel</button>
                                         </div>
                                     </div>
@@ -179,9 +179,9 @@
                                 <p class="text-sm font-semibold text-gray-900">Email notifications</p>
                                 <p class="mt-2 text-sm text-gray-500">Choose whether to receive reservation updates by email.</p>
                             </div>
-                            <div class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <div class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
                                 <label class="flex items-start gap-3">
-                                    <input id="email-notifications-toggle" type="checkbox" name="email_notifications" value="1" @checked(old('email_notifications', auth()->user()->email_notifications)) class="mt-1 rounded border-gray-300 text-black focus:ring-black" />
+                                    <input id="email-notifications-toggle" type="checkbox" name="email_notifications" value="1" @checked(old('email_notifications', auth()->user()->email_notifications)) class="mt-1 rounded border-gray-300 text-indigo-700 focus:ring-indigo-500" />
                                     <span>
                                         <span class="block text-sm font-semibold text-gray-900">Email me about my reservations</span>
                                         <span class="mt-1 block text-sm text-gray-500">Receive an email when a reservation is submitted, approved, or denied. In-app notifications are always on.</span>
@@ -197,11 +197,11 @@
                                 <p class="mt-2 text-sm text-gray-500">Control password access and two-factor authentication.</p>
                             </div>
 
-                            <div class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+                            <div class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
                                 <div class="pb-6">
                                     <p class="text-sm font-semibold text-gray-900">Password Reset</p>
                                     <p class="mt-2 text-sm text-gray-500">Change your account password securely.</p>
-                                    <button type="button" id="open-password-modal" class="mt-4 rounded-md bg-black px-5 py-3 text-sm font-semibold text-white hover:bg-gray-800">Change password</button>
+                                    <button type="button" id="open-password-modal" class="mt-4 rounded-full bg-indigo-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-800">Change password</button>
                                 </div>
 
                                 <div class="mt-6">
@@ -212,7 +212,7 @@
                                             <p class="mt-1 text-sm text-blue-800">Set up Google Authenticator or Microsoft Authenticator to generate login codes.</p>
                                             <div class="mt-4 flex flex-col gap-3 sm:flex-row">
                                                 <input id="setup-current-password" type="password" name="setup_current_password" class="w-full rounded-3xl border border-blue-200 bg-white px-4 py-3 text-sm" placeholder="Current password" autocomplete="current-password">
-                                                <button type="button" id="generate-authenticator-qr" class="rounded-md bg-black px-5 py-3 text-sm font-semibold whitespace-nowrap text-white hover:bg-gray-800">Generate QR code</button>
+                                                <button type="button" id="generate-authenticator-qr" class="rounded-full bg-indigo-700 px-5 py-3 text-sm font-semibold whitespace-nowrap text-white hover:bg-indigo-800">Generate QR code</button>
                                                 <button type="button" id="cancel-authenticator-setup" class="rounded-md bg-red-600 px-5 py-3 text-sm font-semibold whitespace-nowrap text-white hover:bg-red-700">Cancel</button>
                                             </div>
                                             <p id="authenticator-setup-error" class="{{ $errors->has('setup_current_password') ? '' : 'hidden' }} mt-2 text-sm text-red-600">{{ $errors->first('setup_current_password') }}</p>
@@ -230,7 +230,7 @@
                                     </div>
                                     <div class="mt-3 inline-flex items-center gap-4 rounded-3xl border border-gray-300 bg-slate-50 p-4">
                                         <input type="hidden" name="two_fa_enabled" value="0">
-                                        <input type="checkbox" id="two_fa_enabled" name="two_fa_enabled" value="1" class="h-5 w-5 rounded border-gray-300 text-black focus:ring-black" {{ old('two_fa_enabled', auth()->user()->two_fa_enabled) ? 'checked' : '' }}>
+                                        <input type="checkbox" id="two_fa_enabled" name="two_fa_enabled" value="1" class="h-5 w-5 rounded border-gray-300 text-indigo-700 focus:ring-indigo-500" {{ old('two_fa_enabled', auth()->user()->two_fa_enabled) ? 'checked' : '' }}>
                                         <span class="text-sm text-gray-700">Enable two-factor authentication</span>
                                     </div>
                                     @error('two_fa_enabled')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
@@ -241,7 +241,7 @@
 
                         <div class="flex flex-col gap-3 sm:flex-row justify-end">
                             <a href="{{ route('reserve') }}" class="inline-flex items-center justify-center rounded-full border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-all">Cancel</a>
-                            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-black px-6 py-3 text-sm font-semibold text-white hover:bg-gray-900 transition-all">Save settings</button>
+                            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-indigo-700 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-indigo-800">Save settings</button>
                         </div>
                     </form>
                 </div>

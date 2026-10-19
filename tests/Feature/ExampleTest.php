@@ -15,9 +15,10 @@ class ExampleTest extends TestCase
         $response = $this->get('/');
 
         $response->assertStatus(200)
-            ->assertSee('Make room for')
-            ->assertSee('what matters.')
-            ->assertSee('Find a space')
-            ->assertSee('View the calendar');
+            ->assertSee('Welcome to')
+            ->assertSee('Campus Reserve!')
+            ->assertSee('Reserve Now')
+            ->assertSee('Explore Calendar')
+            ->assertSee('Why Choose Campus Reserve?');
     }
 }

@@ -1,38 +1,63 @@
 <section class="overflow-hidden bg-white px-6 py-20 sm:px-8 md:py-24">
     <div class="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:gap-20">
         <div>
-            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">Made for shared spaces</p>
-            <h2 class="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Good campus days start with a little coordination.</h2>
-            <p class="mt-5 max-w-xl text-base leading-7 text-slate-600">
-                From study sessions to department events, Campus Reserve helps your community make better use of the spaces you share.
-            </p>
+            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-indigo-600">Campus Reserve</p>
+            <h2 class="mt-3 max-w-xl text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Why Choose Campus Reserve?</h2>
 
             <div class="mt-8 space-y-5">
                 <div class="flex gap-4">
-                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">1</span>
+                    <span class="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">✓</span>
                     <div>
-                        <h3 class="font-semibold text-slate-950">Find a space that fits</h3>
-                        <p class="mt-1 text-sm leading-6 text-slate-600">Browse facilities and check their schedules before choosing a time.</p>
+                        <h3 class="font-semibold text-slate-950">Centralized Scheduling</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Manage all room and facility reservations in one organized platform.</p>
                     </div>
                 </div>
                 <div class="flex gap-4">
-                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-pink-100 text-sm font-semibold text-pink-800">2</span>
+                    <span class="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-100 text-xs font-bold text-pink-800">✓</span>
                     <div>
-                        <h3 class="font-semibold text-slate-950">Send your request</h3>
-                        <p class="mt-1 text-sm leading-6 text-slate-600">Share the details your campus team needs to review your booking.</p>
+                        <h3 class="font-semibold text-slate-950">Real-Time Calendar Visibility</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Instantly view availability to prevent double-bookings and scheduling conflicts.</p>
                     </div>
                 </div>
                 <div class="flex gap-4">
-                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-800">3</span>
+                    <span class="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-xs font-bold text-cyan-800">✓</span>
                     <div>
-                        <h3 class="font-semibold text-slate-950">Stay in the loop</h3>
-                        <p class="mt-1 text-sm leading-6 text-slate-600">Check your reservation status and keep plans moving.</p>
+                        <h3 class="font-semibold text-slate-950">Efficient Booking Process</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Reserve spaces quickly with an intuitive, step-by-step booking system.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <span class="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">✓</span>
+                    <div>
+                        <h3 class="font-semibold text-slate-950">Reduced Administrative Workload</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Automate scheduling tasks and minimize manual coordination.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <span class="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pink-100 text-xs font-bold text-pink-800">✓</span>
+                    <div>
+                        <h3 class="font-semibold text-slate-950">Improved Space Utilization</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Gain better insight into how facilities are used and optimize resource allocation.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <span class="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-xs font-bold text-cyan-800">✓</span>
+                    <div>
+                        <h3 class="font-semibold text-slate-950">Accessible Anytime, Anywhere</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Use the system through a web-based platform that supports flexible access.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <span class="mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">✓</span>
+                    <div>
+                        <h3 class="font-semibold text-slate-950">Reliable Third-Party Solution</h3>
+                        <p class="mt-1 text-sm leading-6 text-slate-600">Operates independently, allowing schools to adopt the system without institutional dependency.</p>
                     </div>
                 </div>
             </div>
 
             <a href="/about" class="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-slate-900 transition hover:text-indigo-700">
-                Get to know Campus Reserve
+                Learn More
                 <svg aria-hidden="true" class="h-4 w-4" viewBox="0 0 20 20" fill="none">
                     <path d="M4 10h12m-5-5 5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -45,7 +70,7 @@
                 <div class="flex items-center justify-between gap-3">
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Your reservations</p>
-                        <h3 class="mt-1 text-xl font-semibold text-slate-950">A clear path forward</h3>
+                        <h3 class="mt-1 text-xl font-semibold text-slate-950">Centralized Scheduling</h3>
                     </div>
                     <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-700 text-white">
                         <svg aria-hidden="true" class="h-5 w-5" viewBox="0 0 24 24" fill="none">
@@ -95,13 +120,13 @@
                                 <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
                             </svg>
                         </span>
-                        <span class="text-sm font-medium text-slate-600">Your next campus event starts here.</span>
+                        <span class="text-sm font-medium text-slate-600">Keep operations organized and transparent.</span>
                     </div>
                 </div>
 
                 <div class="mt-5 flex items-center gap-2 text-xs text-slate-500">
                     <span class="h-2 w-2 rounded-full bg-indigo-500"></span>
-                    One place for requests and updates
+                    Improved Space Utilization
                 </div>
             </div>
         </div>
