@@ -78,16 +78,15 @@
                     </div>
                 </div>
 
-                <div id="facility-scroll-area" class="space-y-4 rounded-2xl border border-gray-200 bg-gray-50/40 p-2 pr-3" style="height: 420px; max-height: 420px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #5f5f5f #f3f4f6;">
+                <div id="facility-scroll-area" class="space-y-3 rounded-2xl border border-gray-200 bg-gray-50/40 p-2 pr-3" style="height: 420px; max-height: 420px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #5f5f5f #f3f4f6;">
                     @forelse($facilities as $facility)
-                        <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4 facility-card" data-name="{{ strtolower($facility->name) }}" data-description="{{ strtolower($facility->description ?? '') }}">
-                            <div class="mb-3 h-28 rounded-xl bg-gradient-to-br from-slate-200 to-slate-300"></div>
+                        <div class="rounded-2xl border border-gray-200 bg-gray-50 p-3 facility-card" data-name="{{ strtolower($facility->name) }}" data-description="{{ strtolower($facility->description ?? '') }}">
                             <div class="flex items-start justify-between gap-3">
-                                <div>
+                                <div class="min-w-0 flex-1">
                                     <h3 class="text-lg font-semibold text-gray-900">{{ $facility->name }}</h3>
                                     <p class="mt-1 text-sm text-gray-600">{{ $facility->description }}</p>
                                 </div>
-                                <div class="flex gap-2">
+                                <div class="flex shrink-0 gap-2">
                                     <button type="button"
                                         data-edit-id="{{ $facility->id }}"
                                         data-name="{{ $facility->name }}"

@@ -48,11 +48,21 @@ class FacilityItemManagementTest extends TestCase
             'is_admin' => true,
             'is_super_admin' => false,
         ]);
+        Facility::create([
+            'name' => 'Classroom A',
+            'building' => 'Academic Building',
+            'type' => 'Classroom',
+            'capacity' => 30,
+        ]);
 
         $this->actingAs($admin)
             ->get(route('admin.facilities.create'))
             ->assertOk()
             ->assertDontSee('Amenities');
+
+        $this->get(route('admin.facilities.create'))
+            ->assertSee('Classroom A')
+            ->assertDontSee('bg-gradient-to-br from-slate-200 to-slate-300');
 
         $this->get('/calendar/manage')
             ->assertOk()
