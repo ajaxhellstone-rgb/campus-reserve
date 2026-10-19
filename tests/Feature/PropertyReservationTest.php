@@ -28,11 +28,15 @@ class PropertyReservationTest extends TestCase
         $this->actingAs($user)
             ->get(route('reserve'))
             ->assertOk()
+            ->assertSee('Welcome,')
+            ->assertDontSee('Welcome back,')
             ->assertSee('Reserve Facility')
             ->assertSee('Reserve Property')
             ->assertSee('Projector')
             ->assertSee('3 in stock')
-            ->assertSee('Reserve Items');
+            ->assertSee('Reserve Items')
+            ->assertSee('available-facilities-list', false)
+            ->assertSee('available-properties-list', false);
     }
 
     public function test_reserve_page_shows_property_item_quantity_statistics(): void

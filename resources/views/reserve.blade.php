@@ -25,6 +25,28 @@
         background: #94a3b8;
         border-radius: 9999px;
     }
+
+    .reservation-options-scroll {
+        max-height: 32rem;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+        scrollbar-color: #a5b4fc #eef2ff;
+        scrollbar-width: thin;
+    }
+
+    .reservation-options-scroll::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .reservation-options-scroll::-webkit-scrollbar-track {
+        background: #eef2ff;
+        border-radius: 9999px;
+    }
+
+    .reservation-options-scroll::-webkit-scrollbar-thumb {
+        background: #a5b4fc;
+        border-radius: 9999px;
+    }
 </style>
 @endpush
 
@@ -36,7 +58,7 @@
         <div class="relative mb-8 overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-r from-indigo-100/90 via-pink-50 to-cyan-100/80 p-7 shadow-sm sm:p-9">
             <div aria-hidden="true" class="absolute -right-10 -top-20 h-56 w-56 rounded-full bg-white/50 blur-3xl"></div>
             <p class="relative text-sm font-semibold uppercase tracking-[0.16em] text-indigo-700">Campus Reserve</p>
-            <h1 class="relative mt-2 text-3xl font-semibold tracking-tight text-slate-950">Welcome back, {{ Auth::user()->name }}!</h1>
+            <h1 class="relative mt-2 text-3xl font-semibold tracking-tight text-slate-950">Welcome, {{ Auth::user()->name }}!</h1>
             <p class="relative mt-2 text-slate-600">Manage your reservations and explore available facilities.</p>
         </div>
 
@@ -142,7 +164,7 @@
                 @if($facilities->isEmpty())
                     <div class="py-12 text-center text-gray-500">No facilities are available right now.</div>
                 @else
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div id="available-facilities-list" class="reservation-options-scroll grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" tabindex="0" aria-label="Available facilities">
                         @foreach($facilities as $facility)
                             <div class="rounded-2xl border border-slate-200 bg-white p-1 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
                                 <div class="p-4">
@@ -164,7 +186,7 @@
                 @if($facilities->isEmpty())
                     <div class="py-12 text-center text-gray-500">No facilities are available right now.</div>
                 @else
-                    <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                    <div id="available-properties-list" class="reservation-options-scroll grid grid-cols-1 gap-5 lg:grid-cols-2" tabindex="0" aria-label="Available properties and room items">
                         @foreach($facilities as $facility)
                             <article class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-200 hover:shadow-md">
                                 <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
