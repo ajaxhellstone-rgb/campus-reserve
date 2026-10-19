@@ -89,8 +89,8 @@
             </form>
 
             <!-- 2FA Modal -->
-<div id="2faModal" class="fixed inset-0 {{ session('show_2fa_modal') && session('pending_2fa_user_id') ? 'flex' : 'hidden' }} items-center justify-center z-50 p-4 animate-in fade-in zoom-in duration-200" style="background: rgba(0, 0, 0, 0.18); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
-                <div class="w-full max-w-sm rounded-3xl border border-indigo-100 bg-white/95 p-8 shadow-2xl shadow-indigo-950/20 backdrop-blur-xl animate-in slide-in-from-bottom-4 duration-300">
+<div id="2faModal" class="fixed inset-0 {{ session('show_2fa_modal') && session('pending_2fa_user_id') ? 'flex' : 'hidden' }} items-center justify-center z-50 p-4 animate-in fade-in zoom-in duration-200" style="background: rgba(0, 0, 0, 0.18);">
+                <div class="w-full max-w-sm rounded-3xl border border-indigo-100 bg-white/95 p-8 shadow-2xl shadow-indigo-950/20 animate-in slide-in-from-bottom-4 duration-300">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-2xl font-bold text-slate-900">Verify Your Login</h2>
                         <button onclick="close2faModal()" class="rounded-full p-1 text-xl text-slate-500 transition-all hover:bg-indigo-50 hover:text-indigo-900">&times;</button>
