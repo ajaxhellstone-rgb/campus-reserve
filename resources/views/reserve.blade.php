@@ -183,44 +183,14 @@
             <section id="property-reservation-panel" role="tabpanel" aria-labelledby="property-reservation-tab" class="hidden p-6" hidden>
                 <h2 class="mb-2 text-xl font-semibold text-gray-900">Available Room Items</h2>
                 <p class="mb-6 text-sm text-gray-600">Choose a room to see its equipment and reserve item quantities for a date and time.</p>
-                @if($facilities->isEmpty())
-                    <div class="py-12 text-center text-gray-500">No facilities are available right now.</div>
-                @else
-                    <div id="available-properties-list" class="reservation-options-scroll grid grid-cols-1 gap-5 lg:grid-cols-2" tabindex="0" aria-label="Available properties and room items">
-                        @foreach($facilities as $facility)
-                            <article class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-200 hover:shadow-md">
-                                <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                                    <div>
-                                        <h3 class="text-lg font-semibold text-gray-900">{{ $facility->name }}</h3>
-                                        <p class="mt-1 text-sm text-gray-500">{{ $facility->building }}</p>
-                                    </div>
-                                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                                        {{ $facility->items->count() }} {{ \Illuminate\Support\Str::plural('item', $facility->items->count()) }}
-                                    </span>
-                                </div>
-                                @if($facility->items->isEmpty())
-                                    <p class="mt-4 rounded-xl bg-indigo-50/70 px-4 py-3 text-sm text-slate-600">No reservable items are listed for this room.</p>
-                                @else
-                                    <ul class="mt-4 divide-y divide-gray-100">
-                                        @foreach($facility->items as $item)
-                                            <li class="flex items-center justify-between gap-3 py-2 text-sm">
-                                                <span class="font-medium text-gray-700">{{ $item->name }}</span>
-                                                <span class="text-gray-500">{{ $item->quantity }} in stock</span>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                    <button type="button"
-                                        data-property-facility-id="{{ $facility->id }}"
-                                        data-property-facility-name="{{ $facility->building }} — {{ $facility->name }}"
-                                        data-property-items="{{ $facility->items->map(fn ($item) => ['id' => $item->id, 'name' => $item->name, 'quantity' => $item->quantity])->toJson() }}"
-                                        class="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-800">
-                                        Reserve Items
-                                    </button>
-                                @endif
-                            </article>
-                        @endforeach
-                    </div>
-                @endif
+                <div id="available-properties-list"
+                    data-facilities-url="{{ route('api.facilities.property-items') }}"
+                    class="reservation-options-scroll grid grid-cols-1 gap-5 lg:grid-cols-2"
+                    tabindex="0"
+                    aria-label="Available properties and room items"
+                    aria-live="polite">
+                    <p class="py-8 text-center text-sm text-slate-500">Room items load when you open this tab.</p>
+                </div>
             </section>
         </div>
 
@@ -339,6 +309,10 @@
                     </form>
                 @endforeach
 
+                <div class="mt-6">
+                    {{ $reservations->links() }}
+                </div>
+
                 <div id="delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/30 px-4 py-8 backdrop-blur-sm">
                     <div class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
                         <h3 class="text-xl font-semibold text-gray-900">Confirm delete</h3>
@@ -398,6 +372,122 @@
             facility: document.getElementById('facility-reservation-statistics'),
             property: document.getElementById('property-reservation-statistics'),
         };
+        const propertiesList = document.getElementById('available-properties-list');
+        let propertyFacilities = [];
+        let propertyFacilitiesLoaded = false;
+        let propertyFacilitiesRequest = null;
+
+        async function loadPropertyFacilities() {
+            if (propertyFacilitiesRequest) {
+                return propertyFacilitiesRequest;
+            }
+
+            propertiesList.replaceChildren();
+            const loadingMessage = document.createElement('p');
+            loadingMessage.className = 'py-8 text-center text-sm text-slate-500';
+            loadingMessage.textContent = 'Loading room items...';
+            propertiesList.appendChild(loadingMessage);
+
+            propertyFacilitiesRequest = fetch(propertiesList.dataset.facilitiesUrl, {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error('Room items could not be loaded.');
+                    }
+                    return response.json();
+                })
+                .then((facilities) => {
+                    propertyFacilities = facilities;
+                    propertyFacilitiesLoaded = true;
+                    propertiesList.replaceChildren();
+
+                    if (!facilities.length) {
+                        const emptyMessage = document.createElement('p');
+                        emptyMessage.className = 'col-span-full py-12 text-center text-gray-500';
+                        emptyMessage.textContent = 'No facilities are available right now.';
+                        propertiesList.appendChild(emptyMessage);
+                        return;
+                    }
+
+                    facilities.forEach((facility) => {
+                        const card = document.createElement('article');
+                        card.className = 'rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-200 hover:shadow-md';
+
+                        const heading = document.createElement('div');
+                        heading.className = 'flex flex-col justify-between gap-3 sm:flex-row sm:items-start';
+                        const facilityDetails = document.createElement('div');
+                        const name = document.createElement('h3');
+                        name.className = 'text-lg font-semibold text-gray-900';
+                        name.textContent = facility.name;
+                        const building = document.createElement('p');
+                        building.className = 'mt-1 text-sm text-gray-500';
+                        building.textContent = facility.building || '';
+                        facilityDetails.append(name, building);
+
+                        const itemCount = document.createElement('span');
+                        itemCount.className = 'rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700';
+                        itemCount.textContent = `${facility.items.length} ${facility.items.length === 1 ? 'item' : 'items'}`;
+                        heading.append(facilityDetails, itemCount);
+                        card.appendChild(heading);
+
+                        if (!facility.items.length) {
+                            const emptyItems = document.createElement('p');
+                            emptyItems.className = 'mt-4 rounded-xl bg-indigo-50/70 px-4 py-3 text-sm text-slate-600';
+                            emptyItems.textContent = 'No reservable items are listed for this room.';
+                            card.appendChild(emptyItems);
+                        } else {
+                            const itemList = document.createElement('ul');
+                            itemList.className = 'mt-4 divide-y divide-gray-100';
+                            facility.items.forEach((item) => {
+                                const row = document.createElement('li');
+                                row.className = 'flex items-center justify-between gap-3 py-2 text-sm';
+                                const itemName = document.createElement('span');
+                                itemName.className = 'font-medium text-gray-700';
+                                itemName.textContent = item.name;
+                                const quantity = document.createElement('span');
+                                quantity.className = 'text-gray-500';
+                                quantity.textContent = `${item.quantity} in stock`;
+                                row.append(itemName, quantity);
+                                itemList.appendChild(row);
+                            });
+                            card.appendChild(itemList);
+
+                            const reserveButton = document.createElement('button');
+                            reserveButton.type = 'button';
+                            reserveButton.dataset.propertyFacilityId = String(facility.id);
+                            reserveButton.className = 'mt-4 inline-flex w-full items-center justify-center rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-800';
+                            reserveButton.textContent = 'Reserve Items';
+                            card.appendChild(reserveButton);
+                        }
+
+                        propertiesList.appendChild(card);
+                    });
+                })
+                .catch((error) => {
+                    propertiesList.replaceChildren();
+                    const errorMessage = document.createElement('p');
+                    errorMessage.className = 'col-span-full py-8 text-center text-sm text-rose-700';
+                    errorMessage.textContent = error.message || 'Room items could not be loaded.';
+                    propertiesList.appendChild(errorMessage);
+
+                    const retryButton = document.createElement('button');
+                    retryButton.type = 'button';
+                    retryButton.className = 'col-span-full mx-auto rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50';
+                    retryButton.textContent = 'Try again';
+                    retryButton.addEventListener('click', () => {
+                        propertyFacilitiesRequest = null;
+                        loadPropertyFacilities();
+                    });
+                    propertiesList.appendChild(retryButton);
+                })
+                .finally(() => {
+                    propertyFacilitiesRequest = null;
+                });
+
+            return propertyFacilitiesRequest;
+        }
 
         function selectReservationTab(tabName) {
             tabButtons.forEach((button) => {
@@ -421,6 +511,10 @@
                 statistics.hidden = !selected;
                 statistics.classList.toggle('hidden', !selected);
             });
+
+            if (tabName === 'property' && !propertyFacilitiesLoaded) {
+                loadPropertyFacilities();
+            }
         }
 
         tabButtons.forEach((button) => {
@@ -581,24 +675,35 @@
             }
         }
 
-        document.querySelectorAll('[data-property-facility-id]').forEach((button) => {
-            button.addEventListener('click', () => {
-                facilityIdInput.value = button.dataset.propertyFacilityId;
-                facilityLabel.textContent = button.dataset.propertyFacilityName;
-                modalItems = JSON.parse(button.dataset.propertyItems);
-                form.reset();
-                itemsContainer.replaceChildren();
-                facilityIdInput.value = button.dataset.propertyFacilityId;
-                const now = new Date();
-                dateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                startInput.value = '06:00';
-                endInput.value = '07:00';
-                setBookingError('');
-                renderItems(modalItems.map((item) => ({ ...item, available: item.quantity })));
-                setModalOpen(true);
-                refreshAvailability();
-                document.getElementById('property-booking-purpose').focus();
-            });
+        propertiesList.addEventListener('click', (event) => {
+            if (!(event.target instanceof Element)) {
+                return;
+            }
+
+            const button = event.target.closest('[data-property-facility-id]');
+            if (!button) {
+                return;
+            }
+
+            const facility = propertyFacilities.find((item) => String(item.id) === button.dataset.propertyFacilityId);
+            if (!facility) {
+                return;
+            }
+
+            facilityIdInput.value = String(facility.id);
+            facilityLabel.textContent = [facility.building, facility.name].filter(Boolean).join(' — ');
+            modalItems = facility.items;
+            form.reset();
+            itemsContainer.replaceChildren();
+            const now = new Date();
+            dateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            startInput.value = '06:00';
+            endInput.value = '07:00';
+            setBookingError('');
+            renderItems(modalItems.map((item) => ({ ...item, available: item.quantity })));
+            setModalOpen(true);
+            refreshAvailability();
+            document.getElementById('property-booking-purpose').focus();
         });
 
         [dateInput, startInput, endInput].forEach((input) => {

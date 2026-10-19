@@ -15,7 +15,7 @@ class PropertyReservationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_reserve_page_shows_facility_and_property_tabs_and_item_stock(): void
+    public function test_reserve_page_shows_reservation_tabs_without_eager_loading_property_items(): void
     {
         $user = User::factory()->create();
         $facility = $this->createFacility();
@@ -32,11 +32,32 @@ class PropertyReservationTest extends TestCase
             ->assertDontSee('Welcome back,')
             ->assertSee('Reserve Facility')
             ->assertSee('Reserve Property')
-            ->assertSee('Projector')
-            ->assertSee('3 in stock')
-            ->assertSee('Reserve Items')
+            ->assertDontSee('Projector')
+            ->assertDontSee('3 in stock')
             ->assertSee('available-facilities-list', false)
             ->assertSee('available-properties-list', false);
+    }
+
+    public function test_property_facility_items_load_only_when_the_property_tab_is_opened(): void
+    {
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        FacilityItem::create([
+            'facility_id' => $facility->id,
+            'name' => 'Projector',
+            'quantity' => 3,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('reserve'))
+            ->assertOk()
+            ->assertDontSee('Projector');
+
+        $this->getJson(route('api.facilities.property-items'))
+            ->assertOk()
+            ->assertJsonPath('0.id', $facility->id)
+            ->assertJsonPath('0.items.0.name', 'Projector')
+            ->assertJsonPath('0.items.0.quantity', 3);
     }
 
     public function test_reserve_page_shows_property_item_quantity_statistics(): void
@@ -62,6 +83,27 @@ class PropertyReservationTest extends TestCase
             ->assertSee('Borrowed Items')
             ->assertSee('Returned Items')
             ->assertSeeInOrder(['Borrowed Items', '2</p>', 'Returned Items', '3</p>']);
+    }
+
+    public function test_reserve_page_paginates_reservations_and_keeps_total_statistics(): void
+    {
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+
+        for ($index = 1; $index <= 21; $index++) {
+            $reservation = $this->createReservation($user, $facility, 'pending', '10:00', '11:00');
+            $reservation->update([
+                'reservation_date' => now()->addDays($index)->toDateString(),
+                'purpose' => "Booking {$index}",
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->get(route('reserve'))
+            ->assertOk()
+            ->assertSee('>21</p>', false)
+            ->assertSee('Next')
+            ->assertDontSee('Booking 21');
     }
 
     public function test_calendar_shows_all_approved_reservations_but_only_exposes_owner_purpose(): void

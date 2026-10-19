@@ -54,6 +54,12 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
+## Local development
+
+Local development uses the SQLite database at `database/database.sqlite`, file-based sessions and cache, synchronous jobs, and logged email by default. This keeps the local site independent of Wi-Fi and external services. Run `php artisan migrate` after pulling new migrations. The SQLite database is local and is not synchronized with the Render PostgreSQL database.
+
+Set `DB_CONNECTION=pgsql` and the appropriate database credentials in your private `.env` only when you intentionally want local development to use the remote database; that requires an internet connection.
+
 ## Render demo deployment
 
 This repository includes a Render Blueprint (`render.yaml`) and Dockerfile. In Render, create a new Blueprint and connect `ajaxhellstone-rgb/campus-reserve` on the `main` branch. The web service must be configured with the intended PostgreSQL connection (`DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSLMODE`) and the same Laravel `APP_KEY` used to encrypt existing user data. These values are intentionally not synchronized from the Blueprint. Database migrations run when the container starts.

@@ -12,7 +12,7 @@ FROM php:8.4-apache
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libpq-dev libzip-dev unzip \
     && docker-php-ext-install pdo_pgsql zip \
-    && a2enmod rewrite \
+    && a2enmod rewrite headers expires deflate filter \
     && sed -i 's/Listen 80/Listen 10000/' /etc/apache2/ports.conf \
     && rm -rf /var/lib/apt/lists/*
 
@@ -31,4 +31,4 @@ RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoload
 EXPOSE 10000
 
 ENTRYPOINT ["/usr/local/bin/campus-reserve-entrypoint"]
-CMD ["sh", "-c", "php artisan migrate --force && php artisan storage:link --force && php artisan config:cache && (php artisan schedule:work --no-interaction >/proc/1/fd/1 2>&1 &) && (php artisan queue:work --sleep=3 --tries=3 --timeout=60 --no-interaction >/proc/1/fd/1 2>&1 &) && apache2-foreground"]
+CMD ["sh", "-c", "php artisan migrate --force && php artisan storage:link --force && php artisan config:cache && php artisan view:cache && (php artisan schedule:work --no-interaction >/proc/1/fd/1 2>&1 &) && (php artisan queue:work --sleep=3 --tries=3 --timeout=60 --no-interaction >/proc/1/fd/1 2>&1 &) && apache2-foreground"]

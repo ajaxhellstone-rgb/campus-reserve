@@ -32,7 +32,7 @@
         <div class="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-4">
             <div class="rounded-3xl border border-indigo-100 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
                 <p class="text-sm font-medium text-gray-500">Pending Reservations</p>
-                <p class="mt-4 text-3xl font-bold text-gray-900">{{ $pendingReservations->count() }}</p>
+                <p class="mt-4 text-3xl font-bold text-gray-900">{{ $pendingReservations->total() }}</p>
             </div>
             <div class="rounded-3xl border border-pink-100 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
                 <p class="text-sm font-medium text-gray-500">Recent Decisions</p>
@@ -55,7 +55,7 @@
                         <h2 class="text-xl font-semibold text-gray-900">Pending Reservations</h2>
                         <p class="text-sm text-gray-600">Review and approve or reject requests.</p>
                     </div>
-                    <span class="text-sm text-gray-500">{{ $pendingReservations->count() }} pending</span>
+                    <span class="text-sm text-gray-500">{{ $pendingReservations->total() }} pending</span>
                 </div>
 
                 @if($pendingReservations->isEmpty())
@@ -104,6 +104,9 @@
                                 </div>
                             </div>
                         @endforeach
+                    </div>
+                    <div class="mt-4">
+                        {{ $pendingReservations->links() }}
                     </div>
                 @endif
             </section>

@@ -43,6 +43,8 @@ use App\Http\Controllers\CalendarController;
 Route::middleware('auth')->group(function () {
     Route::post('/api/chatbot', [ChatbotController::class, 'respond'])->name('chatbot.respond');
     Route::post('/api/chatbot/reset', [ChatbotController::class, 'reset'])->name('chatbot.reset');
+    Route::get('/api/property-facilities', [FacilityController::class, 'propertyItems'])
+        ->name('api.facilities.property-items');
     Route::get('/calendar', function () {
         return view('calendar');
     })->name('calendar');
@@ -118,26 +120,36 @@ Route::middleware('auth')->group(function () {
             ->where('user_id', $user->id)
             ->orderBy('reservation_date')
             ->orderBy('start_time')
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
-        $upcomingCount = $reservations->filter(function ($reservation) {
-            return in_array($reservation->status, ['pending', 'approved'])
-                && $reservation->reservation_date >= now()->toDateString();
-        })->count();
+        $today = now()->toDateString();
+        $reservationStats = Reservation::where('user_id', $user->id)
+            ->selectRaw(
+                'COUNT(CASE WHEN status IN (?, ?) AND reservation_date >= ? THEN 1 END) AS upcoming_count,
+                COUNT(CASE WHEN status = ? OR reservation_date < ? THEN 1 END) AS completed_count',
+                ['pending', 'approved', $today, 'completed', $today]
+            )
+            ->first();
 
-        $completedCount = $reservations->filter(function ($reservation) {
-            return $reservation->status === 'completed'
-                || $reservation->reservation_date < now()->toDateString();
-        })->count();
+        $itemStats = Reservation::query()
+            ->leftJoin('reservation_items', 'reservations.id', '=', 'reservation_items.reservation_id')
+            ->where('reservations.user_id', $user->id)
+            ->selectRaw(
+                'COALESCE(SUM(CASE WHEN reservations.status = ? THEN reservation_items.quantity ELSE 0 END), 0) AS borrowed_item_count,
+                COALESCE(SUM(CASE WHEN reservations.status = ? THEN reservation_items.quantity ELSE 0 END), 0) AS returned_item_count',
+                ['approved', 'completed']
+            )
+            ->first();
 
-        $borrowedItemCount = $reservations
-            ->where('status', 'approved')
-            ->sum(fn ($reservation) => $reservation->items->sum(fn ($item) => $item->pivot->quantity));
-        $returnedItemCount = $reservations
-            ->where('status', 'completed')
-            ->sum(fn ($reservation) => $reservation->items->sum(fn ($item) => $item->pivot->quantity));
+        $upcomingCount = (int) $reservationStats->upcoming_count;
+        $completedCount = (int) $reservationStats->completed_count;
+        $borrowedItemCount = (int) $itemStats->borrowed_item_count;
+        $returnedItemCount = (int) $itemStats->returned_item_count;
 
-        $facilities = Facility::active()->with('items')->orderBy('name')->get();
+        $facilities = Facility::active()
+            ->orderBy('name')
+            ->get(['id', 'name', 'capacity']);
 
         return view('reserve', compact(
             'reservations',

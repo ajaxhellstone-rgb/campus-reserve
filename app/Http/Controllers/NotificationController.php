@@ -15,11 +15,13 @@ class NotificationController extends Controller
 {
     public function unreadSummary()
     {
-        $unreadNotifications = auth()->user()->unreadNotifications();
+        $summary = auth()->user()->unreadNotifications()
+            ->selectRaw('COUNT(*) as count, MAX(created_at) as latest_at')
+            ->first();
 
         return response()->json([
-            'count' => (clone $unreadNotifications)->count(),
-            'latest_id' => $unreadNotifications->latest('created_at')->value('id'),
+            'count' => (int) $summary->count,
+            'latest_at' => $summary->latest_at,
         ]);
     }
 

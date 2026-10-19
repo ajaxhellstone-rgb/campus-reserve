@@ -42,7 +42,8 @@ class AdminController extends Controller
             ->where('status', 'pending')
             ->orderBy('reservation_date')
             ->orderBy('start_time')
-            ->get();
+            ->paginate(15, ['*'], 'pendingPage')
+            ->withQueryString();
 
         $recentReservations = Reservation::with(['user', 'facility'])
             ->whereIn('status', ['approved', 'rejected'])
@@ -50,7 +51,7 @@ class AdminController extends Controller
             ->take(20)
             ->get();
 
-        $auditLogs = AuditLog::with(['user', 'reservation'])
+        $auditLogs = AuditLog::with(['user', 'reservation.facility'])
             ->latest()
             ->take(25)
             ->get();

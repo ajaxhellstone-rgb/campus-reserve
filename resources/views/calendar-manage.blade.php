@@ -156,7 +156,6 @@
 @endsection
 
 @push('styles')
-<link href="{{ asset('fullcalendar/main.css') }}" rel="stylesheet">
 <style>
     #calendar {
         --fc-border-color: #e2e8f0;
@@ -182,8 +181,7 @@
 @endpush
 
 @push('scripts')
-<script src="{{ asset('fullcalendar/index.global.min.js') }}" crossorigin="anonymous"></script>
-<script src="{{ asset('fullcalendar/locales-all.global.min.js') }}" crossorigin="anonymous"></script>
+<script defer src="{{ asset('fullcalendar/index.global.min.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');

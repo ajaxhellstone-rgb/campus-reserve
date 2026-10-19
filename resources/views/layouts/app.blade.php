@@ -7,13 +7,7 @@
     <title>@yield('title', 'Campus Reserve')</title>
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
-
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js" defer></script>
     @stack('styles')
 </head>
 <body class="min-h-screen bg-white text-slate-900 transition-colors duration-200">
@@ -41,11 +35,6 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
-                    @if(auth()->user()->unreadNotifications->count())
-                        <span id="notificationBadge" class="absolute -top-1 -right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-[10px] font-semibold text-white">
-                            {{ auth()->user()->unreadNotifications->count() }}
-                        </span>
-                    @endif
                 </a>
                 <a href="/profile" class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900">
                     <img
@@ -81,7 +70,8 @@
             document.addEventListener('DOMContentLoaded', function() {
                 var audioContext = null;
                 var lastCount = null;
-                var lastNotificationId = null;
+                var lastNotificationTimestamp = null;
+                var notificationCheckInProgress = false;
                 var notificationLink = document.getElementById('notificationLink');
                 var notificationEndpoint = @json(route('notifications.unreadSummary'));
 
@@ -119,8 +109,9 @@
                 document.addEventListener('keydown', unlockNotificationSound, { once: true });
 
                 function updateNotificationStatus() {
-                    if (document.hidden) return;
+                    if (document.hidden || notificationCheckInProgress) return;
 
+                    notificationCheckInProgress = true;
                     fetch(notificationEndpoint, {
                         headers: { 'Accept': 'application/json' },
                         credentials: 'same-origin'
@@ -133,16 +124,16 @@
                         })
                         .then(function(summary) {
                             var count = Number(summary.count) || 0;
-                            var notificationId = summary.latest_id || null;
+                            var notificationTimestamp = summary.latest_at || null;
 
                             if (lastCount !== null
                                 && (count > lastCount
-                                    || (count === lastCount && count > 0 && notificationId !== lastNotificationId))) {
+                                    || (count === lastCount && count > 0 && notificationTimestamp !== lastNotificationTimestamp))) {
                                 playNotificationSound();
                             }
 
                             lastCount = count;
-                            lastNotificationId = notificationId;
+                            lastNotificationTimestamp = notificationTimestamp;
 
                             var badge = document.getElementById('notificationBadge');
                             if (count > 0) {
@@ -159,11 +150,17 @@
                         })
                         .catch(function(error) {
                             console.error('Could not check for new notifications.', error);
+                        })
+                        .finally(function() {
+                            notificationCheckInProgress = false;
                         });
                 }
 
                 updateNotificationStatus();
-                window.setInterval(updateNotificationStatus, 15000);
+                window.setInterval(updateNotificationStatus, 30000);
+                document.addEventListener('visibilitychange', function() {
+                    if (!document.hidden) updateNotificationStatus();
+                });
             });
         </script>
     @endauth

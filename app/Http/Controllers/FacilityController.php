@@ -19,4 +19,16 @@ class FacilityController extends Controller
 
         return response()->json($facilities);
     }
+
+    public function propertyItems()
+    {
+        $facilities = Facility::active()
+            ->with(['items' => function ($query) {
+                $query->select(['id', 'facility_id', 'name', 'quantity']);
+            }])
+            ->orderBy('name')
+            ->get(['id', 'name', 'building']);
+
+        return response()->json($facilities);
+    }
 }
