@@ -16,7 +16,7 @@ class CompleteExpiredReservationsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_completes_past_approved_facility_reservations_and_notifies_the_borrower(): void
+    public function test_it_completes_all_ended_approved_reservations_and_notifies_the_borrower(): void
     {
         Notification::fake();
         $this->travelTo(now()->setTime(15, 0));
@@ -47,12 +47,12 @@ class CompleteExpiredReservationsTest extends TestCase
         $this->assertDatabaseHas('reservations', ['id' => $endedTodayReservation->id, 'status' => 'completed']);
         $this->assertDatabaseHas('reservations', ['id' => $ongoingReservation->id, 'status' => 'approved']);
         $this->assertDatabaseHas('reservations', ['id' => $futureReservation->id, 'status' => 'approved']);
-        $this->assertDatabaseHas('reservations', ['id' => $propertyReservation->id, 'status' => 'approved']);
-        Notification::assertSentToTimes($user, ReservationStatusChanged::class, 2);
+        $this->assertDatabaseHas('reservations', ['id' => $propertyReservation->id, 'status' => 'completed']);
+        Notification::assertSentToTimes($user, ReservationStatusChanged::class, 3);
 
         Artisan::call('reservations:complete-expired');
 
-        Notification::assertSentToTimes($user, ReservationStatusChanged::class, 2);
+        Notification::assertSentToTimes($user, ReservationStatusChanged::class, 3);
     }
 
     private function createReservation(

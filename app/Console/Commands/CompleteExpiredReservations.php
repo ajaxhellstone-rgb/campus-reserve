@@ -19,7 +19,6 @@ class CompleteExpiredReservations extends Command
 
         Reservation::query()
             ->where('status', 'approved')
-            ->whereDoesntHave('items')
             ->where(function ($query) use ($now): void {
                 $query->whereDate('reservation_date', '<', $now->toDateString())
                     ->orWhere(function ($query) use ($now): void {
@@ -33,7 +32,6 @@ class CompleteExpiredReservations extends Command
                     $updated = Reservation::query()
                         ->whereKey($reservation->id)
                         ->where('status', 'approved')
-                        ->whereDoesntHave('items')
                         ->where(function ($query) use ($now): void {
                             $query->whereDate('reservation_date', '<', $now->toDateString())
                                 ->orWhere(function ($query) use ($now): void {
