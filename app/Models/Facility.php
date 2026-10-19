@@ -76,16 +76,10 @@ class Facility extends Model
         // I only block approvals and calendar bookings against already approved reservations.
         // Pending reservations may overlap, but they are not shown on the calendar until approved.
         $query = $this->reservations()
-            ->where('reservation_date', $date)
+            ->whereDate('reservation_date', $date)
             ->where('status', 'approved')
-            ->where(function ($q) use ($startTime, $endTime) {
-                $q->whereBetween('start_time', [$startTime, $endTime])
-                    ->orWhereBetween('end_time', [$startTime, $endTime])
-                    ->orWhere(function ($q2) use ($startTime, $endTime) {
-                        $q2->where('start_time', '<=', $startTime)
-                            ->where('end_time', '>=', $endTime);
-                    });
-            });
+            ->where('start_time', '<', $endTime)
+            ->where('end_time', '>', $startTime);
 
         if ($excludeReservationId) {
             $query->where('id', '!=', $excludeReservationId);

@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use App\Services\FacilityItemAvailability;
 use App\Services\ReservationNotificationDispatcher;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
@@ -93,68 +94,90 @@ class CalendarController extends Controller
             : Facility::active()->where('name', $facilityInput)->firstOrFail();
 
         if (!$facility->isAvailable($validated['date'], $validated['start_time'], $validated['end_time'])) {
-            return response()->json(['error' => 'Time slot not available'], 409);
+            return response()->json([
+                'code' => 'schedule_occupied',
+                'error' => "This schedule and room is already occupied!\nPlease try another time or room!",
+            ], 409);
         }
 
-        $reservation = DB::transaction(function () use ($validated, $facility, $hasItemBookings, $itemAvailability) {
-            $selectedItems = collect($validated['items'] ?? []);
+        try {
+            $reservation = DB::transaction(function () use ($validated, $facility, $hasItemBookings, $itemAvailability) {
+                $selectedItems = collect($validated['items'] ?? []);
 
-            if ($hasItemBookings) {
-                $itemIds = $selectedItems->pluck('facility_item_id')->map(fn ($id) => (int) $id)->all();
-                $lockedItems = FacilityItem::query()
-                    ->whereIn('id', $itemIds)
-                    ->orderBy('id')
-                    ->lockForUpdate()
-                    ->get()
-                    ->keyBy('id');
+                if ($hasItemBookings) {
+                    $itemIds = $selectedItems->pluck('facility_item_id')->map(fn ($id) => (int) $id)->all();
+                    $lockedItems = FacilityItem::query()
+                        ->whereIn('id', $itemIds)
+                        ->orderBy('id')
+                        ->lockForUpdate()
+                        ->get()
+                        ->keyBy('id');
 
-                if ($lockedItems->count() !== count($itemIds)) {
-                    throw ValidationException::withMessages([
-                        'items' => 'One or more selected items are no longer available.',
-                    ]);
-                }
-
-                foreach ($selectedItems as $selection) {
-                    $item = $lockedItems->get((int) $selection['facility_item_id']);
-                    if ($item->facility_id !== $facility->id) {
+                    if ($lockedItems->count() !== count($itemIds)) {
                         throw ValidationException::withMessages([
-                            'items' => 'Selected items must belong to the facility being reserved.',
+                            'items' => 'One or more selected items are no longer available.',
                         ]);
                     }
 
-                    $availableQuantity = $itemAvailability->availableQuantity(
-                        $item,
-                        $validated['date'],
-                        $validated['start_time'],
-                        $validated['end_time']
-                    );
+                    foreach ($selectedItems as $selection) {
+                        $item = $lockedItems->get((int) $selection['facility_item_id']);
+                        if ($item->facility_id !== $facility->id) {
+                            throw ValidationException::withMessages([
+                                'items' => 'Selected items must belong to the facility being reserved.',
+                            ]);
+                        }
 
-                    if ((int) $selection['quantity'] > $availableQuantity) {
-                        return response()->json([
-                            'error' => "{$item->name} has only {$availableQuantity} available for that date and time.",
-                        ], 409);
+                        $availableQuantity = $itemAvailability->availableQuantity(
+                            $item,
+                            $validated['date'],
+                            $validated['start_time'],
+                            $validated['end_time']
+                        );
+
+                        if ((int) $selection['quantity'] > $availableQuantity) {
+                            return response()->json([
+                                'error' => "{$item->name} has only {$availableQuantity} available for that date and time.",
+                            ], 409);
+                        }
                     }
                 }
+
+                $reservation = Reservation::create([
+                    'user_id' => Auth::id(),
+                    'facility_id' => $facility->id,
+                    'reservation_date' => $validated['date'],
+                    'start_time' => $validated['start_time'],
+                    'end_time' => $validated['end_time'],
+                    'purpose' => $validated['purpose'],
+                    'status' => 'pending',
+                ]);
+
+                if ($hasItemBookings) {
+                    $reservation->items()->attach($selectedItems->mapWithKeys(fn ($selection) => [
+                        (int) $selection['facility_item_id'] => ['quantity' => (int) $selection['quantity']],
+                    ])->all());
+                }
+
+                return $reservation;
+            });
+        } catch (UniqueConstraintViolationException $exception) {
+            $sameStartTimeExists = Reservation::query()
+                ->where('facility_id', $facility->id)
+                ->whereDate('reservation_date', $validated['date'])
+                ->get(['start_time'])
+                ->contains(fn (Reservation $existingReservation): bool =>
+                    $existingReservation->start_time->format('H:i') === $validated['start_time']
+                );
+
+            if (! $sameStartTimeExists) {
+                throw $exception;
             }
 
-            $reservation = Reservation::create([
-                'user_id' => Auth::id(),
-                'facility_id' => $facility->id,
-                'reservation_date' => $validated['date'],
-                'start_time' => $validated['start_time'],
-                'end_time' => $validated['end_time'],
-                'purpose' => $validated['purpose'],
-                'status' => 'pending',
-            ]);
-
-            if ($hasItemBookings) {
-                $reservation->items()->attach($selectedItems->mapWithKeys(fn ($selection) => [
-                    (int) $selection['facility_item_id'] => ['quantity' => (int) $selection['quantity']],
-                ])->all());
-            }
-
-            return $reservation;
-        });
+            return response()->json([
+                'code' => 'schedule_occupied',
+                'error' => "This schedule and room is already occupied!\nPlease try another time or room!",
+            ], 409);
+        }
 
         if ($reservation instanceof \Illuminate\Http\JsonResponse) {
             return $reservation;

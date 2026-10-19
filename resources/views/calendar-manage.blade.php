@@ -130,9 +130,9 @@
 <div id="errorModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/10 backdrop-blur-sm p-4 min-h-screen">
     <div class="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
         <div class="text-center">
-            <p class="text-sm font-semibold text-red-600">Error</p>
+            <p id="errorLabel" class="text-sm font-semibold text-red-600">Error</p>
             <h2 id="errorTitle" class="mt-3 text-2xl font-semibold text-slate-900">Reservation failed</h2>
-            <p id="errorMessage" class="mt-4 text-sm text-slate-600">An error occurred.</p>
+            <p id="errorMessage" class="mt-4 whitespace-pre-line text-sm text-slate-600">An error occurred.</p>
         </div>
         <div class="mt-8 flex justify-center gap-3">
             <button id="closeErrorBtn" type="button" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition">Close</button>
@@ -175,6 +175,7 @@
         var redirectToCalendarBtn = document.getElementById('redirectToCalendarBtn');
         var errorModal = document.getElementById('errorModal');
         var closeErrorBtn = document.getElementById('closeErrorBtn');
+        var errorLabel = document.getElementById('errorLabel');
         var errorTitle = document.getElementById('errorTitle');
         var errorMessage = document.getElementById('errorMessage');
         var modalDate = document.getElementById('modalDate');
@@ -325,9 +326,10 @@
             }
         }
 
-        function toggleErrorModal(show, title, message) {
+        function toggleErrorModal(show, title, message, label) {
             if (!errorModal) return;
             if (show) {
+                errorLabel.textContent = label || 'Error';
                 if (title) errorTitle.textContent = title;
                 if (message) errorMessage.textContent = message;
                 errorModal.classList.remove('hidden');
@@ -587,23 +589,21 @@
             })
             .then(function(response) {
                 return response.text().then(function(text) {
-                    var data = text ? JSON.parse(text) : {};
+                    var data = {};
+                    if (text) {
+                        try {
+                            data = JSON.parse(text);
+                        } catch (parseError) {
+                            if (response.ok) {
+                                throw parseError;
+                            }
+                        }
+                    }
                     if (!response.ok) {
                         var errorMsg = data.error || data.message || (data.errors ? Object.values(data.errors).flat()[0] : null) || 'Reservation failed';
-                        throw { error: errorMsg, status: response.status };
+                        throw { error: errorMsg, status: response.status, code: data.code };
                     }
                     return data;
-                }).catch(function(err) {
-                    if (!response.ok) {
-                        var errorMsg = 'Reservation failed';
-                        if (response.status === 409) {
-                            errorMsg = 'This time slot or one of the selected items is no longer available. Please check availability and try again.';
-                        } else {
-                            errorMsg = 'Reservation failed (' + response.status + ')';
-                        }
-                        throw { error: errorMsg, status: response.status };
-                    }
-                    throw err;
                 });
             })
             .then(function() {
@@ -617,8 +617,13 @@
             .catch(function(err) {
                 var title = 'Reservation failed';
                 var message = 'An error occurred while processing your reservation.';
+                var label = 'Error';
                 
-                if (err && err.error) {
+                if (err && err.code === 'schedule_occupied') {
+                    label = 'Sorry!';
+                    title = 'This schedule and room is already occupied!';
+                    message = 'Please try another time or room!';
+                } else if (err && err.error) {
                     if (err.status === 409) {
                         title = 'Reservation unavailable';
                         message = err.error;
@@ -629,7 +634,7 @@
                     message = err.message;
                 }
                 
-                toggleErrorModal(true, title, message);
+                toggleErrorModal(true, title, message, label);
             });
         });
     });

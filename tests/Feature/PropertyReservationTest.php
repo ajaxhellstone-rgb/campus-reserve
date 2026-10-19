@@ -102,6 +102,49 @@ class PropertyReservationTest extends TestCase
             ->assertJsonValidationErrors(['start', 'end']);
     }
 
+    public function test_reserving_an_occupied_room_returns_the_friendly_conflict_response(): void
+    {
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        $this->createReservation($user, $facility, 'approved', '10:00', '12:00');
+        $this->assertFalse($facility->fresh()->isAvailable('2030-05-01', '11:00', '13:00'));
+
+        $this->actingAs($user)
+            ->postJson('/api/calendar/reserve', [
+                'facility' => (string) $facility->id,
+                'purpose' => 'Club meeting',
+                'date' => '2030-05-01',
+                'start_time' => '11:00',
+                'end_time' => '13:00',
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('code', 'schedule_occupied')
+            ->assertJsonPath('error', "This schedule and room is already occupied!\nPlease try another time or room!");
+
+        $this->assertDatabaseCount('reservations', 1);
+    }
+
+    public function test_same_start_time_database_conflicts_return_the_friendly_response(): void
+    {
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        $this->createReservation($user, $facility, 'pending', '10:00', '12:00');
+
+        $this->actingAs($user)
+            ->postJson('/api/calendar/reserve', [
+                'facility' => (string) $facility->id,
+                'purpose' => 'Club meeting',
+                'date' => '2030-05-01',
+                'start_time' => '10:00',
+                'end_time' => '11:00',
+            ])
+            ->assertStatus(409)
+            ->assertJsonPath('code', 'schedule_occupied')
+            ->assertJsonPath('error', "This schedule and room is already occupied!\nPlease try another time or room!");
+
+        $this->assertDatabaseCount('reservations', 1);
+    }
+
     public function test_user_can_reserve_facility_items_with_date_and_time(): void
     {
         $user = User::factory()->create();

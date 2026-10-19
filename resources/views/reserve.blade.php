@@ -240,7 +240,7 @@
                         <div id="property-booking-items" class="mt-3 max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 p-3"></div>
                     </div>
 
-                    <p id="property-booking-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert"></p>
+                    <p id="property-booking-error" class="hidden whitespace-pre-line rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert"></p>
                     <div class="flex justify-end gap-3 border-t border-slate-100 pt-5">
                         <button type="button" id="property-booking-cancel" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
                         <button type="submit" id="property-booking-submit" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Reserve Items</button>
@@ -644,7 +644,9 @@
                 const data = await response.json();
                 if (!response.ok) {
                     const validationError = data.errors ? Object.values(data.errors).flat()[0] : null;
-                    throw new Error(data.error || validationError || data.message || 'Reservation could not be submitted.');
+                    const error = new Error(data.error || validationError || data.message || 'Reservation could not be submitted.');
+                    error.code = data.code;
+                    throw error;
                 }
 
                 sessionStorage.setItem('propertyBookingFeedback', 'Property reservation submitted and is pending approval.');
@@ -652,7 +654,9 @@
                 url.searchParams.set('tab', 'property');
                 window.location.assign(url);
             } catch (error) {
-                setBookingError(error.message || 'Reservation could not be submitted. Please try again.');
+                setBookingError(error.code === 'schedule_occupied'
+                    ? 'Sorry!\nThis schedule and room is already occupied!\nPlease try another time or room!'
+                    : error.message || 'Reservation could not be submitted. Please try again.');
             } finally {
                 submitButton.disabled = false;
                 submitButton.textContent = 'Reserve Items';
