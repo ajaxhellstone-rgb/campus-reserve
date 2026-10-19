@@ -39,6 +39,7 @@ class RejectExpiredReservationsTest extends TestCase
             'status' => 'rejected',
             'admin_remarks' => 'Automatically rejected because the reservation date has passed.',
         ]);
+        $this->assertNotNull($expiredPending->fresh()->rejected_at);
         $this->assertDatabaseHas('reservations', ['id' => $todayPending->id, 'status' => 'pending']);
         $this->assertDatabaseHas('reservations', ['id' => $upcomingPending->id, 'status' => 'pending']);
         $this->assertDatabaseHas('reservations', ['id' => $expiredApproved->id, 'status' => 'approved']);
@@ -50,6 +51,60 @@ class RejectExpiredReservationsTest extends TestCase
         Artisan::call('reservations:reject-expired');
 
         Notification::assertSentToTimes($user, ReservationStatusChanged::class, 1);
+    }
+
+    public function test_it_deletes_rejected_reservations_after_three_full_days(): void
+    {
+        $user = User::factory()->create();
+        $facility = Facility::create([
+            'name' => 'Lecture Room 1',
+            'building' => 'Main Building',
+            'type' => 'Classroom',
+            'capacity' => 30,
+            'is_active' => true,
+        ]);
+
+        $expiredRejected = $this->createReservation($user, $facility, 'rejected', now()->toDateString(), '10:00');
+        $expiredRejected->forceFill(['rejected_at' => now()->subDays(3)])->save();
+        $recentlyRejected = $this->createReservation($user, $facility, 'rejected', now()->toDateString(), '11:00');
+        $recentlyRejected->forceFill(['rejected_at' => now()->subDays(2)])->save();
+        $oldPending = $this->createReservation($user, $facility, 'pending', now()->toDateString(), '12:00');
+        $oldPending->forceFill(['rejected_at' => now()->subDays(5)])->save();
+
+        Artisan::call('reservations:delete-expired-rejected');
+
+        $this->assertDatabaseMissing('reservations', ['id' => $expiredRejected->id]);
+        $this->assertDatabaseHas('reservations', ['id' => $recentlyRejected->id, 'status' => 'rejected']);
+        $this->assertDatabaseHas('reservations', ['id' => $oldPending->id, 'status' => 'pending']);
+    }
+
+    public function test_admin_rejection_records_the_rejection_time(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create([
+            'is_admin' => true,
+            'is_super_admin' => false,
+        ]);
+        $user = User::factory()->create();
+        $facility = Facility::create([
+            'name' => 'Lecture Room 1',
+            'building' => 'Main Building',
+            'type' => 'Classroom',
+            'capacity' => 30,
+            'is_active' => true,
+        ]);
+        $reservation = $this->createReservation($user, $facility, 'pending', now()->addDay()->toDateString(), '10:00');
+
+        $this->actingAs($admin)
+            ->post(route('admin.reservations.reject', $reservation))
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
+            'status' => 'rejected',
+        ]);
+        $this->assertNotNull($reservation->fresh()->rejected_at);
     }
 
     private function createReservation(

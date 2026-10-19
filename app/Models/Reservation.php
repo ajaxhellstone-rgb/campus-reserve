@@ -20,6 +20,7 @@ class Reservation extends Model
         'purpose',
         'notes',
         'status',
+        'rejected_at',
         'admin_remarks',
         'attendees_count',
     ];
@@ -29,6 +30,7 @@ class Reservation extends Model
      */
     protected $casts = [
         'reservation_date' => 'date',
+        'rejected_at' => 'datetime',
         'start_time' => 'datetime:H:i',
         'end_time' => 'datetime:H:i',
     ];

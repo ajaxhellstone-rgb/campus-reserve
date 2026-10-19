@@ -356,6 +356,7 @@ class AdminController extends Controller
 
         $reservation->update([
             'status' => 'rejected',
+            'rejected_at' => now(),
             'admin_remarks' => $request->input('remarks', 'Rejected by admin.'),
         ]);
 

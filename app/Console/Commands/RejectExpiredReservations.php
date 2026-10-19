@@ -29,6 +29,7 @@ class RejectExpiredReservations extends Command
                         ->whereDate('reservation_date', '<', $cutoffDate)
                         ->update([
                             'status' => 'rejected',
+                            'rejected_at' => now(),
                             'admin_remarks' => 'Automatically rejected because the reservation date has passed.',
                             'updated_at' => now(),
                         ]);

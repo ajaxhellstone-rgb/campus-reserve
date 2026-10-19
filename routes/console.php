@@ -11,3 +11,4 @@ Artisan::command('inspire', function () {
 Schedule::command('property-returns:notify-due')->everyMinute()->withoutOverlapping();
 Schedule::command('reservations:reject-expired')->everyMinute()->withoutOverlapping();
 Schedule::command('reservations:complete-expired')->everyMinute()->withoutOverlapping();
+Schedule::command('reservations:delete-expired-rejected')->everyMinute()->withoutOverlapping();

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Campus Reserve')</title>
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -179,7 +180,7 @@
                 <div class="flex items-center justify-between border-b border-white/15 bg-gradient-to-r from-indigo-800 via-violet-700 to-cyan-700 px-5 py-4 text-white sm:rounded-t-3xl" style="display: flex; align-items: center; justify-content: space-between; min-height: 78px; padding: 16px 20px; background: linear-gradient(110deg, #3730a3, #6d28d9 58%, #0e7490); color: #fff;">
                     <div>
                         <div class="flex items-center gap-3" style="display: flex; align-items: center; gap: 12px;">
-                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/15 text-sm font-bold shadow-inner" style="display: flex; flex: 0 0 40px; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 16px; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.15); color: #fff; font-size: 13px; font-weight: 700;">CR</span>
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/30 bg-white/15 text-sm font-bold shadow-inner" style="display: flex; flex: 0 0 40px; width: 40px; height: 40px; align-items: center; justify-content: center; border-radius: 16px; border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.15); color: #fff; font-size: 13px; font-weight: 700;">AC</span>
                             <div>
                                 <h2 class="text-sm font-semibold" style="margin: 0; color: #fff; font-size: 14px; font-weight: 700;">Arcee</h2>
                                 <p class="text-xs text-slate-300" style="margin: 3px 0 0; color: #cbd5e1; font-size: 12px;">Rooms, items, schedules, and reservations</p>
@@ -193,7 +194,7 @@
                 </div>
                 <div id="chatbot-messages" class="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gradient-to-br from-purple-50/80 via-slate-50 to-cyan-50/70 p-5 text-sm" style="min-height: 0; flex: 1 1 auto; overflow-y: auto; scrollbar-width: thin;">
                     <div class="flex gap-3">
-                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-700 text-[10px] font-bold text-white shadow-sm">CR</span>
+                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-700 text-[10px] font-bold text-white shadow-sm">AC</span>
                         <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-indigo-100 bg-white/95 px-3.5 py-2.5 text-slate-700 shadow-sm" style="width: fit-content; max-width: 90%;">Hi! Ask me about room and item availability, property reservations, schedules, or booking status.</p>
                     </div>
                 </div>
@@ -229,7 +230,7 @@
                 function resetVisibleChat() {
                     messages.innerHTML = `
                         <div class="flex gap-3">
-                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-700 text-[10px] font-bold text-white shadow-sm">CR</span>
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-700 text-[10px] font-bold text-white shadow-sm">AC</span>
                             <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-indigo-100 bg-white/95 px-3.5 py-2.5 text-slate-700 shadow-sm">Hi! Ask me about room and item availability, property reservations, schedules, or booking status.</p>
                         </div>
                     `;
