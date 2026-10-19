@@ -311,8 +311,15 @@
                 updateMiniCalendar();
             },
             events: function(info, successCallback, failureCallback) {
-                fetch('/api/calendar/events', { credentials: 'include' })
+                var query = new URLSearchParams({
+                    start: info.startStr.slice(0, 10),
+                    end: info.endStr.slice(0, 10)
+                });
+                fetch('/api/calendar/events?' + query, { credentials: 'include' })
                     .then(function(response) {
+                        if (!response.ok) {
+                            throw new Error('Calendar events could not be loaded.');
+                        }
                         return response.json();
                     })
                     .then(function(events) {
@@ -329,6 +336,7 @@
                         successCallback(events);
                     })
                     .catch(function(err) {
+                        console.error(err);
                         failureCallback(err);
                     });
             },

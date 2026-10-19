@@ -8,6 +8,7 @@ use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class PropertyReservationTest extends TestCase
@@ -67,12 +68,14 @@ class PropertyReservationTest extends TestCase
         $ownReservation = $this->createReservation($user, $facility, 'approved', '10:00', '11:00');
         $otherReservation = $this->createReservation($otherUser, $facility, 'approved', '11:00', '12:00');
         $hiddenPendingReservation = $this->createReservation($otherUser, $facility, 'pending', '12:00', '13:00');
+        $outsideRangeReservation = $this->createReservation($otherUser, $facility, 'approved', '13:00', '14:00');
 
         $ownReservation->update(['purpose' => 'My meeting']);
         $otherReservation->update(['purpose' => 'Private meeting']);
+        $outsideRangeReservation->update(['reservation_date' => '2030-05-02']);
 
         $this->actingAs($user)
-            ->getJson('/api/calendar/events')
+            ->getJson('/api/calendar/events?start=2030-05-01&end=2030-05-02')
             ->assertOk()
             ->assertJsonCount(2)
             ->assertJsonFragment([
@@ -85,7 +88,18 @@ class PropertyReservationTest extends TestCase
                 'purpose' => null,
                 'is_owner' => false,
             ])
-            ->assertJsonMissing(['id' => $hiddenPendingReservation->id]);
+            ->assertJsonMissing(['id' => $hiddenPendingReservation->id])
+            ->assertJsonMissing(['id' => $outsideRangeReservation->id]);
+    }
+
+    public function test_calendar_events_require_a_date_range(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->getJson('/api/calendar/events')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['start', 'end']);
     }
 
     public function test_user_can_reserve_facility_items_with_date_and_time(): void
@@ -168,13 +182,25 @@ class PropertyReservationTest extends TestCase
             'name' => 'Projector',
             'quantity' => 4,
         ]);
+        $secondItem = FacilityItem::create([
+            'facility_id' => $facility->id,
+            'name' => 'Whiteboard',
+            'quantity' => 5,
+        ]);
 
         $approved = $this->createReservation($user, $facility, 'approved', '10:00', '12:00');
         $approved->items()->attach($item, ['quantity' => 2]);
+        $approved->items()->attach($secondItem, ['quantity' => 3]);
         $pending = $this->createReservation($user, $facility, 'pending', '09:00', '10:45');
         $pending->items()->attach($item, ['quantity' => 1]);
         $nonOverlapping = $this->createReservation($user, $facility, 'approved', '12:00', '13:00');
         $nonOverlapping->items()->attach($item, ['quantity' => 1]);
+        $availabilityQueries = 0;
+        DB::listen(function ($query) use (&$availabilityQueries): void {
+            if (str_contains($query->sql, 'SUM(reservation_items.quantity)')) {
+                $availabilityQueries++;
+            }
+        });
 
         $this->actingAs($user)
             ->getJson(route('api.facilities.items.availability', [
@@ -186,7 +212,11 @@ class PropertyReservationTest extends TestCase
             ->assertOk()
             ->assertJsonPath('items.0.id', $item->id)
             ->assertJsonPath('items.0.stock', 4)
-            ->assertJsonPath('items.0.available', 2);
+            ->assertJsonPath('items.0.available', 2)
+            ->assertJsonPath('items.1.id', $secondItem->id)
+            ->assertJsonPath('items.1.available', 2);
+
+        $this->assertSame(1, $availabilityQueries);
     }
 
     private function createFacility(): Facility

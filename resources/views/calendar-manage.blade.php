@@ -226,7 +226,25 @@
             headerToolbar: false,
             selectable: true,
             editable: false,
-            events: '/api/calendar/events',
+            events: function(info, successCallback, failureCallback) {
+                var query = new URLSearchParams({
+                    start: info.startStr.slice(0, 10),
+                    end: info.endStr.slice(0, 10)
+                });
+
+                fetch('/api/calendar/events?' + query, { credentials: 'include' })
+                    .then(function(response) {
+                        if (!response.ok) {
+                            throw new Error('Calendar events could not be loaded.');
+                        }
+                        return response.json();
+                    })
+                    .then(successCallback)
+                    .catch(function(error) {
+                        console.error(error);
+                        failureCallback(error);
+                    });
+            },
             dateClick: function(info) {
                 selectedDate = info.dateStr.split('T')[0];
                 modalDate.textContent = selectedDate;

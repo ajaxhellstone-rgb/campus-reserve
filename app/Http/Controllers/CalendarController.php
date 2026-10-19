@@ -17,16 +17,24 @@ use Illuminate\Validation\ValidationException;
 
 class CalendarController extends Controller
 {
-    // Get all reservations and format them as calendar events
+    // Get approved reservations in the visible calendar range and format them as events.
     public function events(Request $request)
     {
         // The shared calendar shows approved facility bookings, while keeping
         // each user's reservation purpose private from other users.
-        $facilityName = $request->query('facility');
+        $validated = $request->validate([
+            'start' => ['required', 'date_format:Y-m-d'],
+            'end' => ['required', 'date_format:Y-m-d', 'after:start'],
+            'facility' => ['sometimes', 'string', 'max:100'],
+        ]);
+
         $query = Reservation::with('facility')
-            ->where('status', 'approved');
-        
-        if ($facilityName) {
+            ->where('status', 'approved')
+            ->where('reservation_date', '>=', $validated['start'])
+            ->where('reservation_date', '<', $validated['end']);
+
+        if (! empty($validated['facility'])) {
+            $facilityName = $validated['facility'];
             $query->whereHas('facility', function ($q) use ($facilityName) {
                 $q->where('name', $facilityName);
             });
@@ -177,18 +185,20 @@ class CalendarController extends Controller
 
         $items = $facility->items()
             ->orderBy('name')
-            ->get()
-            ->map(fn (FacilityItem $item) => [
-                'id' => $item->id,
-                'name' => $item->name,
-                'stock' => $item->quantity,
-                'available' => $itemAvailability->availableQuantity(
-                    $item,
-                    $validated['date'],
-                    $validated['start_time'],
-                    $validated['end_time']
-                ),
-            ]);
+            ->get();
+        $availableQuantities = $itemAvailability->availableQuantities(
+            $items,
+            $validated['date'],
+            $validated['start_time'],
+            $validated['end_time']
+        );
+
+        $items = $items->map(fn (FacilityItem $item) => [
+            'id' => $item->id,
+            'name' => $item->name,
+            'stock' => $item->quantity,
+            'available' => $availableQuantities[$item->id],
+        ]);
 
         return response()->json(['items' => $items]);
     }
