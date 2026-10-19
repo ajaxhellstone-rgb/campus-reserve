@@ -62,7 +62,7 @@ class Reservation extends Model
     public function getStatusBadgeAttribute(): array
     {
         return match($this->status) {
-            'pending' => ['label' => 'Pending', 'class' => 'bg-yellow-100 text-yellow-800'],
+            'pending' => ['label' => 'Pending', 'class' => 'bg-indigo-100 text-indigo-800'],
             'approved' => ['label' => 'Approved', 'class' => 'bg-green-100 text-green-800'],
             'rejected' => ['label' => 'Rejected', 'class' => 'bg-red-100 text-red-800'],
             'cancelled' => ['label' => 'Cancelled', 'class' => 'bg-gray-100 text-gray-800'],

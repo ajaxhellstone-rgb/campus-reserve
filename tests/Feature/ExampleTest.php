@@ -14,6 +14,10 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        $response->assertStatus(200)
+            ->assertSee('Make room for')
+            ->assertSee('what matters.')
+            ->assertSee('Find a space')
+            ->assertSee('View the calendar');
     }
 }

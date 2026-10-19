@@ -252,32 +252,13 @@ class CalendarController extends Controller
     // Pick a color for each reservation so they look different on the calendar
     private function getReservationColor($reservationId)
     {
-        // I have 24 nice colors that all look good together
         $colors = [
-            '#FF6B6B',  // Vibrant Red
-            '#4ECDC4',  // Turquoise
-            '#45B7D1',  // Sky Blue
-            '#FFA07A',  // Light Salmon
-            '#98D8C8',  // Mint
-            '#F7DC6F',  // Golden Yellow
-            '#BB8FCE',  // Purple
-            '#85C1E2',  // Cornflower Blue
-            '#F8B88B',  // Peach
-            '#A8E6CF',  // Light Green
-            '#FFD3B6',  // Light Orange
-            '#FF8B94',  // Rose
-            '#A8D8EA',  // Powder Blue
-            '#AA96DA',  // Lavender
-            '#FCBAD3',  // Pink
-            '#B4A7D6',  // Soft Purple
-            '#73A580',  // Sage Green
-            '#F0A202',  // Deep Gold
-            '#E76F51',  // Burnt Orange
-            '#2A9D8F',  // Teal
-            '#E9C46A',  // Sandy Yellow
-            '#F4A261',  // Orange
-            '#D62828',  // Deep Red
-            '#1D3557',  // Navy Blue
+            '#4F46E5', '#7C3AED', '#9333EA', '#6D28D9',
+            '#C026D3', '#A21CAF', '#DB2777', '#BE185D',
+            '#0891B2', '#0E7490', '#0284C7', '#0369A1',
+            '#4338CA', '#5B21B6', '#86198F', '#7E22CE',
+            '#9D174D', '#A21CAF', '#155E75', '#1D4ED8',
+            '#3730A3', '#6B21A8', '#9D174D', '#0F766E',
         ];
         
         // I cycle through the colors based on the reservation ID so each one gets a different color

@@ -4,27 +4,27 @@
 
 @section('content')
 <!-- Calendar page showing reservation events and interaction controls for event details. -->
-<div class="min-h-screen bg-slate-50">
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-slate-50 to-cyan-50">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex flex-col gap-4 md:gap-6 mb-6">
             <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                 <div>
-                    <p class="text-sm font-medium text-slate-500">Campus Reserve</p>
-                    <h1 class="text-3xl font-semibold text-slate-900">Calendar</h1>
+                    <p class="text-sm font-semibold uppercase tracking-[0.16em] text-indigo-700">Campus Reserve</p>
+                    <h1 class="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Calendar</h1>
                 </div>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div class="relative w-full sm:w-80">
                         <label for="eventSearch" class="sr-only">Search events</label>
-                        <input id="eventSearch" type="search" placeholder="Search events, rooms, details..." class="w-full rounded-2xl border border-slate-200 bg-white py-3 px-4 text-sm text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none" autocomplete="off" />
+                        <input id="eventSearch" type="search" placeholder="Search events, rooms, details..." class="w-full rounded-2xl border border-slate-200 bg-white/90 py-3 px-4 text-sm text-slate-700 shadow-sm focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-100" autocomplete="off" />
                         <div id="searchSuggestions" class="absolute left-0 right-0 mt-2 hidden max-h-72 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-lg z-20"></div>
                     </div>
-                    <button id="todayBtn" type="button" class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 transition">Today</button>
+                    <button id="todayBtn" type="button" class="inline-flex items-center justify-center rounded-2xl bg-indigo-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-800">Today</button>
                 </div>
             </div>
             <div class="gap-4 grid-cols-1" style="display:grid;grid-template-columns:240px minmax(680px,1fr);gap:1rem;overflow-x:auto;max-width:1040px;margin:0 auto;">
                 <div class="space-y-6">
-                    <aside class="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
-                        <div class="rounded-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm">
+                    <aside class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm shadow-indigo-950/5">
+                        <div class="rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-cyan-50/70 p-5 text-slate-900 shadow-sm">
                             <div class="mb-4 flex items-center justify-between gap-2 text-sm text-slate-600">
                                 <div class="flex min-w-0 items-center gap-1">
                                     <label class="sr-only" for="miniCalendarMonth">Calendar month</label>
@@ -48,22 +48,22 @@
                             </div>
                         </div>
                     </aside>
-                    <aside class="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+                    <aside class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm shadow-indigo-950/5">
                         <div class="flex items-center justify-between mb-4">
                             <div>
                                 <p class="text-sm font-medium text-slate-500">Pending</p>
                                 <h2 class="text-xl font-semibold text-slate-900">Pending reservations</h2>
                             </div>
-                            <span class="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">Waiting approval</span>
+                            <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">Waiting approval</span>
                         </div>
                         <div id="pendingReservationsList" class="space-y-4">
-                            <div class="rounded-3xl bg-slate-50 p-4 text-sm text-slate-500">
+                            <div class="rounded-3xl bg-indigo-50/60 p-4 text-sm text-slate-600">
                                 Pending reservation requests will appear here.
                             </div>
                         </div>
                     </aside>
                 </div>
-                <main class="min-w-0 rounded-3xl bg-white p-6 shadow-sm border border-slate-200" style="min-width:680px;width:100%;max-width:100%;">
+                <main class="min-w-0 rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5" style="min-width:680px;width:100%;max-width:100%;">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900">Weekly view</p>
@@ -79,11 +79,11 @@
                             <button data-view="dayGridMonth" class="px-4 py-2 rounded-2xl border border-slate-200 bg-slate-100 text-slate-700 transition hover:bg-slate-200">Month</button>
                             <button data-view="timeGridWeek" class="px-4 py-2 rounded-2xl border border-slate-200 bg-slate-100 text-slate-700 transition hover:bg-slate-200">Week</button>
                             <button data-view="listWeek" class="px-4 py-2 rounded-2xl border border-slate-200 bg-slate-100 text-slate-700 transition hover:bg-slate-200">List</button>
-                            <a href="/calendar/manage" class="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition">Reserve Now</a>
+                            <a href="/calendar/manage" class="inline-flex items-center justify-center rounded-2xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-800">Reserve Now</a>
                         </div>
                     </div>
 
-                    <div id="calendar" class="rounded-3xl border border-slate-200 w-full" style="min-height:760px;"></div>
+                    <div id="calendar" class="w-full rounded-3xl border border-indigo-100 bg-white" style="min-height:760px;"></div>
                 </main>
             </div>
         </div>
@@ -91,7 +91,7 @@
 </div>
 
 <div id="eventInfoModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
-    <div class="w-full max-w-xl rounded-3xl bg-white p-8 shadow-2xl">
+    <div class="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl">
         <div class="flex items-start justify-between gap-4 mb-6">
             <div>
                 <p class="text-sm text-slate-500">Reservation details</p>
@@ -106,7 +106,7 @@
             </div>
             <div class="space-y-2">
                 <p class="text-sm font-semibold text-slate-700">Status</p>
-                <p id="eventInfoStatus" class="inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-yellow-100 text-yellow-800">Waiting Approval</p>
+                <p id="eventInfoStatus" class="inline-flex rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-800">Waiting Approval</p>
             </div>
             <div class="space-y-2">
                 <p class="text-sm font-semibold text-slate-700">Date</p>
@@ -136,11 +136,32 @@
 @push('styles')
 <link href="{{ asset('fullcalendar/main.css') }}" rel="stylesheet">
 <style>
+    #calendar {
+        --fc-border-color: #e2e8f0;
+        --fc-page-bg-color: transparent;
+        --fc-neutral-bg-color: #f8fafc;
+        --fc-today-bg-color: #eef2ff;
+        --fc-button-bg-color: #4338ca;
+        --fc-button-border-color: #4338ca;
+        --fc-button-hover-bg-color: #3730a3;
+        --fc-button-hover-border-color: #3730a3;
+        --fc-button-active-bg-color: #312e81;
+        --fc-button-active-border-color: #312e81;
+        --fc-event-border-color: #818cf8;
+        --fc-event-bg-color: #6366f1;
+        --fc-event-text-color: #fff;
+    }
+
+    #calendar .fc-toolbar-title {
+        color: #1e1b4b;
+        font-weight: 600;
+    }
+
     #pendingReservationsList {
         max-height: 18rem;
         overflow-y: scroll;
         padding-right: 0.5rem;
-        scrollbar-color: #94a3b8 #f1f5f9;
+        scrollbar-color: #a5b4fc #eef2ff;
         scrollbar-width: thin;
     }
 
@@ -149,12 +170,12 @@
     }
 
     #pendingReservationsList::-webkit-scrollbar-track {
-        background: #f1f5f9;
+        background: #eef2ff;
         border-radius: 9999px;
     }
 
     #pendingReservationsList::-webkit-scrollbar-thumb {
-        background: #94a3b8;
+        background: #a5b4fc;
         border-radius: 9999px;
     }
 </style>
@@ -265,7 +286,7 @@
                 var statusLabel = status === 'approved' ? 'Approved' : status === 'rejected' ? 'Rejected' : 'Waiting Approval';
                 var statusClasses = status === 'approved' ? 'inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-emerald-100 text-emerald-700' :
                                     status === 'rejected' ? 'inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-red-100 text-red-700' :
-                                    'inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-yellow-100 text-yellow-800';
+                                    'inline-flex rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-800';
 
                 eventInfoTitle.textContent = props.room || sourceEvent.title || 'Reservation';
                 eventInfoRoom.textContent = props.room || sourceEvent.title || '—';
@@ -349,7 +370,7 @@
                 var statusLabel = status === 'approved' ? 'Approved' : status === 'rejected' ? 'Rejected' : 'Waiting Approval';
                 var statusClasses = status === 'approved' ? 'inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-emerald-100 text-emerald-700' :
                                     status === 'rejected' ? 'inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-red-100 text-red-700' :
-                                    'inline-flex rounded-full px-3 py-1 text-sm font-semibold bg-yellow-100 text-yellow-800';
+                                    'inline-flex rounded-full bg-indigo-100 px-3 py-1 text-sm font-semibold text-indigo-800';
 
                 eventInfoTitle.textContent = props.room || event.title || 'Reservation';
                 eventInfoRoom.textContent = props.room || event.title || '—';
@@ -401,7 +422,7 @@
                             + '<p class="text-sm font-semibold text-slate-900">' + item.facility + '</p>'
                             + '<p class="text-sm text-slate-500">' + item.date + ' • ' + item.start_time + ' - ' + item.end_time + '</p>'
                             + '</div>'
-                            + '<span class="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700">Pending</span>'
+                            + '<span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-800">Pending</span>'
                             + '</div>'
                             + '<p class="mt-3 text-sm text-slate-600">' + (item.purpose || 'No purpose provided.') + '</p>'
                             + '</div>';

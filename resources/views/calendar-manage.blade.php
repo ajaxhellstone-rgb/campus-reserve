@@ -3,13 +3,13 @@
 @section('title', 'Reserve a Facility')
 
 @section('content')
-<div class="min-h-screen bg-slate-50">
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-slate-50 to-cyan-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex flex-col gap-4 md:gap-6 mb-6">
             <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                 <div>
-                    <p class="text-sm font-medium text-slate-500">Campus Reserve</p>
-                    <h1 class="text-3xl font-semibold text-slate-900">Reserve a Facility</h1>
+                    <p class="text-sm font-semibold uppercase tracking-[0.16em] text-indigo-700">Campus Reserve</p>
+                    <h1 class="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Reserve a Facility</h1>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
                     <button data-view="timeGridWeek" class="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 hover:bg-slate-200 transition">Week</button>
@@ -20,13 +20,13 @@
 
             <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
                 <aside class="space-y-6">
-                    <div class="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+                    <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm shadow-indigo-950/5">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-semibold text-slate-900">Booking panel</h2>
-                            <button id="todayBtn" type="button" class="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 transition">Today</button>
+                            <button id="todayBtn" type="button" class="rounded-2xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-800">Today</button>
                         </div>
                         <div class="space-y-4">
-                            <div class="rounded-2xl bg-slate-50 p-4">
+                            <div class="rounded-2xl bg-indigo-50/60 p-4">
                                 <label for="monthDropdown" class="text-sm font-medium text-slate-700">Month</label>
                                 <select id="monthDropdown" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
                                     <option value="0">January</option>
@@ -43,18 +43,18 @@
                                     <option value="11">December</option>
                                 </select>
                             </div>
-                            <div class="rounded-2xl bg-slate-50 p-4">
+                            <div class="rounded-2xl bg-cyan-50/70 p-4">
                                 <label for="yearDropdown" class="text-sm font-medium text-slate-700">Year</label>
                                 <select id="yearDropdown" class="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700"></select>
                             </div>
-                            <div class="rounded-3xl bg-white p-4 border border-slate-200">
+                            <div class="rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-cyan-50/70 p-4">
                                 <h3 class="text-sm font-semibold text-slate-900 mb-3">Ready to reserve</h3>
                                 <p class="text-sm text-slate-600 mb-4">Click a date or time slot on the calendar, then complete your booking in the popup form.</p>
-                                <button id="openModalBtn" type="button" class="w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition">Reserve selected day</button>
+                                <button id="openModalBtn" type="button" class="w-full rounded-2xl bg-indigo-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-800">Reserve selected day</button>
                             </div>
                         </div>
                     </div>
-                    <div class="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+                    <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm shadow-indigo-950/5">
                         <h2 class="text-lg font-semibold text-slate-900 mb-3">Booking tips</h2>
                         <ul class="space-y-3 text-sm text-slate-600">
                             <li>Click a date or time slot to start a new reservation.</li>
@@ -64,7 +64,7 @@
                     </div>
                 </aside>
 
-                <main class="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+                <main class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div>
                             <p class="text-sm font-semibold text-slate-900">Reservation calendar</p>
@@ -76,7 +76,7 @@
                             <button data-view="listWeek" class="rounded-2xl border border-slate-200 bg-slate-100 px-4 py-2 text-sm text-slate-700 hover:bg-slate-200 transition">List</button>
                         </div>
                     </div>
-                    <div id="calendar" class="rounded-3xl border border-slate-200"></div>
+                    <div id="calendar" class="rounded-3xl border border-indigo-100 bg-white"></div>
                 </main>
             </div>
         </div>
@@ -84,7 +84,7 @@
 </div>
 
 <div id="reservationModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/10 backdrop-blur-sm p-4 opacity-0 pointer-events-none transition-opacity duration-200" aria-hidden="true">
-    <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-8 shadow-2xl transform transition-transform duration-200">
+    <div class="max-h-[90vh] w-full max-w-2xl transform overflow-y-auto rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl transition-transform duration-200">
         <h2 class="text-2xl font-semibold text-slate-900 mb-3">Reserve a facility on <span id="modalDate"></span></h2>
         <form id="reservationForm" action="/api/calendar/reserve" method="POST" class="space-y-5">
             @csrf
@@ -120,7 +120,7 @@
                 <div id="reservationValidationMessage" class="min-h-5 text-sm font-semibold text-rose-600"></div>
                 <div class="flex gap-3">
                     <button type="button" id="closeModalBtn" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition">Cancel</button>
-                    <button type="submit" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition">Reserve</button>
+                    <button type="submit" class="rounded-2xl bg-indigo-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-800">Reserve</button>
                 </div>
             </div>
         </form>
@@ -135,7 +135,7 @@
             <p id="errorMessage" class="mt-4 whitespace-pre-line text-sm text-slate-600">An error occurred.</p>
         </div>
         <div class="mt-8 flex justify-center gap-3">
-            <button id="closeErrorBtn" type="button" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition">Close</button>
+            <button id="closeErrorBtn" type="button" class="rounded-2xl bg-indigo-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-800">Close</button>
         </div>
     </div>
 </div>
@@ -148,7 +148,7 @@
             <p class="mt-4 text-sm text-slate-600">Your booking has been submitted. You can return to the main calendar to review the reservation.</p>
         </div>
         <div class="mt-8 flex justify-center gap-3">
-            <button id="redirectToCalendarBtn" type="button" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800 transition">Go to Calendar</button>
+            <button id="redirectToCalendarBtn" type="button" class="rounded-2xl bg-indigo-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-800">Go to Calendar</button>
             <button id="closeSuccessBtn" type="button" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition">Close</button>
         </div>
     </div>
@@ -157,6 +157,28 @@
 
 @push('styles')
 <link href="{{ asset('fullcalendar/main.css') }}" rel="stylesheet">
+<style>
+    #calendar {
+        --fc-border-color: #e2e8f0;
+        --fc-page-bg-color: transparent;
+        --fc-neutral-bg-color: #f8fafc;
+        --fc-today-bg-color: #eef2ff;
+        --fc-button-bg-color: #4338ca;
+        --fc-button-border-color: #4338ca;
+        --fc-button-hover-bg-color: #3730a3;
+        --fc-button-hover-border-color: #3730a3;
+        --fc-button-active-bg-color: #312e81;
+        --fc-button-active-border-color: #312e81;
+        --fc-event-border-color: #818cf8;
+        --fc-event-bg-color: #6366f1;
+        --fc-event-text-color: #fff;
+    }
+
+    #calendar .fc-toolbar-title {
+        color: #1e1b4b;
+        font-weight: 600;
+    }
+</style>
 @endpush
 
 @push('scripts')
