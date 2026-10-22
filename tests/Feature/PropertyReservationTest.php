@@ -106,6 +106,37 @@ class PropertyReservationTest extends TestCase
             ->assertDontSee('Booking 21');
     }
 
+    public function test_reservation_search_matches_item_names_without_exposing_other_users_reservations(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $facility = $this->createFacility();
+        $item = FacilityItem::create([
+            'facility_id' => $facility->id,
+            'name' => 'Projector',
+            'quantity' => 3,
+        ]);
+
+        $ownReservation = $this->createReservation($user, $facility, 'pending', '10:00', '11:00');
+        $ownReservation->update(['purpose' => 'Student presentation']);
+        $ownReservation->items()->attach($item, ['quantity' => 1]);
+
+        $otherReservation = $this->createReservation($otherUser, $facility, 'pending', '11:00', '12:00');
+        $otherReservation->update(['purpose' => 'Another user private booking']);
+        $otherReservation->items()->attach($item, ['quantity' => 1]);
+
+        $this->actingAs($user)
+            ->get(route('reserve', ['reservation_search' => 'projector']))
+            ->assertOk()
+            ->assertSee('Student presentation')
+            ->assertDontSee('Another user private booking');
+
+        $this->get(route('reserve', ['reservation_search' => 'Lecture Room 1']))
+            ->assertOk()
+            ->assertSee('Student presentation')
+            ->assertDontSee('Another user private booking');
+    }
+
     public function test_calendar_shows_all_approved_reservations_but_only_exposes_owner_purpose(): void
     {
         $user = User::factory()->create();

@@ -16,6 +16,10 @@ class MobileNavigationTest extends TestCase
             ->assertOk()
             ->assertSee('mobile-menu-toggle', false)
             ->assertSee('mobile-navigation', false)
+            ->assertSee('mobile-navigation-backdrop', false)
+            ->assertSee('fixed bottom-0 left-0', false)
+            ->assertSee('backdrop-blur-sm', false)
+            ->assertSee('transition-transform duration-300', false)
             ->assertSee('aria-expanded="false"', false)
             ->assertSee('Calendar')
             ->assertSee('Log in');

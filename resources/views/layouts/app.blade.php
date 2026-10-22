@@ -62,7 +62,7 @@
         <button
             id="mobile-menu-toggle"
             type="button"
-            class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-green-700 md:hidden"
+            class="relative z-[60] inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-green-700 md:hidden"
             aria-expanded="false"
             aria-controls="mobile-navigation"
             aria-label="Open navigation menu"
@@ -75,7 +75,8 @@
             </svg>
         </button>
 
-        <nav id="mobile-navigation" class="hidden w-full flex-col gap-1 border-t border-slate-100 pt-3 md:hidden" aria-label="Mobile navigation">
+        <button id="mobile-navigation-backdrop" type="button" class="pointer-events-none fixed inset-x-0 bottom-0 z-40 bg-slate-950/20 opacity-0 backdrop-blur-sm transition-opacity duration-300 md:hidden" aria-label="Close navigation menu" aria-hidden="true" tabindex="-1"></button>
+        <nav id="mobile-navigation" class="pointer-events-none fixed bottom-0 left-0 z-50 flex w-[min(84vw,20rem)] -translate-x-full flex-col gap-1 overflow-y-auto border-r border-slate-200 bg-white px-3 py-4 shadow-2xl transition-transform duration-300 ease-out md:hidden" aria-label="Mobile navigation" aria-hidden="true" inert>
             <a href="/" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Home</a>
             <a href="/reserve" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Reserve</a>
             <a href="/calendar" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Calendar</a>
@@ -228,7 +229,7 @@
                         <button id="chatbot-close" type="button" class="rounded-full px-2 py-1 text-xl leading-none text-white/80 transition hover:bg-white/15 hover:text-white" style="padding: 4px 8px; border: 0; border-radius: 9999px; background: transparent; color: rgba(255,255,255,.8); font-size: 22px; line-height: 1; cursor: pointer;" aria-label="Close Arcee">&times;</button>
                     </div>
                 </div>
-                <div id="chatbot-messages" class="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gradient-to-br from-purple-50/80 via-slate-50 to-cyan-50/70 p-5 text-sm" style="min-height: 0; flex: 1 1 auto; overflow-y: auto; scrollbar-width: thin;">
+                <div id="chatbot-messages" class="min-h-0 flex-1 space-y-4 overflow-y-auto bg-gradient-to-br from-purple-50/80 via-slate-50 to-cyan-50/70 p-5 text-sm" style="min-height: 0; flex: 1 1 auto; overflow-y: auto; scrollbar-width: thin;" aria-live="polite">
                     <div class="flex gap-3">
                         <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-700 text-[10px] font-bold text-white shadow-sm">AC</span>
                         <p class="w-fit max-w-[90%] rounded-2xl rounded-tl-sm border border-indigo-100 bg-white/95 px-3.5 py-2.5 text-slate-700 shadow-sm" style="width: fit-content; max-width: 90%;">Hi! Ask me about room and item availability, property reservations, schedules, or booking status.</p>
@@ -239,7 +240,7 @@
                     <div class="flex items-center gap-2 rounded-2xl border border-slate-300 bg-white p-1.5 shadow-sm transition focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100">
                         <label for="chatbot-input" class="sr-only">Ask Arcee</label>
                         <input id="chatbot-input" type="text" class="pointer-events-auto min-w-0 flex-1 border-0 bg-transparent px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400" style="pointer-events: auto; position: relative; z-index: 10003; cursor: text;" placeholder="Ask about availability..." autocomplete="off">
-                        <button type="submit" class="rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-800">Send</button>
+                        <button id="chatbot-send" type="submit" class="rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-800 disabled:cursor-wait disabled:opacity-60">Send</button>
                     </div>
                     <p class="mt-2 px-1 text-[11px] text-slate-500">Check room or item availability, request a reservation, or view booking status.</p>
                 </form>
@@ -255,7 +256,9 @@
                 const form = document.getElementById('chatbot-form');
                 const input = document.getElementById('chatbot-input');
                 const messages = document.getElementById('chatbot-messages');
+                const sendButton = document.getElementById('chatbot-send');
                 const csrfToken = form.querySelector('input[name="_token"]').value;
+                let responsePending = false;
 
                 input.addEventListener('contextmenu', function() {
                     window.setTimeout(function() {
@@ -348,11 +351,19 @@
                 form?.addEventListener('submit', async function(event) {
                     event.preventDefault();
                     const message = input.value.trim();
-                    if (!message) return;
+                    if (!message || responsePending) return;
+                    responsePending = true;
 
                     const escapedMessage = message.replace(/[&<>]/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[character]));
                     messages.insertAdjacentHTML('beforeend', `<p style="width: fit-content; max-width: 90%; margin-left: auto;" class="rounded-2xl rounded-tr-sm bg-indigo-700 px-3.5 py-2.5 text-white shadow-sm">${escapedMessage}</p>`);
                     input.value = '';
+                    sendButton.disabled = true;
+                    sendButton.textContent = 'Checking...';
+                    const pendingReply = document.createElement('p');
+                    pendingReply.className = 'w-fit rounded-2xl rounded-tl-sm border border-indigo-100 bg-white/95 px-3.5 py-2.5 text-slate-500 shadow-sm';
+                    pendingReply.textContent = 'Checking the latest room and reservation details...';
+                    pendingReply.setAttribute('role', 'status');
+                    messages.appendChild(pendingReply);
                     messages.scrollTop = messages.scrollHeight;
 
                     try {
@@ -395,6 +406,11 @@
                         reply.style.maxWidth = '90%';
                         reply.textContent = 'Arcee is temporarily unavailable.';
                         messages.appendChild(reply);
+                    } finally {
+                        pendingReply.remove();
+                        responsePending = false;
+                        sendButton.disabled = false;
+                        sendButton.textContent = 'Send';
                     }
                 });
             });
@@ -405,20 +421,45 @@
         document.addEventListener('DOMContentLoaded', function() {
             const toggle = document.getElementById('mobile-menu-toggle');
             const navigation = document.getElementById('mobile-navigation');
+            const backdrop = document.getElementById('mobile-navigation-backdrop');
             const openIcon = document.getElementById('mobile-menu-open-icon');
             const closeIcon = document.getElementById('mobile-menu-close-icon');
+            const header = toggle.closest('header');
+
+            function updateNavigationPosition() {
+                document.documentElement.style.setProperty('--mobile-header-height', `${header.offsetHeight}px`);
+                navigation.style.top = `${header.offsetHeight}px`;
+                backdrop.style.top = `${header.offsetHeight}px`;
+            }
 
             function setMenuOpen(open) {
+                updateNavigationPosition();
                 toggle.setAttribute('aria-expanded', String(open));
                 toggle.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
-                navigation.classList.toggle('hidden', !open);
-                navigation.classList.toggle('flex', open);
+                navigation.setAttribute('aria-hidden', String(!open));
+                navigation.inert = !open;
+                navigation.classList.toggle('pointer-events-none', !open);
+                navigation.classList.toggle('pointer-events-auto', open);
+                navigation.classList.toggle('translate-x-0', open);
+                navigation.classList.toggle('-translate-x-full', !open);
+                backdrop.setAttribute('aria-hidden', String(!open));
+                backdrop.classList.toggle('pointer-events-none', !open);
+                backdrop.classList.toggle('pointer-events-auto', open);
+                backdrop.classList.toggle('opacity-100', open);
+                backdrop.classList.toggle('opacity-0', !open);
                 openIcon.classList.toggle('hidden', open);
                 closeIcon.classList.toggle('hidden', !open);
             }
 
+            updateNavigationPosition();
+            window.addEventListener('resize', updateNavigationPosition);
+
             toggle.addEventListener('click', function() {
                 setMenuOpen(toggle.getAttribute('aria-expanded') !== 'true');
+            });
+
+            backdrop.addEventListener('click', function() {
+                setMenuOpen(false);
             });
 
             navigation.addEventListener('click', function(event) {

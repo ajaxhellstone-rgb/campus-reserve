@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use App\Notifications\ReservationStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -110,6 +111,81 @@ class ChatbotPropertyReservationTest extends TestCase
         $response->assertOk();
         $this->assertStringContainsString('What time will you use the items', $response->json('reply'));
         $this->assertStringContainsString('what time will you return them', strtolower($response->json('reply')));
+    }
+
+    public function test_chatbot_understands_weekday_dates_and_shared_meridiem_times_with_one_availability_query(): void
+    {
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        Facility::create([
+            'name' => 'Study Room 2',
+            'building' => 'Main Building',
+            'type' => 'Classroom',
+            'capacity' => 20,
+            'is_active' => true,
+        ]);
+        Facility::create([
+            'name' => 'Conference Room 3',
+            'building' => 'North Building',
+            'type' => 'Conference',
+            'capacity' => 12,
+            'is_active' => true,
+        ]);
+        $this->travelTo(now()->setDate(2030, 5, 1)->setTime(8, 0));
+
+        $availabilityQueries = 0;
+        DB::listen(function ($query) use (&$availabilityQueries): void {
+            if (str_contains($query->sql, 'from "reservations"')
+                && str_contains($query->sql, '"facility_id" in')) {
+                $availabilityQueries++;
+            }
+        });
+
+        $response = $this->actingAs($user)
+            ->postJson(route('chatbot.respond'), [
+                'message' => 'Check room availability next Friday from 9 to 11 PM',
+            ]);
+
+        $response->assertOk();
+        $this->assertStringContainsString('May 3, 2030', $response->json('reply'));
+        $this->assertStringContainsString('9:00 PM to 11:00 PM', $response->json('reply'));
+        $this->assertStringContainsString($facility->name, $response->json('reply'));
+        $this->assertSame(1, $availabilityQueries);
+    }
+
+    public function test_chatbot_answers_questions_about_the_next_upcoming_reservation(): void
+    {
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        $this->travelTo(now()->setDate(2030, 5, 1)->setTime(8, 0));
+
+        Reservation::create([
+            'user_id' => $user->id,
+            'facility_id' => $facility->id,
+            'reservation_date' => '2030-04-30',
+            'start_time' => '09:00',
+            'end_time' => '10:00',
+            'purpose' => 'Past presentation',
+            'status' => 'approved',
+        ]);
+        Reservation::create([
+            'user_id' => $user->id,
+            'facility_id' => $facility->id,
+            'reservation_date' => '2030-05-03',
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+            'purpose' => 'Upcoming presentation',
+            'status' => 'approved',
+        ]);
+
+        $response = $this->actingAs($user)
+            ->postJson(route('chatbot.respond'), ['message' => 'When is my next booking?']);
+
+        $response->assertOk();
+        $this->assertStringContainsString('Your next reservation is Lecture Room 1', $response->json('reply'));
+        $this->assertStringContainsString('May 3, 2030', $response->json('reply'));
+        $this->assertStringContainsString('accepted', $response->json('reply'));
+        $this->assertStringNotContainsString('April 30, 2030', $response->json('reply'));
     }
 
     public function test_chatbot_collects_purpose_before_submitting_a_facility_reservation(): void

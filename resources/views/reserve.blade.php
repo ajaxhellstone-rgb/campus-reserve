@@ -160,15 +160,24 @@
             </div>
 
             <section id="facility-reservation-panel" role="tabpanel" aria-labelledby="facility-reservation-tab" class="p-4 sm:p-6">
-                <h2 class="mb-6 text-xl font-semibold text-gray-900">Available Facilities</h2>
+                <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <h2 class="text-xl font-semibold text-gray-900">Available Facilities</h2>
+                    <label class="block w-full sm:max-w-sm">
+                        <span class="sr-only">Search available facilities</span>
+                        <input id="available-facilities-search" type="search" placeholder="Search rooms or buildings" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" autocomplete="off">
+                    </label>
+                </div>
                 @if($facilities->isEmpty())
-                    <div class="py-12 text-center text-gray-500">No facilities are available right now.</div>
+                    <div id="available-facilities-empty" class="py-12 text-center text-gray-500">No facilities are available right now.</div>
                 @else
                     <div id="available-facilities-list" class="reservation-options-scroll grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" tabindex="0" aria-label="Available facilities">
                         @foreach($facilities as $facility)
-                            <div class="rounded-2xl border border-slate-200 bg-white p-1 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
+                            <div data-available-facility-card data-search="{{ strtolower($facility->name . ' ' . ($facility->building ?? '') . ' ' . ($facility->capacity ?? '')) }}" class="rounded-2xl border border-slate-200 bg-white p-1 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
                                 <div class="p-4">
                                     <h3 class="text-lg font-semibold text-gray-900">{{ $facility->name }}</h3>
+                                    @if($facility->building)
+                                        <p class="mt-1 text-sm text-gray-500">{{ $facility->building }}</p>
+                                    @endif
                                     <p class="mt-1 text-sm text-gray-600">Capacity: {{ $facility->capacity ?? 'N/A' }} people</p>
                                     <a href="/calendar/manage" class="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-800">
                                         Reserve Now
@@ -177,12 +186,17 @@
                             </div>
                         @endforeach
                     </div>
+                    <p id="available-facilities-no-results" class="hidden py-8 text-center text-sm text-slate-500" role="status">No rooms match your search.</p>
                 @endif
             </section>
 
             <section id="property-reservation-panel" role="tabpanel" aria-labelledby="property-reservation-tab" class="hidden p-4 sm:p-6" hidden>
                 <h2 class="mb-2 text-xl font-semibold text-gray-900">Available Room Items</h2>
                 <p class="mb-6 text-sm text-gray-600">Choose a room to see its equipment and reserve item quantities for a date and time.</p>
+                <label class="mb-4 block">
+                    <span class="sr-only">Search available rooms and items</span>
+                    <input id="available-properties-search" type="search" placeholder="Search rooms, buildings, or items" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" autocomplete="off">
+                </label>
                 <div id="available-properties-list"
                     data-facilities-url="{{ route('api.facilities.property-items') }}"
                     class="reservation-options-scroll grid grid-cols-1 gap-5 lg:grid-cols-2"
@@ -246,6 +260,19 @@
         <!-- My Reservations -->
         <div class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
             <h2 class="mb-4 text-xl font-semibold tracking-tight text-slate-950">My Reservations</h2>
+            <form method="GET" action="{{ route('reserve') }}" class="mb-5 flex flex-col gap-3 sm:flex-row">
+                <input type="hidden" name="tab" value="{{ request('tab') }}">
+                <label class="block min-w-0 flex-1">
+                    <span class="sr-only">Search my reservations</span>
+                    <input type="search" name="reservation_search" value="{{ $reservationSearch ?? '' }}" placeholder="Search by room, purpose, status, or item" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" autocomplete="off">
+                </label>
+                <div class="flex gap-2">
+                    <button type="submit" class="rounded-xl bg-indigo-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-indigo-800">Search</button>
+                    @if(!empty($reservationSearch))
+                        <a href="{{ route('reserve', request('tab') ? ['tab' => request('tab')] : []) }}" class="inline-flex items-center rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Clear</a>
+                    @endif
+                </div>
+            </form>
             @if(isset($reservations) && $reservations->isNotEmpty())
                 <form id="delete-selected-form" method="POST" action="{{ route('reservations.destroySelected') }}">
                     @csrf
@@ -328,8 +355,13 @@
                     <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                     </svg>
-                    <p>No reservations yet.</p>
-                    <p class="text-sm">Start by reserving a facility above!</p>
+                    @if(!empty($reservationSearch))
+                        <p>No reservations match “{{ $reservationSearch }}”.</p>
+                        <p class="text-sm">Try a different room, purpose, status, or item name.</p>
+                    @else
+                        <p>No reservations yet.</p>
+                        <p class="text-sm">Start by reserving a facility above!</p>
+                    @endif
                 </div>
             @endif
         </div>
@@ -373,9 +405,54 @@
             property: document.getElementById('property-reservation-statistics'),
         };
         const propertiesList = document.getElementById('available-properties-list');
+        const facilitiesSearch = document.getElementById('available-facilities-search');
+        const propertiesSearch = document.getElementById('available-properties-search');
+        const facilityCards = Array.from(document.querySelectorAll('[data-available-facility-card]'));
+        const facilityNoResults = document.getElementById('available-facilities-no-results');
         let propertyFacilities = [];
         let propertyFacilitiesLoaded = false;
         let propertyFacilitiesRequest = null;
+
+        function filterFacilities() {
+            if (!facilitiesSearch) return;
+            const query = facilitiesSearch.value.trim().toLowerCase();
+            let visibleCount = 0;
+
+            facilityCards.forEach((card) => {
+                const matches = (card.dataset.search || '').includes(query);
+                card.classList.toggle('hidden', !matches);
+                if (matches) visibleCount += 1;
+            });
+
+            facilityNoResults?.classList.toggle('hidden', visibleCount > 0 || facilityCards.length === 0);
+        }
+
+        function filterPropertyFacilities() {
+            if (!propertiesSearch || !propertyFacilitiesLoaded) return;
+            const query = propertiesSearch.value.trim().toLowerCase();
+            let visibleCount = 0;
+
+            propertiesList.querySelectorAll('[data-property-facility-card]').forEach((card) => {
+                const facilityMatches = (card.dataset.facilitySearch || '').includes(query);
+                let itemMatches = 0;
+
+                card.querySelectorAll('[data-property-item-row]').forEach((row) => {
+                    const matches = !query || facilityMatches || (row.dataset.itemSearch || '').includes(query);
+                    row.classList.toggle('hidden', !matches);
+                    if (matches) itemMatches += 1;
+                });
+
+                const matches = !query || facilityMatches || itemMatches > 0;
+                card.classList.toggle('hidden', !matches);
+                if (matches) visibleCount += 1;
+            });
+
+            const noResults = propertiesList.querySelector('[data-property-no-results]');
+            if (noResults) noResults.classList.toggle('hidden', visibleCount > 0);
+        }
+
+        facilitiesSearch?.addEventListener('input', filterFacilities);
+        propertiesSearch?.addEventListener('input', filterPropertyFacilities);
 
         async function loadPropertyFacilities() {
             if (propertyFacilitiesRequest) {
@@ -411,8 +488,15 @@
                         return;
                     }
 
+                    const noResultsMessage = document.createElement('p');
+                    noResultsMessage.dataset.propertyNoResults = 'true';
+                    noResultsMessage.className = 'col-span-full hidden py-8 text-center text-sm text-slate-500';
+                    noResultsMessage.textContent = 'No rooms or items match your search.';
+
                     facilities.forEach((facility) => {
                         const card = document.createElement('article');
+                        card.dataset.propertyFacilityCard = 'true';
+                        card.dataset.facilitySearch = `${facility.name} ${facility.building || ''}`.toLowerCase();
                         card.className = 'rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-200 hover:shadow-md';
 
                         const heading = document.createElement('div');
@@ -442,6 +526,8 @@
                             itemList.className = 'mt-4 divide-y divide-gray-100';
                             facility.items.forEach((item) => {
                                 const row = document.createElement('li');
+                                row.dataset.propertyItemRow = 'true';
+                                row.dataset.itemSearch = item.name.toLowerCase();
                                 row.className = 'flex items-center justify-between gap-3 py-2 text-sm';
                                 const itemName = document.createElement('span');
                                 itemName.className = 'font-medium text-gray-700';
@@ -464,6 +550,8 @@
 
                         propertiesList.appendChild(card);
                     });
+                    propertiesList.appendChild(noResultsMessage);
+                    filterPropertyFacilities();
                 })
                 .catch((error) => {
                     propertiesList.replaceChildren();

@@ -6,6 +6,7 @@ use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use App\Services\ReservationNotificationDispatcher;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 
 // Calendar management subpage (not in navbar)
@@ -114,10 +115,22 @@ Route::middleware('web')->group(function () {
 Route::middleware('auth')->group(function () {
     // Authenticated user routes. All of these pages require the user to be signed in.
     // Reserve page (Dashboard) - requires login
-    Route::get('/reserve', function () {
+    Route::get('/reserve', function (Request $request) {
         $user = auth()->user();
-        $reservations = Reservation::with(['facility', 'items'])
+        $reservationSearch = trim((string) $request->query('reservation_search', ''));
+        $reservationsQuery = Reservation::with(['facility', 'items'])
             ->where('user_id', $user->id)
+            ->when($reservationSearch !== '', function ($query) use ($reservationSearch) {
+                $search = '%'.mb_strtolower($reservationSearch).'%';
+
+                $query->where(function ($query) use ($search) {
+                    $query->whereRaw('LOWER(purpose) LIKE ?', [$search])
+                        ->orWhereRaw('LOWER(status) LIKE ?', [$search])
+                        ->orWhereHas('facility', fn ($facilityQuery) => $facilityQuery->whereRaw('LOWER(name) LIKE ?', [$search]))
+                        ->orWhereHas('items', fn ($itemQuery) => $itemQuery->whereRaw('LOWER(name) LIKE ?', [$search]));
+                });
+            });
+        $reservations = $reservationsQuery
             ->orderBy('reservation_date')
             ->orderBy('start_time')
             ->paginate(20)
@@ -149,7 +162,7 @@ Route::middleware('auth')->group(function () {
 
         $facilities = Facility::active()
             ->orderBy('name')
-            ->get(['id', 'name', 'capacity']);
+            ->get(['id', 'name', 'building', 'capacity']);
 
         return view('reserve', compact(
             'reservations',
@@ -157,7 +170,8 @@ Route::middleware('auth')->group(function () {
             'completedCount',
             'borrowedItemCount',
             'returnedItemCount',
-            'facilities'
+            'facilities',
+            'reservationSearch'
         ));
     })->name('reserve');
 
