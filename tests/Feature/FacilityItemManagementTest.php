@@ -101,6 +101,7 @@ class FacilityItemManagementTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('admin.property-management.items.store'), [
+                'current_password' => 'password',
                 'facility_id' => $facility->id,
                 'name' => 'Projector',
                 'quantity' => 2,
@@ -118,6 +119,7 @@ class FacilityItemManagementTest extends TestCase
 
         $this->actingAs($admin)
             ->put(route('admin.property-management.items.update', $item), [
+                'current_password' => 'password',
                 'facility_id' => $facility->id,
                 'name' => 'Interactive Display',
                 'quantity' => 1,
@@ -132,7 +134,7 @@ class FacilityItemManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->delete(route('admin.property-management.items.destroy', $item))
+            ->delete(route('admin.property-management.items.destroy', $item), ['current_password' => 'password'])
             ->assertRedirect(route('admin.property-management.index'))
             ->assertSessionHas('status', 'Facility item removed successfully.');
 

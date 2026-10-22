@@ -38,24 +38,6 @@ class AdminController extends Controller
         // Show the admin dashboard with pending requests, recent activity, and user search
         $this->requireAdmin();
 
-        $pendingReservations = Reservation::with(['user', 'facility', 'items'])
-            ->where('status', 'pending')
-            ->orderBy('reservation_date')
-            ->orderBy('start_time')
-            ->paginate(15, ['*'], 'pendingPage')
-            ->withQueryString();
-
-        $recentReservations = Reservation::with(['user', 'facility'])
-            ->whereIn('status', ['approved', 'rejected'])
-            ->orderBy('updated_at', 'desc')
-            ->take(20)
-            ->get();
-
-        $auditLogs = AuditLog::with(['user', 'reservation.facility'])
-            ->latest()
-            ->take(25)
-            ->get();
-
         $search = trim($request->get('search', ''));
         $role = $request->validate([
             'role' => ['nullable', 'in:all,user,admin,super_admin'],
@@ -82,7 +64,49 @@ class AdminController extends Controller
 
         $users = $users->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
 
+        if ($request->ajax()) {
+            return response()->view('admin.partials.members', compact('users', 'search', 'role'));
+        }
+
+        $pendingReservations = Reservation::with(['user', 'facility', 'items'])
+            ->where('status', 'pending')
+            ->orderBy('reservation_date')
+            ->orderBy('start_time')
+            ->paginate(15, ['*'], 'pendingPage')
+            ->withQueryString();
+
+        $recentReservations = Reservation::with(['user', 'facility'])
+            ->whereIn('status', ['approved', 'rejected'])
+            ->orderBy('updated_at', 'desc')
+            ->take(20)
+            ->get();
+
+        $auditLogs = AuditLog::with(['user', 'reservation.facility'])
+            ->latest()
+            ->take(25)
+            ->get();
+
         return view('admin.dashboard', compact('pendingReservations', 'recentReservations', 'auditLogs', 'users', 'search', 'role'));
+    }
+
+    private function reservationActionResponse(Request $request, string $message, ?AuditLog $auditLog = null)
+    {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => $message,
+                'pending_count' => Reservation::where('status', 'pending')->count(),
+                'recent_decision_count' => min(20, Reservation::whereIn('status', ['approved', 'rejected'])->count()),
+                'audit_log_count' => min(25, AuditLog::count()),
+                'audit_log' => $auditLog ? [
+                    'action' => $auditLog->action,
+                    'details' => $auditLog->details,
+                    'created_at' => $auditLog->created_at->format('M d, Y H:i:s'),
+                    'user' => Auth::user()->name,
+                ] : null,
+            ]);
+        }
+
+        return back()->with('status', $message);
     }
 
     public function createFacility()
@@ -268,6 +292,10 @@ class AdminController extends Controller
         $this->requireAdmin();
 
         if ($reservation->status !== 'pending') {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Only pending reservations can be approved.'], 409);
+            }
+
             return back()->with('error', 'Only pending reservations can be approved.');
         }
 
@@ -334,12 +362,20 @@ class AdminController extends Controller
         });
 
         if ($approvalError) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $approvalError], 409);
+            }
+
             return back()->with('error', $approvalError);
         }
 
         $reservationNotifications->notifyBorrower($reservation);
 
-        return back()->with('status', 'Reservation approved successfully.');
+        return $this->reservationActionResponse(
+            $request,
+            'Reservation approved successfully.',
+            AuditLog::where('reservation_id', $reservation->id)->where('action', 'approved')->latest()->first()
+        );
     }
 
     public function reject(
@@ -352,6 +388,10 @@ class AdminController extends Controller
         $this->requireAdmin();
 
         if ($reservation->status !== 'pending') {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Only pending reservations can be rejected.'], 409);
+            }
+
             return back()->with('error', 'Only pending reservations can be rejected.');
         }
 
@@ -361,7 +401,7 @@ class AdminController extends Controller
             'admin_remarks' => $request->input('remarks', 'Rejected by admin.'),
         ]);
 
-        AuditLog::create([
+        $auditLog = AuditLog::create([
             'user_id' => Auth::id(),
             'reservation_id' => $reservation->id,
             'action' => 'rejected',
@@ -370,7 +410,7 @@ class AdminController extends Controller
 
         $reservationNotifications->notifyBorrower($reservation);
 
-        return back()->with('status', 'Reservation rejected successfully.');
+        return $this->reservationActionResponse($request, 'Reservation rejected successfully.', $auditLog);
     }
 
     public function destroyReservation(Request $request, Reservation $reservation)
@@ -379,14 +419,14 @@ class AdminController extends Controller
 
         $reservation->delete();
 
-        AuditLog::create([
+        $auditLog = AuditLog::create([
             'user_id' => Auth::id(),
             'reservation_id' => $reservation->id,
             'action' => 'deleted',
             'details' => 'Reservation deleted by admin',
         ]);
 
-        return back()->with('status', 'Reservation deleted successfully.');
+        return $this->reservationActionResponse($request, 'Reservation deleted successfully.', $auditLog);
     }
 
     public function updateUserRole(Request $request, \App\Models\User $user)
@@ -395,6 +435,10 @@ class AdminController extends Controller
         $this->requireSuperAdmin();
 
         if ($user->isSuperAdmin()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Cannot change head admin role.'], 403);
+            }
+
             return redirect()->route('admin.dashboard', [
                 'search' => $request->input('return_search'),
                 'role' => $request->input('return_role'),
@@ -417,6 +461,10 @@ class AdminController extends Controller
             'details' => sprintf('Changed role for user %s to %s', $user->email, $request->input('role')),
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json(['status' => 'User role updated successfully.']);
+        }
+
         return redirect()->route('admin.dashboard', [
             'search' => $request->input('return_search'),
             'role' => $request->input('return_role'),
@@ -430,6 +478,10 @@ class AdminController extends Controller
         $this->requireSuperAdmin();
 
         if ($user->isSuperAdmin()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Cannot delete the head admin account.'], 403);
+            }
+
             return redirect()->route('admin.dashboard', [
                 'search' => $request->input('return_search'),
                 'role' => $request->input('return_role'),
@@ -438,6 +490,10 @@ class AdminController extends Controller
         }
 
         if ($user->id === Auth::id()) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'You cannot delete your own account here.'], 403);
+            }
+
             return redirect()->route('admin.dashboard', [
                 'search' => $request->input('return_search'),
                 'role' => $request->input('return_role'),
@@ -453,6 +509,10 @@ class AdminController extends Controller
             'action' => 'user_deleted',
             'details' => sprintf('Deleted user %s', $user->email),
         ]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['status' => 'User deleted successfully.']);
+        }
 
         return redirect()->route('admin.dashboard', [
             'search' => $request->input('return_search'),

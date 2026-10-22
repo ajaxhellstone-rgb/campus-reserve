@@ -97,7 +97,7 @@ class RejectExpiredReservationsTest extends TestCase
         $reservation = $this->createReservation($user, $facility, 'pending', now()->addDay()->toDateString(), '10:00');
 
         $this->actingAs($admin)
-            ->post(route('admin.reservations.reject', $reservation))
+            ->post(route('admin.reservations.reject', $reservation), ['current_password' => 'password'])
             ->assertRedirect();
 
         $this->assertDatabaseHas('reservations', [
@@ -105,6 +105,34 @@ class RejectExpiredReservationsTest extends TestCase
             'status' => 'rejected',
         ]);
         $this->assertNotNull($reservation->fresh()->rejected_at);
+    }
+
+    public function test_admin_can_reject_a_reservation_without_a_redirect(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->create([
+            'is_admin' => true,
+            'is_super_admin' => false,
+        ]);
+        $user = User::factory()->create();
+        $facility = Facility::create([
+            'name' => 'Lecture Room 2',
+            'building' => 'Main Building',
+            'type' => 'Classroom',
+            'capacity' => 30,
+            'is_active' => true,
+        ]);
+        $reservation = $this->createReservation($user, $facility, 'pending', now()->addDay()->toDateString(), '12:00');
+
+        $this->actingAs($admin)
+            ->postJson(route('admin.reservations.reject', $reservation), ['current_password' => 'password'])
+            ->assertOk()
+            ->assertJsonPath('status', 'Reservation rejected successfully.')
+            ->assertJsonPath('pending_count', 0)
+            ->assertJsonPath('audit_log.action', 'rejected');
+
+        $this->assertSame('rejected', $reservation->fresh()->status);
     }
 
     private function createReservation(

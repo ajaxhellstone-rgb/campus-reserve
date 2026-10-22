@@ -35,7 +35,52 @@ class ProfileSecuritySettingsTest extends TestCase
             ->assertDontSee('name="authenticator_otp" required', false)
             ->assertSee('Finish authenticator setup and verify a code', false)
             ->assertDontSee(route('profile.password.verify'), false)
+            ->assertSee("event.preventDefault();\n            const submitButton", false)
+            ->assertDontSee('window.location.reload()', false)
             ->assertSee("this.textContent = 'Saving...'", false);
+    }
+
+    public function test_profile_settings_can_be_saved_without_a_page_redirect(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('profile.update'), [
+                'name' => 'Updated Profile Name',
+                'phone' => '+639123456789',
+                'country_code' => '+63',
+                'email_notifications' => true,
+                'two_fa_enabled' => false,
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'Profile updated successfully.')
+            ->assertJsonPath('user.name', 'Updated Profile Name')
+            ->assertJsonPath('user.phone', '+639123456789');
+
+        $this->assertSame('Updated Profile Name', $user->fresh()->name);
+        $this->assertSame('+639123456789', $user->fresh()->phone);
+    }
+
+    public function test_invalid_two_factor_disable_credentials_return_a_json_error(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'CurrentPass1!',
+            'two_fa_enabled' => true,
+            'two_fa_secret' => TOTP::create()->getSecret(),
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('profile.update'), [
+                'name' => $user->name,
+                'two_fa_enabled' => false,
+                'disable_current_password' => 'wrong-password',
+                'disable_2fa_otp' => '123456',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('field', 'disable_current_password')
+            ->assertJsonPath('message', 'The current password is incorrect.');
+
+        $this->assertTrue($user->fresh()->two_fa_enabled);
     }
 
     public function test_user_can_change_password_without_an_authenticator_code_when_two_factor_is_off(): void
@@ -145,5 +190,23 @@ class ProfileSecuritySettingsTest extends TestCase
         $this->assertTrue($user->fresh()->two_fa_enabled);
         $this->assertSame($secret, $user->fresh()->two_fa_secret);
         $this->assertNull(session('pending_authenticator_secret'));
+    }
+
+    public function test_authenticator_confirmation_can_complete_without_a_redirect(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'CurrentPass1!',
+        ]);
+        $secret = TOTP::create()->getSecret();
+
+        $this->actingAs($user)
+            ->withSession(['pending_authenticator_secret' => $secret])
+            ->postJson(route('profile.2fa.confirm'), [
+                'authenticator_otp' => TOTP::createFromSecret($secret)->now(),
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'Authenticator app 2FA is now enabled.');
+
+        $this->assertTrue($user->fresh()->two_fa_enabled);
     }
 }

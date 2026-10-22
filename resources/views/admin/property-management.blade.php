@@ -16,6 +16,9 @@
         @if(session('status'))
             <div class="mb-6 rounded-xl border border-green-300 bg-green-100 px-4 py-3 text-green-800">{{ session('status') }}</div>
         @endif
+        @if($errors->has('current_password'))
+            <div class="mb-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-red-800" role="alert">{{ $errors->first('current_password') }}</div>
+        @endif
 
         <section class="mb-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 class="text-xl font-semibold text-gray-900">Add an Item</h2>
@@ -99,89 +102,5 @@
     </div>
 </main>
 
-<div id="property-confirmation-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="property-confirmation-title" aria-describedby="property-confirmation-message">
-    <div class="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl">
-        <h2 id="property-confirmation-title" class="text-xl font-semibold text-gray-900">Confirm action</h2>
-        <p id="property-confirmation-message" class="mt-3 text-sm leading-6 text-gray-600"></p>
-        <div class="mt-6 flex justify-end gap-3">
-            <button type="button" id="property-confirmation-cancel" class="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50">Cancel</button>
-            <button type="button" id="property-confirmation-accept" class="rounded-full bg-black px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-800">Confirm</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    (() => {
-        const modal = document.getElementById('property-confirmation-modal');
-        const message = document.getElementById('property-confirmation-message');
-        const cancelButton = document.getElementById('property-confirmation-cancel');
-        const acceptButton = document.getElementById('property-confirmation-accept');
-        let pendingForm = null;
-        let pendingSubmitter = null;
-        let confirmedForm = null;
-
-        function closeModal() {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            pendingForm = null;
-            pendingSubmitter = null;
-        }
-
-        document.addEventListener('submit', (event) => {
-            const form = event.target;
-            if (!(form instanceof HTMLFormElement) || !form.dataset.confirmMessage) {
-                return;
-            }
-
-            if (confirmedForm === form) {
-                confirmedForm = null;
-                return;
-            }
-
-            event.preventDefault();
-            pendingForm = form;
-            pendingSubmitter = event.submitter;
-            message.textContent = form.dataset.confirmMessage;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            cancelButton.focus();
-        });
-
-        cancelButton.addEventListener('click', closeModal);
-
-        acceptButton.addEventListener('click', () => {
-            if (!pendingForm) {
-                return;
-            }
-
-            if (!pendingForm.reportValidity()) {
-                closeModal();
-                return;
-            }
-
-            const form = pendingForm;
-            const submitter = pendingSubmitter;
-            closeModal();
-            confirmedForm = form;
-
-            if (submitter instanceof HTMLElement && submitter.form === form) {
-                form.requestSubmit(submitter);
-            } else {
-                form.requestSubmit();
-            }
-        });
-
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                closeModal();
-            }
-        });
-
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
-                closeModal();
-            }
-        });
-    })();
-</script>
+@include('admin.partials.password-confirmation')
 @endsection

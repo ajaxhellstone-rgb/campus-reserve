@@ -52,7 +52,7 @@
 
 @section('content')
 <div class="min-h-screen bg-gradient-to-br from-purple-50 via-slate-50 to-cyan-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="mx-auto max-w-7xl px-3 py-6 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         <!-- Welcome Section -->
         <!-- Dashboard greeting and summary for the current logged in user. -->
         <div class="relative mb-8 overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-r from-indigo-100/90 via-pink-50 to-cyan-100/80 p-7 shadow-sm sm:p-9">
@@ -75,8 +75,8 @@
 
         <!-- Quick Stats -->
         <!-- Summary cards showing the user's reservation and facility counts. -->
-        <div id="facility-reservation-statistics" data-reservation-statistics="facility" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+        <div id="facility-reservation-statistics" data-reservation-statistics="facility" class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 md:grid-cols-3">
+            <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-sm sm:p-6">
                 <div class="flex items-center">
                     <div class="rounded-2xl bg-indigo-100 p-3">
                         <svg class="h-6 w-6 text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,7 +90,7 @@
                 </div>
             </div>
 
-            <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+            <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-sm sm:p-6">
                 <div class="flex items-center">
                     <div class="rounded-2xl bg-emerald-100 p-3">
                         <svg class="h-6 w-6 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,7 +104,7 @@
                 </div>
             </div>
 
-            <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+            <div class="col-span-2 rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-sm sm:col-span-1 sm:p-6">
                 <div class="flex items-center">
                     <div class="rounded-2xl bg-cyan-100 p-3">
                         <svg class="h-6 w-6 text-cyan-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,8 +119,8 @@
             </div>
 
         </div>
-        <div id="property-reservation-statistics" data-reservation-statistics="property" class="hidden grid grid-cols-1 gap-6 mb-8 sm:grid-cols-2" hidden>
-            <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+        <div id="property-reservation-statistics" data-reservation-statistics="property" class="mb-6 hidden grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6" hidden>
+            <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-sm sm:p-6">
                 <div class="flex items-center">
                     <div class="rounded-2xl bg-indigo-100 p-3">
                         <svg class="h-6 w-6 text-indigo-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +133,7 @@
                     </div>
                 </div>
             </div>
-            <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm">
+            <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-sm sm:p-6">
                 <div class="flex items-center">
                     <div class="rounded-2xl bg-cyan-100 p-3">
                         <svg class="h-6 w-6 text-cyan-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,16 +150,16 @@
 
         <!-- Facility and property reservation tabs -->
         <div class="mb-8 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-indigo-950/5">
-            <div class="flex border-b border-slate-200 px-6 pt-5" role="tablist" aria-label="Reservation type">
-                <button id="facility-reservation-tab" type="button" role="tab" aria-selected="true" aria-controls="facility-reservation-panel" data-reservation-tab="facility" class="border-b-2 border-indigo-700 px-4 py-3 text-sm font-semibold text-indigo-800">
+            <div class="flex border-b border-slate-200 px-3 pt-4 sm:px-6 sm:pt-5" role="tablist" aria-label="Reservation type">
+                <button id="facility-reservation-tab" type="button" role="tab" aria-selected="true" aria-controls="facility-reservation-panel" data-reservation-tab="facility" class="flex-1 border-b-2 border-indigo-700 px-2 py-3 text-sm font-semibold text-indigo-800 sm:flex-none sm:px-4">
                     Reserve Facility
                 </button>
-                <button id="property-reservation-tab" type="button" role="tab" aria-selected="false" aria-controls="property-reservation-panel" data-reservation-tab="property" class="border-b-2 border-transparent px-4 py-3 text-sm font-semibold text-slate-500 hover:text-indigo-700">
+                <button id="property-reservation-tab" type="button" role="tab" aria-selected="false" aria-controls="property-reservation-panel" data-reservation-tab="property" class="flex-1 border-b-2 border-transparent px-2 py-3 text-sm font-semibold text-slate-500 hover:text-indigo-700 sm:flex-none sm:px-4">
                     Reserve Property
                 </button>
             </div>
 
-            <section id="facility-reservation-panel" role="tabpanel" aria-labelledby="facility-reservation-tab" class="p-6">
+            <section id="facility-reservation-panel" role="tabpanel" aria-labelledby="facility-reservation-tab" class="p-4 sm:p-6">
                 <h2 class="mb-6 text-xl font-semibold text-gray-900">Available Facilities</h2>
                 @if($facilities->isEmpty())
                     <div class="py-12 text-center text-gray-500">No facilities are available right now.</div>
@@ -180,7 +180,7 @@
                 @endif
             </section>
 
-            <section id="property-reservation-panel" role="tabpanel" aria-labelledby="property-reservation-tab" class="hidden p-6" hidden>
+            <section id="property-reservation-panel" role="tabpanel" aria-labelledby="property-reservation-tab" class="hidden p-4 sm:p-6" hidden>
                 <h2 class="mb-2 text-xl font-semibold text-gray-900">Available Room Items</h2>
                 <p class="mb-6 text-sm text-gray-600">Choose a room to see its equipment and reserve item quantities for a date and time.</p>
                 <div id="available-properties-list"

@@ -18,8 +18,8 @@
                 </div>
             </div>
 
-            <div class="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
-                <aside class="space-y-6">
+            <div class="calendar-manage-layout grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+                <aside class="calendar-manage-sidebar order-2 space-y-6 xl:order-1">
                     <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm shadow-indigo-950/5">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-semibold text-slate-900">Booking panel</h2>
@@ -64,7 +64,7 @@
                     </div>
                 </aside>
 
-                <main class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
+                <main class="calendar-manage-main order-1 min-w-0 rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6 xl:order-2">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                         <div>
                             <p class="text-sm font-semibold text-slate-900">Reservation calendar</p>
@@ -158,6 +158,43 @@
 @push('styles')
 <style>
     #calendar {
+        min-height: 620px;
+    }
+
+    @media (max-width: 767px) {
+        #calendar {
+            min-height: 480px;
+        }
+
+        .calendar-manage-layout {
+            grid-template-columns: minmax(0, 1fr);
+        }
+
+        #calendar .fc-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.5rem;
+        }
+
+        #calendar .fc-toolbar-chunk {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        #calendar .fc-button {
+            padding: 0.35rem 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        #reservationModal > div {
+            max-height: calc(100dvh - 2rem);
+            padding: 1.25rem;
+        }
+    }
+
+    #calendar {
         --fc-border-color: #e2e8f0;
         --fc-page-bg-color: transparent;
         --fc-neutral-bg-color: #f8fafc;
@@ -243,7 +280,7 @@
         }
 
         var calendar = new window.FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridWeek',
+            initialView: window.matchMedia('(max-width: 767px)').matches ? 'dayGridMonth' : 'timeGridWeek',
             headerToolbar: false,
             selectable: true,
             editable: false,

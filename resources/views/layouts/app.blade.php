@@ -12,7 +12,7 @@
 </head>
 <body class="min-h-screen bg-white text-slate-900 transition-colors duration-200">
     <!-- Application header and global navigation bar -->
-    <header class="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-200 transition-colors duration-200">
+    <header class="relative z-40 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-gray-200 bg-white px-4 py-3 transition-colors duration-200 sm:px-6 sm:py-4">
         <a href="/" class="flex items-center">
             <div class="flex items-center rounded-xl border border-amber-300 bg-white px-2 py-1 shadow-sm">
                 <span class="text-xs font-medium tracking-wide">CAMPUS</span>
@@ -20,7 +20,7 @@
             </div>
         </a>
 
-        <nav class="hidden md:flex items-center gap-8">
+        <nav class="hidden items-center gap-8 md:flex">
             <!-- Main site navigation links. The active route is highlighted dynamically. -->
             <a href="/" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('/') ? 'text-green-900' : 'text-gray-700' }}">HOME</a>
             <a href="/reserve" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('reserve') ? 'text-black' : 'text-gray-700' }}">RESERVE</a>
@@ -29,7 +29,7 @@
             <a href="/contact" class="text-sm font-medium hover:text-gray-600 transition-colors {{ request()->is('contact') ? 'text-green-900' : 'text-gray-700' }}">CONTACT</a>
         </nav>
 
-        <div class="flex items-center gap-3">
+        <div class="hidden items-center gap-3 md:flex">
             @auth
                 <a id="notificationLink" href="{{ route('notifications.index') }}" class="relative text-gray-700 hover:text-gray-900">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -59,6 +59,45 @@
                 <a href="/login" class="px-4 py-1.5 text-sm font-medium bg-black text-white rounded-full hover:bg-gray-800 transition-colors">Log In</a>
             @endauth
         </div>
+        <button
+            id="mobile-menu-toggle"
+            type="button"
+            class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-green-700 md:hidden"
+            aria-expanded="false"
+            aria-controls="mobile-navigation"
+            aria-label="Open navigation menu"
+        >
+            <svg id="mobile-menu-open-icon" class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+            <svg id="mobile-menu-close-icon" class="hidden h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m6 6 12 12M18 6 6 18"></path>
+            </svg>
+        </button>
+
+        <nav id="mobile-navigation" class="hidden w-full flex-col gap-1 border-t border-slate-100 pt-3 md:hidden" aria-label="Mobile navigation">
+            <a href="/" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Home</a>
+            <a href="/reserve" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Reserve</a>
+            <a href="/calendar" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Calendar</a>
+            <a href="/about" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">About us</a>
+            <a href="/contact" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Contact</a>
+            @auth
+                <a href="{{ route('notifications.index') }}" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Notifications</a>
+                <a href="/profile" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Profile settings</a>
+                @if(auth()->user()->isAdmin())
+                    <a href="{{ route('admin.dashboard') }}" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Admin dashboard</a>
+                @endif
+                <form method="POST" action="{{ route('logout') }}" class="px-4 pb-2 pt-1">
+                    @csrf
+                    <button type="submit" class="w-full rounded-xl bg-green-800 px-4 py-3 text-left text-sm font-semibold text-white hover:bg-green-900">Log out</button>
+                </form>
+            @else
+                <div class="flex gap-3 px-4 pb-2 pt-1">
+                    <a href="/signup" class="flex-1 rounded-xl bg-green-800 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-green-900">Sign up</a>
+                    <a href="/login" class="flex-1 rounded-xl border border-green-800 px-4 py-3 text-center text-sm font-semibold text-green-900 hover:bg-green-50">Log in</a>
+                </div>
+            @endauth
+        </nav>
     </header>
     
     <main>
@@ -362,5 +401,38 @@
         </script>
     @endif
     @stack('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggle = document.getElementById('mobile-menu-toggle');
+            const navigation = document.getElementById('mobile-navigation');
+            const openIcon = document.getElementById('mobile-menu-open-icon');
+            const closeIcon = document.getElementById('mobile-menu-close-icon');
+
+            function setMenuOpen(open) {
+                toggle.setAttribute('aria-expanded', String(open));
+                toggle.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+                navigation.classList.toggle('hidden', !open);
+                navigation.classList.toggle('flex', open);
+                openIcon.classList.toggle('hidden', open);
+                closeIcon.classList.toggle('hidden', !open);
+            }
+
+            toggle.addEventListener('click', function() {
+                setMenuOpen(toggle.getAttribute('aria-expanded') !== 'true');
+            });
+
+            navigation.addEventListener('click', function(event) {
+                if (event.target.closest('a')) setMenuOpen(false);
+            });
+
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') setMenuOpen(false);
+            });
+
+            window.matchMedia('(min-width: 768px)').addEventListener('change', function(event) {
+                if (event.matches) setMenuOpen(false);
+            });
+        });
+    </script>
 </body>
 </html>

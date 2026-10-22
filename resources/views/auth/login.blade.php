@@ -36,7 +36,10 @@
             <!-- Login Form -->
             <form method="POST" action="{{ route('login') }}" class="space-y-6" id="loginForm">
                 @csrf
-                <div id="loginFormError" class="hidden rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"></div>
+                <div id="loginFormError" class="hidden rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    <p id="loginFormErrorMessage"></p>
+                    <button id="refreshLoginPage" type="button" class="mt-2 hidden font-semibold underline hover:text-rose-900">Refresh login page</button>
+                </div>
                 
                 <div class="space-y-2">
                     <label for="email" class="block text-sm font-medium text-slate-700">Email</label>
@@ -213,9 +216,12 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
     const form = this;
     const submitButton = form.querySelector('button[type="submit"]');
     const error = document.getElementById('loginFormError');
+    const errorMessage = document.getElementById('loginFormErrorMessage');
+    const refreshButton = document.getElementById('refreshLoginPage');
     submitButton.disabled = true;
     submitButton.textContent = 'Checking...';
     error.classList.add('hidden');
+    refreshButton.classList.add('hidden');
 
     try {
         const response = await fetch(form.action, {
@@ -234,6 +240,12 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
             ? await response.json()
             : {};
         if (!response.ok) {
+            if (response.status === 419) {
+                errorMessage.textContent = 'Your login session expired or changed. Refresh this page and try again.';
+                refreshButton.classList.remove('hidden');
+                error.classList.remove('hidden');
+                return;
+            }
             throw new Error(data.message || Object.values(data.errors || {}).flat()[0] || 'The provided credentials do not match our records.');
         }
 
@@ -259,12 +271,16 @@ document.getElementById('loginForm')?.addEventListener('submit', async function(
             document.getElementById('verify_otp').focus();
         }
     } catch (requestError) {
-        error.textContent = requestError.message;
+        errorMessage.textContent = requestError.message;
         error.classList.remove('hidden');
     } finally {
         submitButton.disabled = false;
         submitButton.textContent = 'Log In';
     }
+});
+
+document.getElementById('refreshLoginPage')?.addEventListener('click', function() {
+    window.location.reload();
 });
 
 document.getElementById('verify2faForm')?.addEventListener('submit', async function(event) {

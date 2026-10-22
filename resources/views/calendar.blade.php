@@ -21,9 +21,9 @@
                     <button id="todayBtn" type="button" class="inline-flex items-center justify-center rounded-2xl bg-indigo-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-800">Today</button>
                 </div>
             </div>
-            <div class="gap-4 grid-cols-1" style="display:grid;grid-template-columns:240px minmax(680px,1fr);gap:1rem;overflow-x:auto;max-width:1040px;margin:0 auto;">
-                <div class="space-y-6">
-                    <aside class="rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm shadow-indigo-950/5">
+            <div class="calendar-page-layout grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+                <div class="calendar-sidebar space-y-6">
+                    <aside class="calendar-mini rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-sm shadow-indigo-950/5">
                         <div class="rounded-3xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-cyan-50/70 p-5 text-slate-900 shadow-sm">
                             <div class="mb-4 flex items-center justify-between gap-2 text-sm text-slate-600">
                                 <div class="flex min-w-0 items-center gap-1">
@@ -63,35 +63,35 @@
                         </div>
                     </aside>
                 </div>
-                <main class="min-w-0 rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5" style="min-width:680px;width:100%;max-width:100%;">
+                <main class="calendar-main min-w-0 rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
                     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                         <div class="space-y-2">
                             <p class="text-sm font-semibold text-slate-900">Weekly view</p>
                             <p class="text-sm text-slate-500">Browse existing reservations and see availability at a glance.</p>
                         </div>
-                        <div class="flex flex-nowrap items-center gap-3 overflow-x-auto">
+                        <div class="flex flex-wrap items-center gap-2">
                             <div class="flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-2">
                                 <label class="sr-only" for="mainCalendarMonth">Calendar month</label>
                                 <select id="mainCalendarMonth" class="min-w-0 rounded-lg border-0 bg-white py-2 pl-1 pr-5 text-sm font-medium text-slate-800 focus:ring-1 focus:ring-slate-400"></select>
                                 <label class="sr-only" for="mainCalendarYear">Calendar year</label>
                                 <select id="mainCalendarYear" class="rounded-lg border-0 bg-white py-2 pl-1 pr-5 text-sm font-medium text-slate-800 focus:ring-1 focus:ring-slate-400"></select>
                             </div>
-                            <button data-view="dayGridMonth" class="px-4 py-2 rounded-2xl border border-slate-200 bg-slate-100 text-slate-700 transition hover:bg-slate-200">Month</button>
-                            <button data-view="timeGridWeek" class="px-4 py-2 rounded-2xl border border-slate-200 bg-slate-100 text-slate-700 transition hover:bg-slate-200">Week</button>
-                            <button data-view="listWeek" class="px-4 py-2 rounded-2xl border border-slate-200 bg-slate-100 text-slate-700 transition hover:bg-slate-200">List</button>
-                            <a href="/calendar/manage" class="inline-flex items-center justify-center rounded-2xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-800">Reserve Now</a>
+                            <button data-view="dayGridMonth" class="rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-200">Month</button>
+                            <button data-view="timeGridWeek" class="rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-200">Week</button>
+                            <button data-view="listWeek" class="rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-700 transition hover:bg-slate-200">List</button>
+                            <a href="/calendar/manage" class="inline-flex items-center justify-center rounded-2xl bg-indigo-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-800">Reserve Now</a>
                         </div>
                     </div>
 
-                    <div id="calendar" class="w-full rounded-3xl border border-indigo-100 bg-white" style="min-height:760px;"></div>
+                    <div id="calendar" class="w-full rounded-3xl border border-indigo-100 bg-white"></div>
                 </main>
             </div>
         </div>
     </div>
 </div>
 
-<div id="eventInfoModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm">
-    <div class="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-8 shadow-2xl">
+<div id="eventInfoModal" class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-slate-900/30 p-3 backdrop-blur-sm sm:p-4">
+    <div class="my-auto w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-8">
         <div class="flex items-start justify-between gap-4 mb-6">
             <div>
                 <p class="text-sm text-slate-500">Reservation details</p>
@@ -135,6 +135,56 @@
 
 @push('styles')
 <style>
+    #calendar {
+        min-height: 640px;
+    }
+
+    @media (max-width: 767px) {
+        #calendar {
+            min-height: 480px;
+        }
+
+        .calendar-page-layout {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .calendar-main {
+            order: 1;
+        }
+
+        .calendar-sidebar {
+            order: 2;
+        }
+
+        .calendar-mini {
+            display: none;
+        }
+
+        #pendingReservationsList {
+            max-height: 16rem;
+            overflow-y: auto;
+        }
+
+        #calendar .fc-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.5rem;
+        }
+
+        #calendar .fc-toolbar-chunk {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        #calendar .fc-button {
+            padding: 0.35rem 0.5rem;
+            font-size: 0.8rem;
+        }
+    }
+
     #calendar {
         --fc-border-color: #e2e8f0;
         --fc-page-bg-color: transparent;
@@ -316,7 +366,7 @@
             }
 
         var calendar = new window.FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridWeek',
+            initialView: window.matchMedia('(max-width: 767px)').matches ? 'listWeek' : 'timeGridWeek',
             headerToolbar: false,
             navLinks: true,
             selectable: false,

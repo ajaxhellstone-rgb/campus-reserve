@@ -282,20 +282,22 @@ Route::middleware('auth')->group(function () {
     Route::post('/debug/decrypt', [DebugController::class, 'decrypt'])->name('debug.decrypt');
 
     // Admin portal routes (hidden / secret access only)
-    Route::prefix('admin')->group(function () {
-        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
-        Route::get('/facilities/create', [AdminController::class, 'createFacility'])->name('admin.facilities.create');
-        Route::get('/property-management', [AdminController::class, 'propertyManagement'])->name('admin.property-management.index');
-        Route::post('/property-management/items', [AdminController::class, 'storeFacilityItem'])->name('admin.property-management.items.store');
-        Route::put('/property-management/items/{item}', [AdminController::class, 'updateFacilityItem'])->name('admin.property-management.items.update');
-        Route::delete('/property-management/items/{item}', [AdminController::class, 'destroyFacilityItem'])->name('admin.property-management.items.destroy');
-        Route::post('/facilities', [AdminController::class, 'storeFacility'])->name('admin.facilities.store');
-        Route::put('/facilities/{facility}', [AdminController::class, 'updateFacility'])->name('admin.facilities.update');
-        Route::delete('/facilities/{facility}', [AdminController::class, 'destroyFacility'])->name('admin.facilities.destroy');
-        Route::post('/reservations/{reservation}/approve', [AdminController::class, 'approve'])->name('admin.reservations.approve');
-        Route::post('/reservations/{reservation}/reject', [AdminController::class, 'reject'])->name('admin.reservations.reject');
-        Route::delete('/reservations/{reservation}', [AdminController::class, 'destroyReservation'])->name('admin.reservations.destroy');
-        Route::post('/users/{user}/role', [AdminController::class, 'updateUserRole'])->name('admin.users.role');
-        Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('admin.users.destroy');
-    });
+    Route::prefix('admin')
+        ->middleware(\App\Http\Middleware\RequireAdminActionPassword::class)
+        ->group(function () {
+            Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+            Route::get('/facilities/create', [AdminController::class, 'createFacility'])->name('admin.facilities.create');
+            Route::get('/property-management', [AdminController::class, 'propertyManagement'])->name('admin.property-management.index');
+            Route::post('/property-management/items', [AdminController::class, 'storeFacilityItem'])->name('admin.property-management.items.store');
+            Route::put('/property-management/items/{item}', [AdminController::class, 'updateFacilityItem'])->name('admin.property-management.items.update');
+            Route::delete('/property-management/items/{item}', [AdminController::class, 'destroyFacilityItem'])->name('admin.property-management.items.destroy');
+            Route::post('/facilities', [AdminController::class, 'storeFacility'])->name('admin.facilities.store');
+            Route::put('/facilities/{facility}', [AdminController::class, 'updateFacility'])->name('admin.facilities.update');
+            Route::delete('/facilities/{facility}', [AdminController::class, 'destroyFacility'])->name('admin.facilities.destroy');
+            Route::post('/reservations/{reservation}/approve', [AdminController::class, 'approve'])->name('admin.reservations.approve');
+            Route::post('/reservations/{reservation}/reject', [AdminController::class, 'reject'])->name('admin.reservations.reject');
+            Route::delete('/reservations/{reservation}', [AdminController::class, 'destroyReservation'])->name('admin.reservations.destroy');
+            Route::post('/users/{user}/role', [AdminController::class, 'updateUserRole'])->name('admin.users.role');
+            Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('admin.users.destroy');
+        });
 });

@@ -37,7 +37,7 @@
 
 @section('content')
 <!-- Profile settings page for updating user account details, profile picture, and phone information. -->
-<main class="min-h-[calc(100vh-73px)] bg-gradient-to-br from-purple-50 via-slate-50 to-cyan-50 px-4 py-10 md:px-8 xl:px-16">
+<main class="min-h-[calc(100vh-73px)] bg-gradient-to-br from-purple-50 via-slate-50 to-cyan-50 px-3 py-6 sm:px-4 sm:py-10 md:px-8 xl:px-16">
     <div class="mx-auto w-full max-w-5xl">
         <section class="space-y-8">
             <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-indigo-950/5">
@@ -46,7 +46,7 @@
                     <p class="mt-2 max-w-2xl text-sm text-slate-300">Update your profile, security preferences, and manage how people see your account.</p>
                 </div>
 
-                <div class="p-8 space-y-8">
+                <div class="space-y-6 p-4 sm:space-y-8 sm:p-8">
                     <div id="profile-status" class="{{ session('status') ? '' : 'hidden' }} rounded-3xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-sm text-emerald-800">{{ session('status') }}</div>
                     <div id="password-change-alert" class="hidden rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
                         <span>Password changed successfully. If you did not make this change, </span><a href="{{ route('security.compromised') }}" class="font-semibold underline">secure your account immediately</a>.
@@ -64,13 +64,13 @@
                         <input type="hidden" name="country_code" id="form_country_code_input" value="" />
                         <input type="hidden" name="email_notifications" value="0" />
 
-                        <div class="grid gap-6 xl:grid-cols-[280px_1fr]">
-                            <div class="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-6">
+                        <div class="grid gap-4 sm:gap-6 xl:grid-cols-[280px_1fr]">
+                            <div class="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-4 sm:p-6">
                                 <p class="text-sm font-semibold text-gray-900">Profile</p>
                                 <p class="mt-2 text-sm text-gray-500">Your avatar, name, and contact details.</p>
                             </div>
 
-                            <div class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
+                            <div class="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
                                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
                                     <div class="relative h-24 w-24 overflow-hidden rounded-3xl border border-gray-200 bg-gray-100">
                                         <img
@@ -223,7 +223,7 @@
 
                         <div class="flex flex-col gap-3 sm:flex-row justify-end">
                             <a href="{{ route('reserve') }}" class="inline-flex items-center justify-center rounded-full border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-all">Cancel</a>
-                            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-indigo-700 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-indigo-800">Save settings</button>
+                            <button id="profile-settings-save" type="submit" class="inline-flex items-center justify-center rounded-full bg-indigo-700 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-indigo-800">Save settings</button>
                         </div>
                     </form>
                 </div>
@@ -339,6 +339,9 @@
                     body: formData,
                     credentials: 'same-origin',
                 });
+                if (response.status === 419) {
+                    throw new Error('Your session expired. Refresh this page and try uploading again.');
+                }
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -346,7 +349,13 @@
                     throw new Error(validationMessage || data.message || 'Unable to upload profile picture.');
                 }
 
-                window.location.reload();
+                document.querySelectorAll('img[alt="Profile Picture"], img[alt="Profile picture"]').forEach(function(image) {
+                    image.src = data.picture_url;
+                });
+                profilePictureUploadStatus.textContent = data.status || 'Profile picture uploaded successfully.';
+                profilePictureUploadStatus.className = 'mt-2 text-sm text-emerald-700';
+                this.value = '';
+                this.disabled = false;
             } catch (error) {
                 profilePictureUploadStatus.textContent = error.message;
                 profilePictureUploadStatus.className = 'mt-2 text-sm text-red-600';
@@ -525,8 +534,57 @@
             document.getElementById('authenticator-qr-result')?.classList.add('hidden');
         });
 
-        profileSettingsForm?.addEventListener('submit', function(event) {
+        profileSettingsForm?.addEventListener('submit', async function(event) {
+            syncPhoneFieldsToForm();
             const isAuthenticatorAction = event.submitter?.formAction?.includes('/profile/2fa/');
+
+            if (isAuthenticatorAction) {
+                event.preventDefault();
+                const button = event.submitter;
+                const originalText = button?.textContent;
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = 'Saving...';
+                }
+
+                try {
+                    const response = await fetch(button.formAction, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': profileSettingsForm.querySelector('input[name="_token"]').value,
+                        },
+                        body: new FormData(profileSettingsForm),
+                        credentials: 'same-origin',
+                    });
+                    if (response.status === 419) {
+                        throw new Error('Your session expired. Refresh this page and try again.');
+                    }
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.errors?.authenticator_otp?.[0] || data.message || 'Unable to save authenticator settings.');
+                    }
+
+                    twoFactorToggle.checked = true;
+                    authenticatorSetupPanel?.classList.add('hidden');
+                    document.getElementById('authenticator-qr-result')?.classList.add('hidden');
+                    const status = document.getElementById('profile-status');
+                    status.textContent = data.status || 'Authenticator app 2FA is now enabled.';
+                    status.className = 'rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800';
+                    status.classList.remove('hidden');
+                } catch (error) {
+                    const setupError = document.getElementById('authenticator-setup-error');
+                    setupError.textContent = error.message;
+                    setupError.classList.remove('hidden');
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent = originalText;
+                    }
+                }
+                return;
+            }
 
             if (!isAuthenticatorAction && {{ auth()->user()->two_fa_enabled ? 'true' : 'false' }} && this.querySelector('input[name="password"]')?.value && !passwordTwoFactorConfirmed) {
                 event.preventDefault();
@@ -555,6 +613,64 @@
                 disableTwoFactorModal?.classList.remove('hidden');
                 disableTwoFactorModal?.classList.add('flex');
                 disableCurrentPassword?.focus();
+                return;
+            }
+
+            event.preventDefault();
+            const submitButton = event.submitter || document.getElementById('profile-settings-save');
+            const originalText = submitButton?.textContent;
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = 'Saving...';
+            }
+
+            try {
+                const response = await fetch(profileSettingsForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': profileSettingsForm.querySelector('input[name="_token"]').value,
+                    },
+                    body: new FormData(profileSettingsForm),
+                    credentials: 'same-origin',
+                });
+                if (response.status === 419) {
+                    throw new Error('Your session expired. Refresh this page and try again.');
+                }
+                const data = await response.json();
+                if (!response.ok) {
+                    const validationMessage = Object.values(data.errors || {}).flat()[0];
+                    throw new Error(validationMessage || data.message || 'Unable to save profile settings.');
+                }
+
+                const status = document.getElementById('profile-status');
+                status.textContent = data.status || 'Profile updated successfully.';
+                status.className = 'rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800';
+                status.classList.remove('hidden');
+
+                if (data.user?.phone) {
+                    const phone = data.user.phone;
+                    document.getElementById('phone_display_text').textContent = phone;
+                    document.getElementById('form_phone_input').value = phone;
+                    displayMode.classList.remove('hidden');
+                    editMode.classList.add('hidden');
+                }
+                if (data.user?.two_fa_enabled === false) {
+                    disableCurrentPassword.value = '';
+                    disableAuthenticatorCode.value = '';
+                    disableConfirmed = false;
+                }
+            } catch (error) {
+                const status = document.getElementById('profile-status');
+                status.textContent = error.message;
+                status.className = 'rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800';
+                status.classList.remove('hidden');
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                }
             }
         });
 
@@ -912,7 +1028,7 @@
             syncPhoneFieldsToForm();
 
             if (profileSettingsForm) {
-                profileSettingsForm.submit();
+                profileSettingsForm.requestSubmit();
                 return;
             }
 

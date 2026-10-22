@@ -28,6 +28,7 @@ class DuplicateFacilityTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('admin.facilities.store'), [
+                'current_password' => 'password',
                 'name' => 'Classroom A',
                 'building' => 'Academic Building',
                 'type' => 'Classroom',
@@ -48,6 +49,7 @@ class DuplicateFacilityTest extends TestCase
 
         $this->actingAs($admin)
             ->post(route('admin.facilities.store'), [
+                'current_password' => 'password',
                 'name' => 'Computer Lab',
                 'building' => 'Engineering Hall',
                 'type' => 'Laboratory',
@@ -79,7 +81,7 @@ class DuplicateFacilityTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->delete(route('admin.facilities.destroy', $facility))
+            ->delete(route('admin.facilities.destroy', $facility), ['current_password' => 'password'])
             ->assertRedirect(route('admin.facilities.create'))
             ->assertSessionHas('status', 'Facility removed successfully.');
 
@@ -105,6 +107,7 @@ class DuplicateFacilityTest extends TestCase
 
         $this->actingAs($admin)
             ->put(route('admin.facilities.update', $facility), [
+                'current_password' => 'password',
                 'name' => 'Updated Lab',
                 'building' => 'Engineering Hall',
                 'type' => 'Laboratory',

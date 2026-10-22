@@ -4,9 +4,9 @@
 
 @section('content')
 <!-- Admin dashboard layout: pending approvals, audit logs, and user management sections. -->
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-slate-50 to-cyan-50 py-10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="relative mb-8 overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-r from-indigo-100/90 via-pink-50 to-cyan-100/80 p-7 shadow-sm sm:p-9">
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-slate-50 to-cyan-50 py-6 sm:py-10">
+    <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        <div class="relative mb-6 overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-r from-indigo-100/90 via-pink-50 to-cyan-100/80 p-5 shadow-sm sm:mb-8 sm:p-9">
             <div aria-hidden="true" class="absolute -right-10 -top-20 h-56 w-56 rounded-full bg-white/50 blur-3xl"></div>
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -28,42 +28,47 @@
         @if(session('error'))
             <div class="mb-6 bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded">{{ session('error') }}</div>
         @endif
+        @if($errors->has('current_password'))
+            <div class="mb-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-red-800" role="alert">{{ $errors->first('current_password') }}</div>
+        @endif
 
-        <div class="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-4">
-            <div class="rounded-3xl border border-indigo-100 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
+        <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 xl:grid-cols-4">
+            <div class="rounded-3xl border border-indigo-100 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
                 <p class="text-sm font-medium text-gray-500">Pending Reservations</p>
-                <p class="mt-4 text-3xl font-bold text-gray-900">{{ $pendingReservations->total() }}</p>
+                <p id="pending-reservations-total" class="mt-2 text-2xl font-bold text-gray-900 sm:mt-4 sm:text-3xl">{{ $pendingReservations->total() }}</p>
             </div>
-            <div class="rounded-3xl border border-pink-100 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
+            <div class="rounded-3xl border border-pink-100 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
                 <p class="text-sm font-medium text-gray-500">Recent Decisions</p>
-                <p class="mt-4 text-3xl font-bold text-gray-900">{{ $recentReservations->count() }}</p>
+                <p id="recent-decisions-total" class="mt-2 text-2xl font-bold text-gray-900 sm:mt-4 sm:text-3xl">{{ $recentReservations->count() }}</p>
             </div>
-            <div class="rounded-3xl border border-cyan-100 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
+            <div class="rounded-3xl border border-cyan-100 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
                 <p class="text-sm font-medium text-gray-500">Audit Log Entries</p>
-                <p class="mt-4 text-3xl font-bold text-gray-900">{{ $auditLogs->count() }}</p>
+                <p id="audit-log-total" class="mt-2 text-2xl font-bold text-gray-900 sm:mt-4 sm:text-3xl">{{ $auditLogs->count() }}</p>
             </div>
-            <div class="rounded-3xl border border-violet-100 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
+            <div class="rounded-3xl border border-violet-100 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
                 <p class="text-sm font-medium text-gray-500">Members</p>
-                <p class="mt-4 text-3xl font-bold text-gray-900">{{ $users->total() ?? 0 }}</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900 sm:mt-4 sm:text-3xl">{{ $users->total() ?? 0 }}</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-            <section class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5 xl:col-span-2">
+            <section class="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6 xl:col-span-2">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div>
                         <h2 class="text-xl font-semibold text-gray-900">Pending Reservations</h2>
                         <p class="text-sm text-gray-600">Review and approve or reject requests.</p>
                     </div>
-                    <span class="text-sm text-gray-500">{{ $pendingReservations->total() }} pending</span>
+                    <span id="pending-reservations-label" class="text-sm text-gray-500">{{ $pendingReservations->total() }} pending</span>
                 </div>
+                <p id="dashboard-action-status" class="mb-3 hidden text-sm text-emerald-700" role="status" aria-live="polite"></p>
+                <p id="dashboard-action-error" class="mb-3 hidden text-sm text-rose-700" role="alert"></p>
 
                 @if($pendingReservations->isEmpty())
                     <p class="text-gray-500">No pending reservations at the moment.</p>
                 @else
-                    <div class="space-y-4 pr-2" style="height: 32rem; overflow-y: scroll; scrollbar-width: auto; scrollbar-color: #6b7280 #e5e7eb;" tabindex="0" aria-label="Scrollable pending reservations">
+                    <div id="pending-reservations-list" class="space-y-4 pr-2" style="height: 32rem; overflow-y: scroll; scrollbar-width: auto; scrollbar-color: #6b7280 #e5e7eb;" tabindex="0" aria-label="Scrollable pending reservations">
                         @foreach($pendingReservations as $reservation)
-                            <div class="rounded-3xl border border-slate-200 bg-white p-4 transition hover:border-indigo-200">
+                            <div data-reservation-card class="rounded-3xl border border-slate-200 bg-white p-4 transition hover:border-indigo-200">
                                 <div class="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
                                     <div>
                                         <p class="text-sm text-gray-500">Reservation #{{ $reservation->id }}</p>
@@ -87,15 +92,15 @@
                                         @endif
                                     </div>
                                     <div class="flex gap-2">
-                                        <form method="POST" action="{{ route('admin.reservations.approve', $reservation) }}">
+                                        <form method="POST" action="{{ route('admin.reservations.approve', $reservation) }}" data-pending-action>
                                             @csrf
                                             <button type="submit" class="px-4 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition">Approve</button>
                                         </form>
-                                        <form method="POST" action="{{ route('admin.reservations.reject', $reservation) }}">
+                                        <form method="POST" action="{{ route('admin.reservations.reject', $reservation) }}" data-pending-action>
                                             @csrf
                                             <button type="submit" class="px-4 py-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition">Reject</button>
                                         </form>
-                                        <form method="POST" action="{{ route('admin.reservations.destroy', $reservation) }}" onsubmit="return confirm('Delete this reservation? This will remove it from the calendar and user view.');">
+                                        <form method="POST" action="{{ route('admin.reservations.destroy', $reservation) }}" data-pending-action data-confirm="Delete this reservation? This will remove it from the calendar and user view.">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="px-4 py-2 rounded-full bg-gray-600 text-white hover:bg-gray-700 transition">Delete</button>
@@ -111,16 +116,16 @@
                 @endif
             </section>
 
-            <section class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
+            <section class="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
                 <div class="mb-4">
                     <h2 class="text-xl font-semibold text-gray-900">Audit Log</h2>
                     <p class="text-sm text-gray-600">Track administrator actions and reservation activity.</p>
                 </div>
 
-                @if($auditLogs->isEmpty())
-                    <p class="text-gray-500">No audit log entries yet.</p>
-                @else
-                    <div class="space-y-4 pr-2" style="height: 32rem; overflow-y: scroll; scrollbar-width: auto; scrollbar-color: #6b7280 #e5e7eb;" tabindex="0" aria-label="Scrollable audit log entries">
+                <div id="audit-log-list" class="space-y-4 pr-2" style="height: 32rem; overflow-y: scroll; scrollbar-width: auto; scrollbar-color: #6b7280 #e5e7eb;" tabindex="0" aria-label="Scrollable audit log entries">
+                    @if($auditLogs->isEmpty())
+                        <p data-empty-audit class="text-gray-500">No audit log entries yet.</p>
+                    @else
                         @foreach($auditLogs as $log)
                             <div class="rounded-3xl border border-slate-200 bg-indigo-50/40 p-4">
                                 <div class="flex items-start justify-between gap-4">
@@ -136,100 +141,276 @@
                                 </div>
                             </div>
                         @endforeach
-                    </div>
-                @endif
+                    @endif
+                </div>
             </section>
         </div>
 
-        <section class="rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-sm shadow-indigo-950/5">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                <div>
-                    <h2 class="text-xl font-semibold text-gray-900">Member Management</h2>
-                    <p class="text-sm text-gray-600">Search members and update admin access.</p>
-                </div>
-                <form method="GET" action="{{ route('admin.dashboard') }}" class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-                    <label class="sr-only" for="role-filter">Filter members by role</label>
-                    <select id="role-filter" name="role" onchange="this.form.submit()" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100">
-                        <option value="all" {{ ($role ?? 'all') === 'all' ? 'selected' : '' }}>All roles</option>
-                        <option value="user" {{ ($role ?? '') === 'user' ? 'selected' : '' }}>Members only</option>
-                        <option value="admin" {{ ($role ?? '') === 'admin' ? 'selected' : '' }}>Admins only</option>
-                        <option value="super_admin" {{ ($role ?? '') === 'super_admin' ? 'selected' : '' }}>Head admins only</option>
-                    </select>
-                    <div class="relative">
-                        <label class="sr-only" for="search">Search members</label>
-                        <input id="search" name="search" type="text" value="{{ $search ?? '' }}" placeholder="Search name or email" class="w-full rounded-full border border-slate-300 bg-slate-50 py-2 pl-4 pr-20 text-sm focus:border-indigo-400 focus:ring-indigo-200 sm:w-80" />
-                        <button type="submit" class="absolute inset-y-0 right-0 inline-flex items-center pr-4 text-slate-500 hover:text-indigo-800">Search</button>
-                    </div>
-                </form>
-            </div>
-
-            @if($users->isEmpty())
-                <p class="text-gray-500">No users found.</p>
-            @else
-                <div class="rounded-3xl border border-slate-200" style="height: 32rem; overflow: auto; scrollbar-width: auto; scrollbar-color: #fbbf24 #fffbeb;" tabindex="0" aria-label="Scrollable member list">
-                    <table class="min-w-full divide-y divide-slate-200 bg-white">
-                        <thead class="sticky top-0 z-10 bg-indigo-50/80">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Name</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Email</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Role</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Joined</th>
-                                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-200">
-                            @foreach($users as $user)
-                                <tr class="hover:bg-indigo-50/50">
-                                    <td class="px-4 py-4 text-sm text-gray-700">{{ $user->name }}</td>
-                                    <td class="px-4 py-4 text-sm text-gray-700">{{ $user->email }}</td>
-                                    <td class="px-4 py-4 text-sm text-gray-700">
-                                        @if($user->isSuperAdmin())
-                                            <span class="inline-flex items-center rounded-full bg-indigo-800 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">Head Admin</span>
-                                        @elseif($user->is_admin)
-                                            <span class="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-800">Admin</span>
-                                        @else
-                                            <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-700">Member</span>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-4 text-sm text-gray-500">{{ $user->created_at->format('M d, Y') }}</td>
-                                    <td class="px-4 py-4 text-right text-sm font-medium space-x-2">
-                                        @if(auth()->user()->isSuperAdmin())
-                                            @if(! $user->isSuperAdmin())
-                                                <form method="POST" action="{{ route('admin.users.role', $user) }}" class="inline-flex">
-                                                    @csrf
-                                                    <input type="hidden" name="return_search" value="{{ $search ?? '' }}">
-                                                    <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
-                                                    <select name="role" class="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200">
-                                                        <option value="user" {{ ! $user->is_admin ? 'selected' : '' }}>Member</option>
-                                                        <option value="admin" {{ $user->is_admin ? 'selected' : '' }}>Admin</option>
-                                                    </select>
-                                                    <button type="submit" class="ml-2 rounded-full bg-indigo-700 px-3 py-2 text-xs text-white transition hover:bg-indigo-800">Save</button>
-                                                </form>
-                                                <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline-flex" onsubmit="return confirm('Delete this user? This cannot be undone.');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <input type="hidden" name="return_search" value="{{ $search ?? '' }}">
-                                                    <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
-                                                    <button type="submit" class="rounded-full bg-red-600 px-3 py-2 text-xs text-white hover:bg-red-700 transition">Delete</button>
-                                                </form>
-                                            @else
-                                                <span class="text-xs text-gray-500">Protected</span>
-                                            @endif
-                                        @else
-                                            <span class="text-xs text-gray-500">Head admin only</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="mt-4">
-                    {{ $users->links() }}
-                </div>
-            @endif
-        </section>
+        <p id="member-management-status" class="mt-3 hidden text-sm text-emerald-700" role="status" aria-live="polite"></p>
+        <p id="member-management-error" class="mt-3 hidden text-sm text-rose-700" role="alert"></p>
+        <div id="member-management-content" data-endpoint="{{ route('admin.dashboard') }}" aria-busy="false">
+            @include('admin.partials.members')
+        </div>
     </div>
 </div>
+@include('admin.partials.password-confirmation')
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const memberContent = document.getElementById('member-management-content');
+        const errorMessage = document.getElementById('member-management-error');
+        const memberStatus = document.getElementById('member-management-status');
+        const dashboardStatus = document.getElementById('dashboard-action-status');
+        const dashboardError = document.getElementById('dashboard-action-error');
+        let activeRequest = null;
+        let searchTimer = null;
+
+        function showMessage(element, message) {
+            element.textContent = message;
+            element.classList.remove('hidden');
+        }
+
+        function setLoading(loading) {
+            memberContent.setAttribute('aria-busy', String(loading));
+            memberContent.classList.toggle('opacity-60', loading);
+            memberContent.classList.toggle('pointer-events-none', loading);
+        }
+
+        function loadMembers(url, updateHistory) {
+            if (activeRequest) activeRequest.abort();
+            const controller = new AbortController();
+            activeRequest = controller;
+            setLoading(true);
+            errorMessage.classList.add('hidden');
+
+            fetch(url, {
+                headers: {
+                    'Accept': 'text/html',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+                signal: controller.signal,
+            })
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Member list could not be updated. Please try again.');
+                    }
+                    return response.text();
+                })
+                .then(function(html) {
+                    const previousScrollTop = memberContent.querySelector('[aria-label="Scrollable member list"]')?.scrollTop || 0;
+                    memberContent.innerHTML = html;
+                    const updatedList = memberContent.querySelector('[aria-label="Scrollable member list"]');
+                    if (updatedList) updatedList.scrollTop = previousScrollTop;
+                    if (updateHistory) {
+                        window.history.pushState({}, '', url);
+                    }
+                })
+                .catch(function(error) {
+                    if (error.name !== 'AbortError') {
+                        errorMessage.textContent = error.message;
+                        errorMessage.classList.remove('hidden');
+                    }
+                })
+                .finally(function() {
+                    if (activeRequest === controller) {
+                        activeRequest = null;
+                        setLoading(false);
+                    }
+                });
+        }
+
+        function membersUrl(pageUrl) {
+            const url = new URL(pageUrl || memberContent.dataset.endpoint, window.location.origin);
+            const form = memberContent.querySelector('#member-filter-form');
+            if (form) {
+                const formData = new FormData(form);
+                url.searchParams.set('search', String(formData.get('search') || '').trim());
+                url.searchParams.set('role', String(formData.get('role') || 'all'));
+                if (!pageUrl) url.searchParams.delete('page');
+            }
+            return url;
+        }
+
+        memberContent.addEventListener('submit', function(event) {
+            const form = event.target;
+            if (event.defaultPrevented) return;
+            if (!(form instanceof HTMLFormElement)) return;
+            if (form.id !== 'member-filter-form') {
+                if (!form.action.includes('/users/')) return;
+                event.preventDefault();
+                memberStatus.classList.add('hidden');
+                errorMessage.classList.add('hidden');
+                const button = form.querySelector('button[type="submit"]');
+                const originalText = button?.textContent;
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = 'Saving...';
+                }
+                const requestBody = new FormData(form);
+                form.querySelector('input[name="current_password"]')?.remove();
+                delete form.dataset.adminPasswordConfirmed;
+
+                fetch(form.action, {
+                    method: form.method.toUpperCase(),
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: requestBody,
+                    credentials: 'same-origin',
+                })
+                    .then(async function(response) {
+                        if (response.status === 419) throw new Error('Your session expired. Refresh this page and try again.');
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(Object.values(data.errors || {}).flat()[0] || data.message || 'Member update failed.');
+                        }
+                        return data;
+                    })
+                    .then(function(data) {
+                        showMessage(memberStatus, data.status || 'Member updated.');
+                        loadMembers(membersUrl().toString(), false);
+                    })
+                    .catch(function(error) {
+                        showMessage(errorMessage, error.message);
+                    })
+                    .finally(function() {
+                        if (button) {
+                            button.disabled = false;
+                            button.textContent = originalText;
+                        }
+                    });
+                return;
+            }
+            event.preventDefault();
+            window.clearTimeout(searchTimer);
+            loadMembers(membersUrl().toString(), true);
+        });
+
+        memberContent.addEventListener('input', function(event) {
+            if (!(event.target instanceof HTMLInputElement) || event.target.name !== 'search') return;
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(function() {
+                loadMembers(membersUrl().toString(), true);
+            }, 300);
+        });
+
+        memberContent.addEventListener('change', function(event) {
+            if (!(event.target instanceof HTMLSelectElement) || event.target.name !== 'role') return;
+            loadMembers(membersUrl().toString(), true);
+        });
+
+        memberContent.addEventListener('click', function(event) {
+            if (!(event.target instanceof Element)) return;
+            const link = event.target.closest('nav[aria-label="Pagination Navigation"] a');
+            if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            loadMembers(link.href, true);
+        });
+
+        window.addEventListener('popstate', function() {
+            loadMembers(window.location.href, false);
+        });
+
+        document.addEventListener('submit', function(event) {
+            const form = event.target;
+            if (event.defaultPrevented) return;
+            if (!(form instanceof HTMLFormElement) || !form.hasAttribute('data-pending-action')) return;
+            event.preventDefault();
+            dashboardStatus.classList.add('hidden');
+            dashboardError.classList.add('hidden');
+            const button = form.querySelector('button[type="submit"]');
+            const originalText = button?.textContent;
+            if (button) {
+                button.disabled = true;
+                button.textContent = 'Saving...';
+            }
+            const requestBody = new FormData(form);
+            form.querySelector('input[name="current_password"]')?.remove();
+            delete form.dataset.adminPasswordConfirmed;
+
+            fetch(form.action, {
+                method: form.method.toUpperCase(),
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: requestBody,
+                credentials: 'same-origin',
+            })
+                .then(async function(response) {
+                    if (response.status === 419) throw new Error('Your session expired. Refresh this page and try again.');
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || 'Reservation update failed.');
+                    return data;
+                })
+                .then(function(data) {
+                    const list = document.getElementById('pending-reservations-list');
+                    const scrollTop = list?.scrollTop || 0;
+                    form.closest('[data-reservation-card]')?.remove();
+                    const updatedList = document.getElementById('pending-reservations-list');
+                    if (updatedList) {
+                        updatedList.scrollTop = scrollTop;
+                        if (!updatedList.querySelector('[data-reservation-card]')) {
+                            const emptyMessage = document.createElement('p');
+                            emptyMessage.className = 'text-gray-500';
+                            emptyMessage.textContent = data.pending_count === 0
+                                ? 'No pending reservations at the moment.'
+                                : 'No pending reservations on this page.';
+                            updatedList.appendChild(emptyMessage);
+                        }
+                    }
+                    document.getElementById('pending-reservations-total').textContent = data.pending_count;
+                    document.getElementById('pending-reservations-label').textContent = `${data.pending_count} pending`;
+                    document.getElementById('recent-decisions-total').textContent = data.recent_decision_count;
+                    document.getElementById('audit-log-total').textContent = data.audit_log_count;
+
+                    if (data.audit_log) {
+                        const auditList = document.getElementById('audit-log-list');
+                        const auditScrollTop = auditList.scrollTop;
+                        auditList.querySelector('[data-empty-audit]')?.remove();
+                        const entry = document.createElement('div');
+                        entry.className = 'rounded-3xl border border-slate-200 bg-indigo-50/40 p-4';
+                        const content = document.createElement('div');
+                        content.className = 'flex items-start justify-between gap-4';
+                        const details = document.createElement('div');
+                        const timestamp = document.createElement('p');
+                        timestamp.className = 'text-sm text-gray-500';
+                        timestamp.textContent = data.audit_log.created_at;
+                        const action = document.createElement('p');
+                        action.className = 'mt-1 text-base font-semibold text-gray-900 capitalize';
+                        action.textContent = data.audit_log.action;
+                        const description = document.createElement('p');
+                        description.className = 'mt-1 text-sm text-gray-700';
+                        description.textContent = data.audit_log.details;
+                        const actor = document.createElement('span');
+                        actor.className = 'rounded-full bg-gray-200 px-3 py-1 text-xs font-semibold uppercase text-gray-700';
+                        actor.textContent = data.audit_log.user;
+                        details.append(timestamp, action, description);
+                        content.append(details, actor);
+                        entry.appendChild(content);
+                        auditList.prepend(entry);
+                        auditList.querySelectorAll(':scope > div').forEach(function(oldEntry, index) {
+                            if (index >= 25) oldEntry.remove();
+                        });
+                        auditList.scrollTop = auditScrollTop;
+                    }
+
+                    showMessage(dashboardStatus, data.status || 'Reservation updated.');
+                })
+                .catch(function(error) {
+                    showMessage(dashboardError, error.message);
+                })
+                .finally(function() {
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent = originalText;
+                    }
+                });
+        });
+    });
+</script>
+@endpush

@@ -425,11 +425,23 @@ class AuthController extends Controller
         $user = Auth::user();
 
         if (! $secret || ! TOTP::createFromSecret($secret)->verify($request->authenticator_otp, null, 29)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'The authenticator code is invalid.',
+                ], 422);
+            }
+
             return back()->withErrors(['authenticator_otp' => 'The authenticator code is invalid.'])->withInput();
         }
 
         $user->update(['two_fa_secret' => $secret, 'two_fa_enabled' => true]);
         session()->forget('pending_authenticator_secret');
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'status' => 'Authenticator app 2FA is now enabled.',
+            ]);
+        }
 
         return back()->with('status', 'Authenticator app 2FA is now enabled.');
     }
@@ -533,6 +545,10 @@ class AuthController extends Controller
             ]);
 
             if (! Hash::check($request->disable_current_password, $user->password)) {
+                if ($request->expectsJson()) {
+                    return $this->profileValidationResponse($request, 'disable_current_password', 'The current password is incorrect.');
+                }
+
                 return back()->withErrors([
                     'disable_current_password' => 'The current password is incorrect.',
                 ])->withInput();
@@ -540,6 +556,10 @@ class AuthController extends Controller
 
             if (! $request->filled('disable_2fa_otp')) {
                 if ($user->two_fa_secret) {
+                    if ($request->expectsJson()) {
+                        return response()->json(['message' => 'Enter the current code from your authenticator app to disable 2FA.'], 422);
+                    }
+
                     return back()->with('show_disable_2fa_otp', true)->with(
                         'status',
                         'Enter the current code from your authenticator app to disable 2FA.'
@@ -556,6 +576,10 @@ class AuthController extends Controller
 
             if ($user->two_fa_secret) {
                 if (! TOTP::createFromSecret($user->two_fa_secret)->verify($request->disable_2fa_otp, null, 29)) {
+                    if ($request->expectsJson()) {
+                        return $this->profileValidationResponse($request, 'disable_2fa_otp', 'Invalid Authenticator Code');
+                    }
+
                     return back()->withErrors([
                         'disable_2fa_otp' => 'Invalid Authenticator Code',
                     ])->with('show_disable_2fa_otp', true)->withInput();
@@ -570,6 +594,10 @@ class AuthController extends Controller
             if (! $otp || ! $otp->isValid() || ! Hash::check($request->disable_2fa_otp, $otp->code)) {
                 if ($otp && $otp->isValid()) {
                     $otp->incrementAttempts();
+                }
+
+                if ($request->expectsJson()) {
+                    return $this->profileValidationResponse($request, 'disable_2fa_otp', 'Invalid Authenticator Code');
                 }
 
                 return back()->withErrors([
@@ -622,6 +650,11 @@ class AuthController extends Controller
             return response()->json([
                 'status' => $isChangingPassword ? 'Password changed successfully.' : 'Profile updated successfully.',
                 'password_changed' => $isChangingPassword,
+                'user' => [
+                    'name' => $user->name,
+                    'phone' => $user->phone,
+                    'two_fa_enabled' => $user->two_fa_enabled,
+                ],
             ]);
         }
 

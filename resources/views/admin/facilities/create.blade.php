@@ -19,6 +19,9 @@
         @if(session('error'))
             <div class="mb-6 bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded-xl">{{ session('error') }}</div>
         @endif
+        @if($errors->has('current_password'))
+            <div class="mb-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-red-800" role="alert">{{ $errors->first('current_password') }}</div>
+        @endif
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -27,7 +30,7 @@
                     <p class="mt-2 text-sm text-gray-600">Add a room or space to Campus Reserve.</p>
                 </div>
 
-                <form id="facility-form" method="POST" action="{{ route('admin.facilities.store') }}" class="space-y-6">
+                <form id="facility-form" method="POST" action="{{ route('admin.facilities.store') }}" data-confirm-message="Save this facility change?" class="space-y-6">
                     @csrf
                     <input type="hidden" name="_method" id="facility-form-method" value="POST">
 
@@ -96,11 +99,11 @@
                                         class="rounded-full border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100">
                                         Edit
                                     </button>
-                                    <button type="button" onclick="openFacilityDeleteModal({{ $facility->id }})" class="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">Remove</button>
+                                    <button type="submit" form="delete-facility-form-{{ $facility->id }}" class="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100">Remove</button>
                                 </div>
                             </div>
                         </div>
-                        <form id="delete-facility-form-{{ $facility->id }}" method="POST" action="{{ route('admin.facilities.destroy', $facility) }}" class="hidden">
+                        <form id="delete-facility-form-{{ $facility->id }}" method="POST" action="{{ route('admin.facilities.destroy', $facility) }}" data-confirm-message="Remove this facility?" class="hidden">
                             @csrf
                             @method('DELETE')
                         </form>
@@ -118,31 +121,7 @@
     </div>
 </div>
 
-<div id="facility-delete-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4 py-8">
-    <div class="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
-        <h3 class="text-xl font-semibold text-gray-900">Confirm removal</h3>
-        <p class="mt-3 text-sm text-gray-600">Are you sure you want to remove this facility? This action cannot be undone and may affect future reservations.</p>
-        <div class="mt-6 flex justify-end gap-3">
-            <button type="button" id="facility-delete-cancel" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-gray-50">No</button>
-            <button type="button" id="facility-delete-confirm" class="rounded-full bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700">Yes, remove</button>
-        </div>
-    </div>
-</div>
-
-<div id="facility-update-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4 py-8">
-    <div class="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
-        <h3 class="text-xl font-semibold text-gray-900">Confirm update</h3>
-        <p class="mt-3 text-sm text-gray-600">Are you sure you want to save these changes to this facility?</p>
-        <div class="mt-6 flex justify-end gap-3">
-            <button type="button" id="facility-update-cancel" class="rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-gray-50">No</button>
-            <button type="button" id="facility-update-confirm" class="rounded-full bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">Yes, update</button>
-        </div>
-    </div>
-</div>
-
 <script>
-    let facilityDeleteFormId = null;
-
     function resetFacilityForm() {
         const form = document.getElementById('facility-form');
         if (!form) {
@@ -152,6 +131,7 @@
         form.action = '{{ route('admin.facilities.store') }}';
         document.getElementById('facility-form-method').value = 'POST';
         document.getElementById('facility-submit-button').textContent = 'Save Facility';
+        form.dataset.confirmMessage = 'Add this facility?';
         form.reset();
     }
 
@@ -169,6 +149,7 @@
         form.action = `/admin/facilities/${facilityId}`;
         document.getElementById('facility-form-method').value = 'PUT';
         document.getElementById('facility-submit-button').textContent = 'Update Facility';
+        form.dataset.confirmMessage = `Update ${button.dataset.name || 'this facility'}?`;
 
         document.getElementById('name').value = button.dataset.name || '';
         document.getElementById('building').value = button.dataset.building || '';
@@ -178,70 +159,6 @@
         const formTop = form.getBoundingClientRect().top + window.scrollY - 80;
         window.scrollTo({ top: formTop, behavior: 'smooth' });
     }
-
-    function openFacilityDeleteModal(facilityId) {
-        facilityDeleteFormId = facilityId;
-        const modal = document.getElementById('facility-delete-modal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-    }
-
-    function closeFacilityDeleteModal() {
-        facilityDeleteFormId = null;
-        const modal = document.getElementById('facility-delete-modal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-    }
-
-    function openFacilityUpdateModal() {
-        const modal = document.getElementById('facility-update-modal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-    }
-
-    function closeFacilityUpdateModal() {
-        const modal = document.getElementById('facility-update-modal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-    }
-
-    document.getElementById('facility-delete-cancel')?.addEventListener('click', closeFacilityDeleteModal);
-    document.getElementById('facility-delete-confirm')?.addEventListener('click', function () {
-        if (!facilityDeleteFormId) {
-            return;
-        }
-
-        const form = document.getElementById(`delete-facility-form-${facilityDeleteFormId}`);
-        if (form) {
-            form.submit();
-        }
-        closeFacilityDeleteModal();
-    });
-
-    document.getElementById('facility-update-cancel')?.addEventListener('click', closeFacilityUpdateModal);
-    document.getElementById('facility-update-confirm')?.addEventListener('click', function () {
-        const form = document.getElementById('facility-form');
-        if (form) {
-            form.submit();
-        }
-        closeFacilityUpdateModal();
-    });
-
-    const facilityForm = document.getElementById('facility-form');
-    facilityForm?.addEventListener('submit', function (event) {
-        if (document.getElementById('facility-form-method')?.value === 'PUT') {
-            event.preventDefault();
-            openFacilityUpdateModal();
-        }
-    });
 
     document.getElementById('facility-reset-form')?.addEventListener('click', resetFacilityForm);
     document.querySelectorAll('[data-edit-id]').forEach((button) => {
@@ -300,4 +217,5 @@
         background: #4b5563;
     }
 </style>
+@include('admin.partials.password-confirmation')
 @endsection
