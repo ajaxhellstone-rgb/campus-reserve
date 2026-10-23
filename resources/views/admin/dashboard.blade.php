@@ -178,65 +178,107 @@
                 @if($approvedReservations->isEmpty())
                     <p class="text-gray-500">No approved reservations to edit.</p>
                 @else
-                    <div class="space-y-4">
-                        @foreach($approvedReservations as $reservation)
-                            <article class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                                <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                                    <div>
-                                        <h3 class="font-semibold text-slate-900">
-                                            Reservation #{{ $reservation->id }} —
-                                            {{ $reservation->items->isNotEmpty() ? 'Property items' : ($reservation->facility?->name ?? 'Facility') }}
-                                        </h3>
-                                        <p class="text-sm text-slate-600">
-                                            Requested by {{ $reservation->user?->name ?? 'Unknown user' }}
-                                            @if($reservation->items->isNotEmpty())
-                                                ·
-                                                @foreach($reservation->items as $item)
-                                                    {{ $item->name }} × {{ $item->pivot->quantity }}@if(!$loop->last), @endif
-                                                @endforeach
-                                            @endif
-                                        </p>
-                                    </div>
-                                    <span class="text-sm font-medium text-green-800">Approved</span>
-                                </div>
-
-                                <div class="flex flex-col gap-3 xl:flex-row xl:items-end">
-                                    <form method="POST" action="{{ route('admin.reservations.update', $reservation) }}" data-confirm="Save these changes to the approved reservation?" class="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_2fr_auto]">
-                                        @csrf
-                                        @method('PUT')
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            Date
-                                            <input name="reservation_date" type="date" required min="{{ now()->toDateString() }}" value="{{ $reservation->reservation_date->format('Y-m-d') }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
-                                        </label>
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            Start time
-                                            <input name="start_time" type="time" required value="{{ $reservation->start_time->format('H:i') }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
-                                        </label>
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            End time
-                                            <input name="end_time" type="time" required value="{{ $reservation->end_time->format('H:i') }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
-                                        </label>
-                                        <label class="block text-sm font-medium text-slate-700">
-                                            Purpose
-                                            <input name="purpose" type="text" required maxlength="255" value="{{ $reservation->purpose }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
-                                        </label>
-                                        <button type="submit" class="inline-flex h-10 items-center justify-center self-end rounded-xl bg-green-800 px-5 text-sm font-semibold text-white transition hover:bg-green-900">Save changes</button>
-                                    </form>
-
-                                    <form method="POST" action="{{ route('admin.reservations.destroy', $reservation) }}" data-confirm="Delete this approved reservation? The client will be notified." class="shrink-0">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="inline-flex h-10 w-full items-center justify-center rounded-xl border border-rose-200 bg-white px-5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 xl:w-auto">Delete reservation</button>
-                                    </form>
-                                </div>
-                            </article>
-                        @endforeach
+                    <div class="overflow-hidden rounded-2xl border border-slate-200">
+                        <div class="max-h-[32rem] overflow-auto" style="scrollbar-width: auto; scrollbar-color: #fbbf24 #fffbeb;" tabindex="0" aria-label="Scrollable approved reservations">
+                            <table class="min-w-full divide-y divide-slate-200 bg-white">
+                                <thead class="sticky top-0 z-10 bg-green-50">
+                                    <tr>
+                                        <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Reservation</th>
+                                        <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Room / Items</th>
+                                        <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Requested by</th>
+                                        <th class="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Date</th>
+                                        <th class="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200">
+                                    @foreach($approvedReservations as $reservation)
+                                        <tr class="hover:bg-green-50/40">
+                                            <td class="whitespace-nowrap px-4 py-3 text-sm font-semibold text-slate-800">#{{ $reservation->id }}</td>
+                                            <td class="px-4 py-3 text-sm text-slate-700">
+                                                {{ $reservation->facility?->name ?? ($reservation->items->isNotEmpty() ? 'Property items' : 'Facility') }}
+                                                @if($reservation->items->isNotEmpty())
+                                                    <span class="block max-w-xs truncate text-xs text-slate-500">
+                                                        @foreach($reservation->items as $item)
+                                                            {{ $item->name }} × {{ $item->pivot->quantity }}@if(!$loop->last), @endif
+                                                        @endforeach
+                                                    </span>
+                                                @endif
+                                            </td>
+                                            <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{{ $reservation->user?->name ?? 'Unknown user' }}</td>
+                                            <td class="whitespace-nowrap px-4 py-3 text-sm text-slate-600">{{ $reservation->reservation_date->format('M d, Y') }}</td>
+                                            <td class="whitespace-nowrap px-4 py-3 text-right">
+                                                <div class="inline-flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        data-edit-reservation
+                                                        data-edit-action="{{ route('admin.reservations.update', $reservation) }}"
+                                                        data-reservation-id="{{ $reservation->id }}"
+                                                        data-reservation-room="{{ $reservation->facility?->name ?? ($reservation->items->isNotEmpty() ? 'Property items' : 'Facility') }}"
+                                                        data-reservation-date="{{ $reservation->reservation_date->format('Y-m-d') }}"
+                                                        data-reservation-start="{{ $reservation->start_time->format('H:i') }}"
+                                                        data-reservation-end="{{ $reservation->end_time->format('H:i') }}"
+                                                        data-reservation-purpose="{{ $reservation->purpose }}"
+                                                        class="rounded-full bg-green-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-green-800">
+                                                        Edit
+                                                    </button>
+                                                    <form method="POST" action="{{ route('admin.reservations.destroy', $reservation) }}" data-confirm="Delete this approved reservation? The client will be notified.">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-red-700">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="mt-4">
                         {{ $approvedReservations->links() }}
                     </div>
                 @endif
             </section>
+
+            <div id="approved-reservation-edit-modal" class="fixed inset-0 z-[90] hidden items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="approved-reservation-edit-title">
+                <div class="my-auto w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-7">
+                    <div class="mb-6 flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-slate-500">Approved reservation</p>
+                            <h2 id="approved-reservation-edit-title" class="mt-1 text-2xl font-semibold text-slate-900">Edit reservation</h2>
+                            <p id="approved-reservation-edit-summary" class="mt-1 text-sm text-slate-600"></p>
+                        </div>
+                        <button id="approved-reservation-edit-close" type="button" class="rounded-full p-2 text-xl leading-none text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="Close edit reservation dialog">&times;</button>
+                    </div>
+
+                    <form id="approved-reservation-edit-form" method="POST" action="#" data-confirm="Save these changes to the approved reservation?" class="space-y-5">
+                        @csrf
+                        @method('PUT')
+                        <div class="grid gap-4 sm:grid-cols-2">
+                            <label class="block text-sm font-medium text-slate-700">
+                                Date
+                                <input id="approved-reservation-edit-date" name="reservation_date" type="date" required min="{{ now()->toDateString() }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                            </label>
+                            <label class="block text-sm font-medium text-slate-700">
+                                Start time
+                                <input id="approved-reservation-edit-start" name="start_time" type="time" required class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                            </label>
+                            <label class="block text-sm font-medium text-slate-700">
+                                End time
+                                <input id="approved-reservation-edit-end" name="end_time" type="time" required class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                            </label>
+                            <label class="block text-sm font-medium text-slate-700">
+                                Purpose
+                                <input id="approved-reservation-edit-purpose" name="purpose" type="text" required maxlength="255" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                            </label>
+                        </div>
+                        <div class="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+                            <button id="approved-reservation-edit-cancel" type="button" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
+                            <button type="submit" class="rounded-xl bg-green-800 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-900">Save changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
                 </section>
 
                 <section id="audit" data-admin-section="audit" class="hidden">
@@ -288,6 +330,14 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const memberContent = document.getElementById('member-management-content');
+        const reservationEditModal = document.getElementById('approved-reservation-edit-modal');
+        const reservationEditForm = document.getElementById('approved-reservation-edit-form');
+        const reservationEditSummary = document.getElementById('approved-reservation-edit-summary');
+        const reservationEditDate = document.getElementById('approved-reservation-edit-date');
+        const reservationEditStart = document.getElementById('approved-reservation-edit-start');
+        const reservationEditEnd = document.getElementById('approved-reservation-edit-end');
+        const reservationEditPurpose = document.getElementById('approved-reservation-edit-purpose');
+        let reservationEditTrigger = null;
         const errorMessage = document.getElementById('member-management-error');
         const memberStatus = document.getElementById('member-management-status');
         const dashboardStatus = document.getElementById('dashboard-action-status');
@@ -301,6 +351,46 @@
             'member-management-section': 'members',
             'audit-activity-section': 'audit',
         };
+
+        function closeReservationEditModal() {
+            reservationEditModal.classList.add('hidden');
+            reservationEditModal.classList.remove('flex');
+            reservationEditTrigger?.focus();
+            reservationEditTrigger = null;
+        }
+
+        document.addEventListener('click', function(event) {
+            if (!(event.target instanceof Element)) return;
+
+            const editButton = event.target.closest('[data-edit-reservation]');
+            if (editButton) {
+                reservationEditTrigger = editButton;
+                reservationEditForm.action = editButton.dataset.editAction;
+                reservationEditSummary.textContent = `Reservation #${editButton.dataset.reservationId} — ${editButton.dataset.reservationRoom}`;
+                reservationEditDate.value = editButton.dataset.reservationDate;
+                reservationEditStart.value = editButton.dataset.reservationStart;
+                reservationEditEnd.value = editButton.dataset.reservationEnd;
+                reservationEditPurpose.value = editButton.dataset.reservationPurpose;
+                reservationEditModal.classList.remove('hidden');
+                reservationEditModal.classList.add('flex');
+                reservationEditDate.focus();
+                return;
+            }
+
+            if (event.target === reservationEditModal
+                || event.target.closest('#approved-reservation-edit-close, #approved-reservation-edit-cancel')) {
+                closeReservationEditModal();
+            }
+        });
+
+        document.addEventListener('keydown', function(event) {
+            const passwordDialog = document.getElementById('admin-password-confirmation');
+            if (event.key === 'Escape'
+                && !reservationEditModal.classList.contains('hidden')
+                && (!passwordDialog || passwordDialog.classList.contains('hidden'))) {
+                closeReservationEditModal();
+            }
+        });
 
         function activateDashboardSection(sectionName, updateHistory) {
             const section = dashboardSections.find(function(item) {
