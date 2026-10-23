@@ -2,6 +2,35 @@
 
 @section('title', 'Reservation Settings - Campus Reserve')
 
+@push('styles')
+<style>
+    #maintenance-edit-dialog,
+    #password_confirmation_dialog {
+        position: fixed;
+        inset: 0;
+        width: calc(100% - 2rem);
+        max-width: 42rem;
+        max-height: calc(100dvh - 2rem);
+        height: fit-content;
+        margin: auto;
+        overflow-y: auto;
+        background: white;
+    }
+
+    #maintenance-edit-dialog:not([open]),
+    #password_confirmation_dialog:not([open]) {
+        display: none;
+    }
+
+    #maintenance-edit-dialog::backdrop,
+    #password_confirmation_dialog::backdrop {
+        background: rgb(15 23 42 / 55%);
+        -webkit-backdrop-filter: blur(8px);
+        backdrop-filter: blur(8px);
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="min-h-screen bg-[#f5f3f7]">
     <div class="flex min-h-screen flex-col md:flex-row">

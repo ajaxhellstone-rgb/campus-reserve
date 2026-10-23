@@ -1,4 +1,4 @@
-<div id="admin-password-confirmation" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="admin-password-confirmation-title" aria-describedby="admin-password-confirmation-message">
+<div id="admin-password-confirmation" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" style="-webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);" role="dialog" aria-modal="true" aria-labelledby="admin-password-confirmation-title" aria-describedby="admin-password-confirmation-message">
     <div class="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
         <h2 id="admin-password-confirmation-title" class="text-xl font-semibold text-slate-900">Confirm admin action</h2>
         <p id="admin-password-confirmation-message" class="mt-2 text-sm text-slate-600">Enter your password to continue.</p>

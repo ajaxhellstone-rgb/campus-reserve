@@ -201,6 +201,8 @@ class FacilityMaintenanceSchedulingTest extends TestCase
             ->assertSee('Facility maintenance')
             ->assertSee('Room repairs')
             ->assertSee('password_confirmation_dialog', false)
+            ->assertSee('#maintenance-edit-dialog::backdrop', false)
+            ->assertSee('backdrop-filter: blur(8px)', false)
             ->assertSee('data-password-confirm', false);
 
         $this->delete(route('admin.reservation-settings.maintenance.destroy', $block), [
