@@ -10,6 +10,7 @@ use App\Notifications\ReservationPendingApproval;
 use App\Services\FacilityItemAvailability;
 use App\Services\FacilityMaintenanceSchedule;
 use App\Services\ReservationNotificationDispatcher;
+use App\Services\ReservationDateWindow;
 use App\Services\ReservationTimeWindow;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -37,7 +38,8 @@ class ChatbotController extends Controller
         FacilityItemAvailability $itemAvailability,
         ReservationNotificationDispatcher $reservationNotifications,
         ReservationTimeWindow $reservationTimeWindow,
-        FacilityMaintenanceSchedule $maintenanceSchedule
+        FacilityMaintenanceSchedule $maintenanceSchedule,
+        ReservationDateWindow $reservationDateWindow
     ): JsonResponse {
         $message = trim((string) $request->input('message'));
         $normalized = $this->normalizeMessage($message);
@@ -468,6 +470,13 @@ class ChatbotController extends Controller
             }
 
         $date ??= !empty($state['date']) ? Carbon::parse($state['date']) : null;
+        if ($date && ! $reservationDateWindow->allows($date->toDateString())) {
+            session()->forget('chatbot_reservation');
+
+            return response()->json([
+                'reply' => 'Reservations can be made up to '.$reservationDateWindow->maximumDate().'. Please choose an earlier date.',
+            ]);
+        }
         $startTime ??= $state['start_time'] ?? null;
         $endTime ??= $state['end_time'] ?? null;
         $requestedFacility ??= $facilities->firstWhere('id', $state['facility_id'] ?? null);

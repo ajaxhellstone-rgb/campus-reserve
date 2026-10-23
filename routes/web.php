@@ -130,7 +130,11 @@ Route::middleware('web')->group(function () {
 Route::middleware('auth')->group(function () {
     // Authenticated user routes. All of these pages require the user to be signed in.
     // Reserve page (Dashboard) - requires login
-    Route::get('/reserve', function (Request $request, ReservationTimeWindow $reservationTimeWindow) {
+    Route::get('/reserve', function (
+        Request $request,
+        ReservationTimeWindow $reservationTimeWindow,
+        \App\Services\ReservationDateWindow $reservationDateWindow
+    ) {
         $user = auth()->user();
         $reservationSearch = trim((string) $request->query('reservation_search', ''));
         $reservationsQuery = Reservation::with(['facility', 'items'])
@@ -179,6 +183,7 @@ Route::middleware('auth')->group(function () {
             ->orderBy('name')
             ->get(['id', 'name', 'building', 'capacity']);
         $reservationHours = $reservationTimeWindow->current();
+        $maximumReservationDate = $reservationDateWindow->maximumDate();
 
         return view('reserve', compact(
             'reservations',
@@ -188,11 +193,15 @@ Route::middleware('auth')->group(function () {
             'returnedItemCount',
             'facilities',
             'reservationHours',
-            'reservationSearch'
+            'reservationSearch',
+            'maximumReservationDate'
         ));
     })->name('reserve');
 
-    Route::get('/reserve/reservations/{reservation}/edit', function (Reservation $reservation) {
+    Route::get('/reserve/reservations/{reservation}/edit', function (
+        Reservation $reservation,
+        \App\Services\ReservationDateWindow $reservationDateWindow
+    ) {
         $reservation = Reservation::with(['facility', 'items'])
             ->where('user_id', auth()->id())
             ->findOrFail($reservation->id);
@@ -201,7 +210,9 @@ Route::middleware('auth')->group(function () {
             ? Facility::active()->orderBy('name')->get()
             : collect();
 
-        return view('reservations.edit', compact('reservation', 'facilities'));
+        $maximumReservationDate = $reservationDateWindow->maximumDate();
+
+        return view('reservations.edit', compact('reservation', 'facilities', 'maximumReservationDate'));
     })->name('reservations.edit');
 
     Route::put('/reserve/reservations/{reservation}', function (
@@ -210,6 +221,7 @@ Route::middleware('auth')->group(function () {
         ReservationNotificationDispatcher $reservationNotifications,
         ReservationTimeWindow $reservationTimeWindow,
         FacilityMaintenanceSchedule $maintenanceSchedule,
+        \App\Services\ReservationDateWindow $reservationDateWindow,
         \App\Services\FacilityItemAvailability $itemAvailability
     ) {
         $reservation = Reservation::where('user_id', auth()->id())->findOrFail($reservation->id);
@@ -218,7 +230,7 @@ Route::middleware('auth')->group(function () {
         $request->validate([
             'facility_id' => [$isPropertyReservation ? 'nullable' : 'required', 'exists:facilities,id'],
             'purpose' => 'required|string|max:255',
-            'reservation_date' => 'required|date',
+            'reservation_date' => $reservationDateWindow->rules(),
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
             'notes' => 'nullable|string|max:500',

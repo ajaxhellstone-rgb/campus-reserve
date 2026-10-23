@@ -68,7 +68,7 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>
                             <label for="reservation_date" class="block text-sm font-medium text-slate-700 mb-2">Date</label>
-                            <input id="reservation_date" name="reservation_date" type="date" value="{{ old('reservation_date', $reservation->reservation_date->toDateString()) }}" class="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 focus:border-slate-400 focus:outline-none" />
+                            <input id="reservation_date" name="reservation_date" type="date" max="{{ $maximumReservationDate }}" value="{{ old('reservation_date', $reservation->reservation_date->toDateString()) }}" class="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 focus:border-slate-400 focus:outline-none" />
                             @error('reservation_date')
                                 <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
                             @enderror

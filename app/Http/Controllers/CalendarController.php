@@ -12,6 +12,7 @@ use App\Notifications\ReservationPendingApproval;
 use App\Services\FacilityItemAvailability;
 use App\Services\FacilityMaintenanceSchedule;
 use App\Services\ReservationNotificationDispatcher;
+use App\Services\ReservationDateWindow;
 use App\Services\ReservationTimeWindow;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
@@ -119,7 +120,8 @@ class CalendarController extends Controller
         FacilityItemAvailability $itemAvailability,
         ReservationNotificationDispatcher $reservationNotifications,
         ReservationTimeWindow $reservationTimeWindow,
-        FacilityMaintenanceSchedule $maintenanceSchedule
+        FacilityMaintenanceSchedule $maintenanceSchedule,
+        ReservationDateWindow $reservationDateWindow
     )
     {
         // First, I validate that all the required info is provided
@@ -128,7 +130,7 @@ class CalendarController extends Controller
         $validated = $request->validate([
             'facility' => $hasItemBookings ? ['nullable', 'string'] : ['required', 'string'],
             'purpose' => 'required|string|max:255',
-            'date' => 'required|date',
+            'date' => $reservationDateWindow->rules(),
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
             'items' => $hasItemBookings ? ['required', 'array', 'min:1'] : ['sometimes', 'array'],
@@ -268,12 +270,13 @@ class CalendarController extends Controller
         Facility $facility,
         FacilityItemAvailability $itemAvailability,
         ReservationTimeWindow $reservationTimeWindow,
-        FacilityMaintenanceSchedule $maintenanceSchedule
+        FacilityMaintenanceSchedule $maintenanceSchedule,
+        ReservationDateWindow $reservationDateWindow
     ) {
         abort_unless($facility->is_active, 404);
 
         $validated = $request->validate([
-            'date' => ['required', 'date'],
+            'date' => $reservationDateWindow->rules(),
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
         ]);
@@ -319,10 +322,11 @@ class CalendarController extends Controller
     public function propertyItemAvailability(
         Request $request,
         FacilityItemAvailability $itemAvailability,
-        ReservationTimeWindow $reservationTimeWindow
+        ReservationTimeWindow $reservationTimeWindow,
+        ReservationDateWindow $reservationDateWindow
     ) {
         $validated = $request->validate([
-            'date' => ['required', 'date'],
+            'date' => $reservationDateWindow->rules(),
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
         ]);

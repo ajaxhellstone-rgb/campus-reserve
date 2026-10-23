@@ -5,11 +5,18 @@ namespace Tests\Feature;
 use App\Models\Facility;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class ReservationScheduleSettingsTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->travelTo(Carbon::parse('2030-04-01'));
+    }
 
     public function test_admin_can_view_and_update_allowed_reservation_hours(): void
     {

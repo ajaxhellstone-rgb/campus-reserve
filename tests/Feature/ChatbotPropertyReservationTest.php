@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use App\Notifications\ReservationStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -16,6 +17,12 @@ use Tests\TestCase;
 class ChatbotPropertyReservationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->travelTo(Carbon::parse('2030-04-01'));
+    }
 
     public function test_chatbot_submits_property_reservations_to_the_admin_approval_queue(): void
     {
@@ -87,6 +94,20 @@ class ChatbotPropertyReservationTest extends TestCase
         $this->assertStringContainsString('pending', $status->json('reply'));
         $this->assertStringContainsString('use at 10:00 AM, return at 12:00 PM', $status->json('reply'));
         $this->assertStringContainsString('purpose: Classroom presentation', $status->json('reply'));
+    }
+
+    public function test_chatbot_rejects_reservation_dates_outside_the_booking_window(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('chatbot.respond'), [
+                'message' => 'Reserve a projector on May 1 2041 from 10 AM to 12 PM',
+            ])
+            ->assertOk()
+            ->assertJsonPath('reply', 'Reservations can be made up to 2032-04-01. Please choose an earlier date.');
+
+        $this->assertDatabaseCount('reservations', 0);
     }
 
     public function test_chatbot_asks_for_use_and_return_times_when_property_booking_times_are_missing(): void

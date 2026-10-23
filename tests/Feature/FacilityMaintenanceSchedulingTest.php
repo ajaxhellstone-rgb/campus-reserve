@@ -8,11 +8,18 @@ use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationStatusChanged;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class FacilityMaintenanceSchedulingTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->travelTo(Carbon::parse('2030-04-01'));
+    }
 
     public function test_admin_can_schedule_maintenance_and_overlapping_reservations_are_rejected_and_notified(): void
     {

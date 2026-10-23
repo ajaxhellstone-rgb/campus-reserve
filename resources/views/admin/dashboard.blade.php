@@ -257,7 +257,7 @@
                         <div class="grid gap-4 sm:grid-cols-2">
                             <label class="block text-sm font-medium text-slate-700">
                                 Date
-                                <input id="approved-reservation-edit-date" name="reservation_date" type="date" required min="{{ now()->toDateString() }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                                <input id="approved-reservation-edit-date" name="reservation_date" type="date" required min="{{ now()->toDateString() }}" max="{{ $maximumReservationDate }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
                             </label>
                             <label class="block text-sm font-medium text-slate-700">
                                 Start time

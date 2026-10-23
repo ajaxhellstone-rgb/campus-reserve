@@ -64,6 +64,25 @@ class AdminReservationManagementTest extends TestCase
         ]);
     }
 
+    public function test_admin_cannot_edit_an_approved_reservation_beyond_the_booking_window(): void
+    {
+        $admin = $this->createAdmin();
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        $reservation = $this->createReservation($user, $facility);
+
+        $this->actingAs($admin)
+            ->putJson(route('admin.reservations.update', $reservation), [
+                'current_password' => 'password',
+                'reservation_date' => now()->addYears(2)->addDay()->toDateString(),
+                'start_time' => '13:00',
+                'end_time' => '14:00',
+                'purpose' => 'Updated presentation',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('reservation_date');
+    }
+
     public function test_admin_cannot_edit_an_approved_reservation_into_an_occupied_schedule(): void
     {
         $admin = $this->createAdmin();

@@ -7,13 +7,21 @@ use App\Models\FacilityItem;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationStatusChanged;
+use App\Services\ReservationDateWindow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class PropertyReservationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->travelTo(Carbon::parse('2030-04-01'));
+    }
 
     public function test_reserve_page_shows_both_reservation_sections_without_eager_loading_property_items(): void
     {
@@ -276,6 +284,28 @@ class PropertyReservationTest extends TestCase
         ]);
     }
 
+    public function test_reservation_date_cannot_exceed_the_two_year_booking_window(): void
+    {
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        $maximumDate = app(ReservationDateWindow::class)->maximumDate();
+        $reservationData = [
+            'facility' => (string) $facility->id,
+            'purpose' => 'Club meeting',
+            'start_time' => '10:00',
+            'end_time' => '12:00',
+        ];
+
+        $this->actingAs($user)
+            ->postJson('/api/calendar/reserve', $reservationData + ['date' => $maximumDate])
+            ->assertOk();
+
+        $this->postJson('/api/calendar/reserve', $reservationData + [
+            'date' => Carbon::parse($maximumDate)->addDay()->toDateString(),
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('date');
+    }
+
     public function test_property_reservation_can_use_items_without_facility_assignment(): void
     {
         $user = User::factory()->create();
@@ -362,6 +392,24 @@ class PropertyReservationTest extends TestCase
             'purpose' => 'Updated presentation',
             'status' => 'pending',
         ]);
+    }
+
+    public function test_user_cannot_edit_a_reservation_beyond_the_booking_window(): void
+    {
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        $reservation = $this->createReservation($user, $facility, 'approved', '10:00', '12:00');
+
+        $this->actingAs($user)
+            ->putJson(route('reservations.update', $reservation), [
+                'facility_id' => $facility->id,
+                'purpose' => 'Updated presentation',
+                'reservation_date' => now()->addYears(2)->addDay()->toDateString(),
+                'start_time' => '10:00',
+                'end_time' => '12:00',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('reservation_date');
     }
 
     public function test_item_availability_counts_only_overlapping_approved_reservations(): void

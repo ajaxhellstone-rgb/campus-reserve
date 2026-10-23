@@ -10,6 +10,7 @@ use App\Models\Reservation;
 use App\Services\FacilityItemAvailability;
 use App\Services\FacilityMaintenanceSchedule;
 use App\Services\ReservationNotificationDispatcher;
+use App\Services\ReservationDateWindow;
 use App\Services\ReservationTimeWindow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -37,7 +38,7 @@ class AdminController extends Controller
         }
     }
 
-    public function dashboard(Request $request)
+    public function dashboard(Request $request, ReservationDateWindow $reservationDateWindow)
     {
         // Show the admin dashboard with pending requests, recent activity, and user search
         $this->requireAdmin();
@@ -105,6 +106,7 @@ class AdminController extends Controller
             ->latest()
             ->take(25)
             ->get();
+        $maximumReservationDate = $reservationDateWindow->maximumDate();
 
         return view('admin.dashboard', compact(
             'pendingReservations',
@@ -116,6 +118,7 @@ class AdminController extends Controller
             'users',
             'search',
             'role',
+            'maximumReservationDate',
         ));
     }
 
@@ -629,7 +632,8 @@ class AdminController extends Controller
         Reservation $reservation,
         FacilityItemAvailability $itemAvailability,
         FacilityMaintenanceSchedule $maintenanceSchedule,
-        ReservationTimeWindow $reservationTimeWindow
+        ReservationTimeWindow $reservationTimeWindow,
+        ReservationDateWindow $reservationDateWindow
     ) {
         $this->requireAdmin();
 
@@ -638,7 +642,7 @@ class AdminController extends Controller
         }
 
         $validated = $request->validate([
-            'reservation_date' => ['required', 'date', 'after_or_equal:today'],
+            'reservation_date' => array_merge($reservationDateWindow->rules(), ['after_or_equal:today']),
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
             'purpose' => ['required', 'string', 'max:255'],

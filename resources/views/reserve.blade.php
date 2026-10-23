@@ -217,7 +217,7 @@
                     <div class="grid gap-4 sm:grid-cols-3">
                         <div>
                             <label for="property-booking-date" class="block text-sm font-medium text-slate-700">Date</label>
-                            <input id="property-booking-date" type="date" required class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                            <input id="property-booking-date" type="date" max="{{ $maximumReservationDate }}" required class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
                         </div>
                         <div>
                             <label for="property-booking-start" class="block text-sm font-medium text-slate-700">Time to use</label>
