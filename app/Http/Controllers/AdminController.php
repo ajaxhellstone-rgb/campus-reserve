@@ -14,6 +14,7 @@ use App\Services\ReservationTimeWindow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
@@ -78,6 +79,14 @@ class AdminController extends Controller
             ->paginate(15, ['*'], 'pendingPage')
             ->withQueryString();
 
+        $approvedReservations = Reservation::with(['user', 'facility', 'items'])
+            ->where('status', 'approved')
+            ->orderByDesc('reservation_date')
+            ->orderByDesc('start_time')
+            ->paginate(20, ['*'], 'approvedPage')
+            ->withQueryString()
+            ->fragment('reservations');
+
         $recentReservations = Reservation::with(['user', 'facility'])
             ->whereIn('status', ['approved', 'rejected'])
             ->orderBy('updated_at', 'desc')
@@ -99,6 +108,7 @@ class AdminController extends Controller
 
         return view('admin.dashboard', compact(
             'pendingReservations',
+            'approvedReservations',
             'recentReservations',
             'approvedReservationCount',
             'rejectedReservationCount',
@@ -614,20 +624,136 @@ class AdminController extends Controller
         return $this->reservationActionResponse($request, 'Reservation rejected successfully.', $auditLog);
     }
 
-    public function destroyReservation(Request $request, Reservation $reservation)
-    {
+    public function updateApprovedReservation(
+        Request $request,
+        Reservation $reservation,
+        FacilityItemAvailability $itemAvailability,
+        FacilityMaintenanceSchedule $maintenanceSchedule,
+        ReservationTimeWindow $reservationTimeWindow
+    ) {
         $this->requireAdmin();
 
-        $reservation->delete();
+        if ($reservation->status !== 'approved') {
+            return back()->with('error', 'Only approved reservations can be edited.');
+        }
+
+        $validated = $request->validate([
+            'reservation_date' => ['required', 'date', 'after_or_equal:today'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'purpose' => ['required', 'string', 'max:255'],
+        ]);
+
+        $reservation->loadMissing('items');
+        $startTime = $validated['start_time'];
+        $endTime = $validated['end_time'];
+        $date = $validated['reservation_date'];
+
+        if (! $reservationTimeWindow->allows($startTime, $endTime)) {
+            throw ValidationException::withMessages([
+                'start_time' => $reservationTimeWindow->validationMessage(),
+            ]);
+        }
+
+        if ($reservation->facility_id !== null) {
+            $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
+                $reservation->facility_id,
+                $date,
+                $startTime,
+                $endTime
+            );
+
+            if ($maintenanceBlock) {
+                throw ValidationException::withMessages([
+                    'reservation_date' => $maintenanceSchedule->validationMessage($maintenanceBlock),
+                ]);
+            }
+
+            $conflict = Reservation::query()
+                ->where('facility_id', $reservation->facility_id)
+                ->whereDate('reservation_date', $date)
+                ->where('status', 'approved')
+                ->where('id', '!=', $reservation->id)
+                ->where('start_time', '<', $endTime)
+                ->where('end_time', '>', $startTime)
+                ->exists();
+
+            if ($conflict) {
+                throw ValidationException::withMessages([
+                    'start_time' => 'Another approved reservation already occupies this facility at that time.',
+                ]);
+            }
+        }
+
+        if ($reservation->items->isNotEmpty()) {
+            $availableQuantities = $itemAvailability->availableQuantities(
+                $reservation->items,
+                $date,
+                $startTime,
+                $endTime,
+                $reservation->id
+            );
+
+            foreach ($reservation->items as $item) {
+                if ($item->pivot->quantity > ($availableQuantities[$item->id] ?? 0)) {
+                    throw ValidationException::withMessages([
+                        'reservation_date' => "Only ".($availableQuantities[$item->id] ?? 0)." of {$item->name} are available for that schedule.",
+                    ]);
+                }
+            }
+        }
+
+        $reservation->update([
+            'reservation_date' => $date,
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+            'purpose' => $validated['purpose'],
+        ]);
 
         $auditLog = AuditLog::create([
             'user_id' => Auth::id(),
             'reservation_id' => $reservation->id,
-            'action' => 'deleted',
-            'details' => 'Reservation deleted by admin',
+            'action' => 'reservation_updated',
+            'details' => "Updated approved reservation #{$reservation->id} to {$date}, {$startTime}-{$endTime}.",
         ]);
 
-        return $this->reservationActionResponse($request, 'Reservation deleted successfully.', $auditLog);
+        if ($request->expectsJson()) {
+            return response()->json(['status' => 'Approved reservation updated successfully.']);
+        }
+
+        return redirect()->to(route('admin.dashboard').'#reservations')
+            ->with('status', 'Approved reservation updated successfully.');
+    }
+
+    public function destroyReservation(
+        Request $request,
+        Reservation $reservation,
+        ReservationNotificationDispatcher $reservationNotifications
+    )
+    {
+        $this->requireAdmin();
+
+        $reservation->loadMissing(['user', 'facility', 'items']);
+        $reservation->status = 'cancelled';
+        $auditLog = DB::transaction(function () use ($reservation) {
+            $auditLog = AuditLog::create([
+                'user_id' => Auth::id(),
+                'reservation_id' => $reservation->id,
+                'action' => 'deleted',
+                'details' => 'Reservation cancelled and deleted by admin.',
+            ]);
+            $reservation->delete();
+
+            return $auditLog;
+        });
+
+        $reservationNotifications->notifyBorrower($reservation);
+
+        return $this->reservationActionResponse(
+            $request,
+            'Reservation deleted successfully and the borrower was notified.',
+            $auditLog
+        );
     }
 
     public function updateUserRole(Request $request, \App\Models\User $user)

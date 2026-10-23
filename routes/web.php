@@ -364,6 +364,7 @@ Route::middleware('auth')->group(function () {
             Route::delete('/facilities/{facility}', [AdminController::class, 'destroyFacility'])->name('admin.facilities.destroy');
             Route::post('/reservations/{reservation}/approve', [AdminController::class, 'approve'])->name('admin.reservations.approve');
             Route::post('/reservations/{reservation}/reject', [AdminController::class, 'reject'])->name('admin.reservations.reject');
+            Route::put('/reservations/{reservation}', [AdminController::class, 'updateApprovedReservation'])->name('admin.reservations.update');
             Route::delete('/reservations/{reservation}', [AdminController::class, 'destroyReservation'])->name('admin.reservations.destroy');
             Route::post('/users/{user}/role', [AdminController::class, 'updateUserRole'])->name('admin.users.role');
             Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('admin.users.destroy');

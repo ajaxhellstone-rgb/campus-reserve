@@ -30,6 +30,10 @@
         @endif
         @if($errors->has('current_password'))
             <div class="mb-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-red-800" role="alert">{{ $errors->first('current_password') }}</div>
+        @elseif($errors->any())
+            <div class="mb-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-red-800" role="alert">
+                {{ $errors->first() }}
+            </div>
         @endif
 
         <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-5 xl:grid-cols-4">
@@ -97,7 +101,8 @@
                         </div>
                     </div>
                 </section>
-                </section>
+
+                    </section>
 
                 <section id="reservations" data-admin-section="reservations" class="hidden">
             <section id="pending-reservations-section" class="scroll-mt-6 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-6">
@@ -160,6 +165,75 @@
                     </div>
                     <div class="mt-4">
                         {{ $pendingReservations->links() }}
+                    </div>
+                @endif
+            </section>
+
+            <section id="edit-reservations-section" class="mt-6 scroll-mt-6 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-6">
+                <div class="mb-4">
+                    <h2 class="text-xl font-semibold text-gray-900">Edit Reservations</h2>
+                    <p class="text-sm text-gray-600">Adjust approved reservation dates, schedules, or purpose. Deleting a reservation removes it from the client’s list and sends them a notification.</p>
+                </div>
+
+                @if($approvedReservations->isEmpty())
+                    <p class="text-gray-500">No approved reservations to edit.</p>
+                @else
+                    <div class="space-y-4">
+                        @foreach($approvedReservations as $reservation)
+                            <article class="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+                                <div class="mb-4 flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <h3 class="font-semibold text-slate-900">
+                                            Reservation #{{ $reservation->id }} —
+                                            {{ $reservation->items->isNotEmpty() ? 'Property items' : ($reservation->facility?->name ?? 'Facility') }}
+                                        </h3>
+                                        <p class="text-sm text-slate-600">
+                                            Requested by {{ $reservation->user?->name ?? 'Unknown user' }}
+                                            @if($reservation->items->isNotEmpty())
+                                                ·
+                                                @foreach($reservation->items as $item)
+                                                    {{ $item->name }} × {{ $item->pivot->quantity }}@if(!$loop->last), @endif
+                                                @endforeach
+                                            @endif
+                                        </p>
+                                    </div>
+                                    <span class="text-sm font-medium text-green-800">Approved</span>
+                                </div>
+
+                                <div class="flex flex-col gap-3 xl:flex-row xl:items-end">
+                                    <form method="POST" action="{{ route('admin.reservations.update', $reservation) }}" data-confirm="Save these changes to the approved reservation?" class="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_2fr_auto]">
+                                        @csrf
+                                        @method('PUT')
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Date
+                                            <input name="reservation_date" type="date" required min="{{ now()->toDateString() }}" value="{{ $reservation->reservation_date->format('Y-m-d') }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                                        </label>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Start time
+                                            <input name="start_time" type="time" required value="{{ $reservation->start_time->format('H:i') }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                                        </label>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            End time
+                                            <input name="end_time" type="time" required value="{{ $reservation->end_time->format('H:i') }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                                        </label>
+                                        <label class="block text-sm font-medium text-slate-700">
+                                            Purpose
+                                            <input name="purpose" type="text" required maxlength="255" value="{{ $reservation->purpose }}" class="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                                        </label>
+                                        <button type="submit" class="inline-flex h-10 items-center justify-center self-end rounded-xl bg-green-800 px-5 text-sm font-semibold text-white transition hover:bg-green-900">Save changes</button>
+                                    </form>
+
+                                    <form method="POST" action="{{ route('admin.reservations.destroy', $reservation) }}" data-confirm="Delete this approved reservation? The client will be notified." class="shrink-0">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="inline-flex h-10 w-full items-center justify-center rounded-xl border border-rose-200 bg-white px-5 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 xl:w-auto">Delete reservation</button>
+                                    </form>
+                                </div>
+                            </article>
+                        @endforeach
+                    </div>
+                    <div class="mt-4">
+                        {{ $approvedReservations->links() }}
                     </div>
                 @endif
             </section>

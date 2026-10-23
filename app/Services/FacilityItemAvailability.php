@@ -32,7 +32,8 @@ class FacilityItemAvailability
         iterable $items,
         string $date,
         string $startTime,
-        string $endTime
+        string $endTime,
+        ?int $excludeReservationId = null
     ): array {
         $quantities = [];
         foreach ($items as $item) {
@@ -52,6 +53,7 @@ class FacilityItemAvailability
             ->where('reservations.reservation_date', '<', $nextDate)
             ->where('reservations.start_time', '<', $endTime)
             ->where('reservations.end_time', '>', $startTime)
+            ->when($excludeReservationId !== null, fn ($query) => $query->where('reservations.id', '!=', $excludeReservationId))
             ->select('reservation_items.facility_item_id')
             ->selectRaw('SUM(reservation_items.quantity) AS reserved_quantity')
             ->groupBy('reservation_items.facility_item_id')
