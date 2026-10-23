@@ -13,6 +13,7 @@
 /.zed
 /auth.json
 /node_modules
+/k6.exe
 /public/build
 /public/hot
 /public/storage
