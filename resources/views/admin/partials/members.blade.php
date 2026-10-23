@@ -49,25 +49,25 @@
                                 @endif
                             </td>
                             <td class="px-4 py-4 text-sm text-gray-500">{{ $user->created_at->format('M d, Y') }}</td>
-                            <td class="space-x-2 px-4 py-4 text-right text-sm font-medium">
+                            <td class="min-w-[210px] whitespace-nowrap px-4 py-4 text-right text-sm font-medium">
                                 @if(auth()->user()->isSuperAdmin())
                                     @if(! $user->isSuperAdmin())
-                                        <form method="POST" action="{{ route('admin.users.role', $user) }}" class="inline-flex">
+                                        <form method="POST" action="{{ route('admin.users.role', $user) }}" class="inline-flex shrink-0 items-center gap-2 whitespace-nowrap align-middle">
                                             @csrf
                                             <input type="hidden" name="return_search" value="{{ $search ?? '' }}">
                                             <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
-                                            <select name="role" class="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                                            <select name="role" class="w-24 shrink-0 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200">
                                                 <option value="user" {{ ! $user->is_admin ? 'selected' : '' }}>Member</option>
                                                 <option value="admin" {{ $user->is_admin ? 'selected' : '' }}>Staff</option>
                                             </select>
-                                            <button type="submit" class="ml-2 rounded-full bg-indigo-700 px-3 py-2 text-xs text-white transition hover:bg-indigo-800">Save</button>
+                                            <button type="submit" class="shrink-0 whitespace-nowrap rounded-full bg-indigo-700 px-3 py-2 text-xs text-white transition hover:bg-indigo-800">Save</button>
                                         </form>
-                                        <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline-flex" data-confirm="Delete this user? This cannot be undone.">
+                                        <form method="POST" action="{{ route('admin.users.destroy', $user) }}" class="inline-flex shrink-0 items-center whitespace-nowrap align-middle" data-confirm="Delete this user? This cannot be undone.">
                                             @csrf
                                             @method('DELETE')
                                             <input type="hidden" name="return_search" value="{{ $search ?? '' }}">
                                             <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
-                                            <button type="submit" class="rounded-full bg-red-600 px-3 py-2 text-xs text-white transition hover:bg-red-700">Delete</button>
+                                            <button type="submit" class="shrink-0 whitespace-nowrap rounded-full bg-red-600 px-3 py-2 text-xs text-white transition hover:bg-red-700">Delete</button>
                                         </form>
                                     @else
                                         <span class="text-xs text-gray-500">Protected</span>
