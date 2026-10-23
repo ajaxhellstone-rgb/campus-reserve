@@ -22,13 +22,10 @@ class FacilityController extends Controller
 
     public function propertyItems()
     {
-        $facilities = Facility::active()
-            ->with(['items' => function ($query) {
-                $query->select(['id', 'facility_id', 'name', 'quantity']);
-            }])
+        $items = \App\Models\FacilityItem::query()
             ->orderBy('name')
-            ->get(['id', 'name', 'building']);
+            ->get(['id', 'name', 'quantity']);
 
-        return response()->json($facilities);
+        return response()->json($items);
     }
 }

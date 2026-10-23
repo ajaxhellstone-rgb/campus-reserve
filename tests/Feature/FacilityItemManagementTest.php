@@ -41,7 +41,8 @@ class FacilityItemManagementTest extends TestCase
         $this->get(route('admin.property-management.index'))
             ->assertOk()
             ->assertSee('Projector')
-            ->assertSee('Main Building')
+            ->assertSee('Property Inventory')
+            ->assertDontSee('Room or facility')
             ->assertSee('Admin dashboard navigation')
             ->assertSee('Property items')
             ->assertSee('aria-current="page"', false);
@@ -53,7 +54,7 @@ class FacilityItemManagementTest extends TestCase
             ->assertSee('aria-current="page"', false);
     }
 
-    public function test_facility_management_omits_amenities_and_facility_booking_shows_item_options(): void
+    public function test_facility_management_omits_amenities_and_facility_booking_keeps_property_items_separate(): void
     {
         $admin = User::factory()->create([
             'is_admin' => true,
@@ -77,8 +78,8 @@ class FacilityItemManagementTest extends TestCase
 
         $this->get('/calendar/manage')
             ->assertOk()
-            ->assertSee('Items included with this facility')
-            ->assertSee('facilityItemOptions');
+            ->assertSee('Property items are reserved separately from facilities')
+            ->assertDontSee('facilityItemOptions');
     }
 
     public function test_facilities_api_returns_identifiers_for_item_availability_lookup(): void
@@ -113,7 +114,6 @@ class FacilityItemManagementTest extends TestCase
         $this->actingAs($admin)
             ->post(route('admin.property-management.items.store'), [
                 'current_password' => 'password',
-                'facility_id' => $facility->id,
                 'name' => 'Projector',
                 'quantity' => 2,
             ])
@@ -123,7 +123,7 @@ class FacilityItemManagementTest extends TestCase
         $item = FacilityItem::firstOrFail();
         $this->assertDatabaseHas('facility_items', [
             'id' => $item->id,
-            'facility_id' => $facility->id,
+            'facility_id' => null,
             'name' => 'Projector',
             'quantity' => 2,
         ]);
@@ -131,7 +131,6 @@ class FacilityItemManagementTest extends TestCase
         $this->actingAs($admin)
             ->put(route('admin.property-management.items.update', $item), [
                 'current_password' => 'password',
-                'facility_id' => $facility->id,
                 'name' => 'Interactive Display',
                 'quantity' => 1,
             ])

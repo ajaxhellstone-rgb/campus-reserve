@@ -26,7 +26,7 @@ class PropertyReturnDue extends Notification
         return [
             'reservation_id' => $this->reservation->id,
             'title' => 'Property items are due for return',
-            'message' => "Your return time for {$items} from {$this->reservation->facility->name} has passed. Have you returned these items?",
+            'message' => "Your return time for {$items} has passed. Have you returned these items?",
             'action_url' => route('notifications.index'),
             'status' => 'approved',
             'response_required' => true,

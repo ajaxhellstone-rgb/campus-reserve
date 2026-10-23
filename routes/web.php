@@ -67,6 +67,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/calendar/pending', [CalendarController::class, 'pending']);
     Route::get('/api/facilities/{facility}/item-availability', [CalendarController::class, 'itemAvailability'])
         ->name('api.facilities.items.availability');
+    Route::get('/api/property-items/availability', [CalendarController::class, 'propertyItemAvailability'])
+        ->name('api.property-items.availability');
 });
 
 Route::middleware('auth')->post('/api/calendar/reserve', [CalendarController::class, 'store']);
@@ -191,11 +193,13 @@ Route::middleware('auth')->group(function () {
     })->name('reserve');
 
     Route::get('/reserve/reservations/{reservation}/edit', function (Reservation $reservation) {
-        $reservation = Reservation::with('facility')
+        $reservation = Reservation::with(['facility', 'items'])
             ->where('user_id', auth()->id())
             ->findOrFail($reservation->id);
 
-        $facilities = Facility::active()->orderBy('name')->get();
+        $facilities = $reservation->items->isEmpty()
+            ? Facility::active()->orderBy('name')->get()
+            : collect();
 
         return view('reservations.edit', compact('reservation', 'facilities'));
     })->name('reservations.edit');
@@ -205,12 +209,14 @@ Route::middleware('auth')->group(function () {
         Reservation $reservation,
         ReservationNotificationDispatcher $reservationNotifications,
         ReservationTimeWindow $reservationTimeWindow,
-        FacilityMaintenanceSchedule $maintenanceSchedule
+        FacilityMaintenanceSchedule $maintenanceSchedule,
+        \App\Services\FacilityItemAvailability $itemAvailability
     ) {
         $reservation = Reservation::where('user_id', auth()->id())->findOrFail($reservation->id);
+        $isPropertyReservation = $reservation->items()->exists();
 
         $request->validate([
-            'facility_id' => 'required|exists:facilities,id',
+            'facility_id' => [$isPropertyReservation ? 'nullable' : 'required', 'exists:facilities,id'],
             'purpose' => 'required|string|max:255',
             'reservation_date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
@@ -224,27 +230,38 @@ Route::middleware('auth')->group(function () {
                 ->withErrors(['start_time' => $reservationTimeWindow->validationMessage()]);
         }
 
-        $facility = Facility::findOrFail($request->facility_id);
-        if ($reservation->items()->exists() && $facility->id !== $reservation->facility_id) {
-            return back()->withInput()->with('error', 'Property reservation items must remain assigned to their original facility. Cancel this reservation and create a new one to reserve items in another facility.');
-        }
+        if ($isPropertyReservation) {
+            foreach ($reservation->items as $item) {
+                $availableQuantity = $itemAvailability->availableQuantity(
+                    $item,
+                    $request->reservation_date,
+                    $request->start_time,
+                    $request->end_time,
+                    $reservation->id
+                );
+                if ($item->pivot->quantity > $availableQuantity) {
+                    return back()->withInput()->with('error', "{$item->name} has only {$availableQuantity} available for that date and time.");
+                }
+            }
+        } else {
+            $facility = Facility::findOrFail($request->facility_id);
+            if (! $facility->isAvailable($request->reservation_date, $request->start_time, $request->end_time, $reservation->id)) {
+                return back()->withInput()->with('error', 'Selected time slot is unavailable. Please choose another slot.');
+            }
 
-        if (! $facility->isAvailable($request->reservation_date, $request->start_time, $request->end_time, $reservation->id)) {
-            return back()->withInput()->with('error', 'Selected time slot is unavailable. Please choose another slot.');
-        }
-
-        $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
-            $facility->id,
-            $request->reservation_date,
-            $request->start_time,
-            $request->end_time
-        );
-        if ($maintenanceBlock) {
-            return back()->withInput()->with('error', $maintenanceSchedule->validationMessage($maintenanceBlock));
+            $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
+                $facility->id,
+                $request->reservation_date,
+                $request->start_time,
+                $request->end_time
+            );
+            if ($maintenanceBlock) {
+                return back()->withInput()->with('error', $maintenanceSchedule->validationMessage($maintenanceBlock));
+            }
         }
 
         $reservation->update([
-            'facility_id' => $facility->id,
+            'facility_id' => $isPropertyReservation ? null : $facility->id,
             'reservation_date' => $request->reservation_date,
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,

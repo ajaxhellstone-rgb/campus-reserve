@@ -26,7 +26,7 @@ class PropertyReturnNotConfirmed extends Notification
         return [
             'reservation_id' => $this->reservation->id,
             'title' => 'Property items not returned',
-            'message' => "{$this->reservation->user->name} reported that {$items} from {$this->reservation->facility->name} have not been returned by the scheduled return time.",
+            'message' => "{$this->reservation->user->name} reported that {$items} have not been returned by the scheduled return time.",
             'action_url' => route('admin.dashboard'),
             'status' => $this->reservation->status,
         ];

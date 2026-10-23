@@ -233,10 +233,9 @@ class AdminController extends Controller
     {
         $this->requireAdmin();
 
-        $facilities = Facility::query()->orderBy('building')->orderBy('name')->get();
-        $items = FacilityItem::with('facility')->orderBy('name')->get();
+        $items = FacilityItem::orderBy('name')->get();
 
-        return view('admin.property-management', compact('facilities', 'items'));
+        return view('admin.property-management', compact('items'));
     }
 
     public function reservationSettings(
@@ -402,7 +401,6 @@ class AdminController extends Controller
         $this->requireAdmin();
 
         $validated = $request->validate([
-            'facility_id' => ['required', 'integer', 'exists:facilities,id'],
             'name' => ['required', 'string', 'max:100'],
             'quantity' => ['required', 'integer', 'min:1'],
         ]);
@@ -413,7 +411,7 @@ class AdminController extends Controller
             'user_id' => Auth::id(),
             'reservation_id' => null,
             'action' => 'facility_item_created',
-            'details' => "Added {$item->name} (quantity: {$item->quantity}) to {$item->facility->name}.",
+            'details' => "Added property item {$item->name} (quantity: {$item->quantity}).",
         ]);
 
         return redirect()->route('admin.property-management.index')->with('status', 'Facility item added successfully.');
@@ -424,7 +422,6 @@ class AdminController extends Controller
         $this->requireAdmin();
 
         $validated = $request->validate([
-            'facility_id' => ['required', 'integer', 'exists:facilities,id'],
             'name' => ['required', 'string', 'max:100'],
             'quantity' => ['required', 'integer', 'min:1'],
         ]);
@@ -435,7 +432,7 @@ class AdminController extends Controller
             'user_id' => Auth::id(),
             'reservation_id' => null,
             'action' => 'facility_item_updated',
-            'details' => "Updated {$item->name} (quantity: {$item->quantity}) for {$item->facility->name}.",
+            'details' => "Updated property item {$item->name} (quantity: {$item->quantity}).",
         ]);
 
         return redirect()->route('admin.property-management.index')->with('status', 'Facility item updated successfully.');
@@ -446,14 +443,13 @@ class AdminController extends Controller
         $this->requireAdmin();
 
         $itemName = $item->name;
-        $facilityName = $item->facility->name;
         $item->delete();
 
         AuditLog::create([
             'user_id' => Auth::id(),
             'reservation_id' => null,
             'action' => 'facility_item_deleted',
-            'details' => "Removed {$itemName} from {$facilityName}.",
+            'details' => "Removed property item {$itemName}.",
         ]);
 
         return redirect()->route('admin.property-management.index')->with('status', 'Facility item removed successfully.');
@@ -493,35 +489,40 @@ class AdminController extends Controller
         }
 
         $approvalError = DB::transaction(function () use ($request, $reservation, $itemAvailability, $maintenanceSchedule) {
-            $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
-                $reservation->facility_id,
-                $reservation->reservation_date->format('Y-m-d'),
-                $reservation->start_time->format('H:i'),
-                $reservation->end_time->format('H:i')
-            );
+            if ($reservation->facility_id !== null) {
+                $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
+                    $reservation->facility_id,
+                    $reservation->reservation_date->format('Y-m-d'),
+                    $reservation->start_time->format('H:i'),
+                    $reservation->end_time->format('H:i')
+                );
 
-            if ($maintenanceBlock) {
-                return $maintenanceSchedule->validationMessage($maintenanceBlock);
-            }
+                if ($maintenanceBlock) {
+                    return $maintenanceSchedule->validationMessage($maintenanceBlock);
+                }
 
-            $conflictingApproved = Reservation::where('facility_id', $reservation->facility_id)
-                ->where('reservation_date', $reservation->reservation_date)
-                ->where('status', 'approved')
-                ->where(function ($q) use ($reservation) {
-                    $q->whereBetween('start_time', [$reservation->start_time, $reservation->end_time])
-                        ->orWhereBetween('end_time', [$reservation->start_time, $reservation->end_time])
-                        ->orWhere(function ($q2) use ($reservation) {
-                            $q2->where('start_time', '<=', $reservation->start_time)
-                                ->where('end_time', '>=', $reservation->end_time);
-                        });
-                })
-                ->exists();
+                $conflictingApproved = Reservation::where('facility_id', $reservation->facility_id)
+                    ->where('reservation_date', $reservation->reservation_date)
+                    ->where('status', 'approved')
+                    ->where(function ($q) use ($reservation) {
+                        $q->whereBetween('start_time', [$reservation->start_time, $reservation->end_time])
+                            ->orWhereBetween('end_time', [$reservation->start_time, $reservation->end_time])
+                            ->orWhere(function ($q2) use ($reservation) {
+                                $q2->where('start_time', '<=', $reservation->start_time)
+                                    ->where('end_time', '>=', $reservation->end_time);
+                            });
+                    })
+                    ->exists();
 
-            if ($conflictingApproved) {
-                return 'Cannot approve this reservation because an approved booking already occupies the same room and time slot. Please reject or reschedule it first.';
+                if ($conflictingApproved) {
+                    return 'Cannot approve this reservation because an approved booking already occupies the same room and time slot. Please reject or reschedule it first.';
+                }
             }
 
             $reservedItems = $reservation->items()->orderBy('facility_items.id')->get();
+            if ($reservation->facility_id === null && $reservedItems->isEmpty()) {
+                return 'Cannot approve this reservation because it has no facility or property items.';
+            }
             $lockedItems = FacilityItem::query()
                 ->whereIn('id', $reservedItems->modelKeys())
                 ->orderBy('id')
@@ -534,10 +535,6 @@ class AdminController extends Controller
                     if (!$lockedItem) {
                         return 'Cannot approve this reservation because one of its facility items is no longer available.';
                     }
-                    if ($lockedItem->facility_id !== $reservation->facility_id) {
-                        return 'Cannot approve this reservation because one of its items is no longer assigned to this facility.';
-                    }
-
                     $availableQuantity = $itemAvailability->availableQuantity(
                         $lockedItem,
                         $reservation->reservation_date->format('Y-m-d'),

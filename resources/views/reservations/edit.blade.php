@@ -41,17 +41,29 @@
                 @method('PUT')
 
                 <div class="grid grid-cols-1 gap-6">
-                    <div>
-                        <label for="facility_id" class="block text-sm font-medium text-slate-700 mb-2">Facility</label>
-                        <select id="facility_id" name="facility_id" class="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 focus:border-slate-400 focus:outline-none">
-                            @foreach($facilities as $facility)
-                                <option value="{{ $facility->id }}" {{ $reservation->facility_id === $facility->id ? 'selected' : '' }}>{{ $facility->name }} @if($facility->building) - {{ $facility->building }}@endif</option>
-                            @endforeach
-                        </select>
-                        @error('facility_id')
-                            <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    @if($reservation->items->isNotEmpty())
+                        <div class="rounded-2xl bg-slate-50 p-4">
+                            <p class="text-sm font-medium text-slate-700">Independent property reservation</p>
+                            <p class="mt-1 text-sm text-slate-600">
+                                Items:
+                                @foreach($reservation->items as $item)
+                                    {{ $item->name }} × {{ $item->pivot->quantity }}@if(!$loop->last), @endif
+                                @endforeach
+                            </p>
+                        </div>
+                    @else
+                        <div>
+                            <label for="facility_id" class="block text-sm font-medium text-slate-700 mb-2">Facility</label>
+                            <select id="facility_id" name="facility_id" required class="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 focus:border-slate-400 focus:outline-none">
+                                @foreach($facilities as $facility)
+                                    <option value="{{ $facility->id }}" {{ $reservation->facility_id === $facility->id ? 'selected' : '' }}>{{ $facility->name }} @if($facility->building) - {{ $facility->building }}@endif</option>
+                                @endforeach
+                            </select>
+                            @error('facility_id')
+                                <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @endif
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                         <div>

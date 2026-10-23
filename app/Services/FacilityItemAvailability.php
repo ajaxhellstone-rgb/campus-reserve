@@ -12,14 +12,18 @@ class FacilityItemAvailability
         FacilityItem $item,
         string $date,
         string $startTime,
-        string $endTime
+        string $endTime,
+        ?int $excludeReservationId = null
     ): int {
-        $reservedQuantity = $item->reservations()
+        $reservations = $item->reservations()
             ->where('reservations.status', 'approved')
             ->whereDate('reservations.reservation_date', $date)
             ->where('reservations.start_time', '<', $endTime)
-            ->where('reservations.end_time', '>', $startTime)
-            ->sum('reservation_items.quantity');
+            ->where('reservations.end_time', '>', $startTime);
+        if ($excludeReservationId !== null) {
+            $reservations->where('reservations.id', '!=', $excludeReservationId);
+        }
+        $reservedQuantity = $reservations->sum('reservation_items.quantity');
 
         return max(0, $item->quantity - (int) $reservedQuantity);
     }

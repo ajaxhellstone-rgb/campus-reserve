@@ -191,19 +191,19 @@
             </section>
 
             <section id="property-reservation-panel" role="tabpanel" aria-labelledby="property-reservation-tab" class="hidden p-4 sm:p-6" hidden>
-                <h2 class="mb-2 text-xl font-semibold text-gray-900">Available Room Items</h2>
-                <p class="mb-6 text-sm text-gray-600">Choose a room to see its equipment and reserve item quantities for a date and time.</p>
+                <h2 class="mb-2 text-xl font-semibold text-gray-900">Available Property Items</h2>
+                <p class="mb-6 text-sm text-gray-600">Browse property inventory and reserve item quantities for a date and time. Property reservations are independent of rooms and facilities.</p>
                 <label class="mb-4 block">
-                    <span class="sr-only">Search available rooms and items</span>
-                    <input id="available-properties-search" type="search" placeholder="Search rooms, buildings, or items" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" autocomplete="off">
+                    <span class="sr-only">Search available property items</span>
+                    <input id="available-properties-search" type="search" placeholder="Search property items" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" autocomplete="off">
                 </label>
                 <div id="available-properties-list"
-                    data-facilities-url="{{ route('api.facilities.property-items') }}"
+                    data-items-url="{{ route('api.facilities.property-items') }}"
                     class="reservation-options-scroll grid grid-cols-1 gap-5 lg:grid-cols-2"
                     tabindex="0"
-                    aria-label="Available properties and room items"
+                    aria-label="Available property items"
                     aria-live="polite">
-                    <p class="py-8 text-center text-sm text-slate-500">Room items load when you open this tab.</p>
+                    <p class="py-8 text-center text-sm text-slate-500">Property items load when you open this tab.</p>
                 </div>
             </section>
         </div>
@@ -213,14 +213,13 @@
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p class="text-sm font-medium text-slate-500">Property reservation</p>
-                        <h2 id="property-booking-title" class="mt-1 text-2xl font-semibold text-slate-900">Reserve room items</h2>
-                        <p id="property-booking-facility" class="mt-1 text-sm text-slate-600"></p>
+                        <h2 id="property-booking-title" class="mt-1 text-2xl font-semibold text-slate-900">Reserve property items</h2>
+                        <p id="property-booking-facility" class="mt-1 text-sm text-slate-600">Property inventory is independent of rooms and facilities.</p>
                     </div>
                     <button type="button" id="property-booking-close" class="rounded-full p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900" aria-label="Close reservation dialog">&times;</button>
                 </div>
 
                 <form id="property-booking-form" class="mt-6 space-y-5">
-                    <input type="hidden" id="property-booking-facility-id">
                     <div>
                         <label for="property-booking-purpose" class="block text-sm font-medium text-slate-700">Purpose</label>
                         <input id="property-booking-purpose" type="text" maxlength="255" required placeholder="e.g. club meeting" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
@@ -284,7 +283,7 @@
                             <div class="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-indigo-200 hover:shadow-md">
                                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                     <div>
-                                        <p class="text-sm text-gray-500">{{ $reservation->facility->name ?? 'Facility' }}</p>
+                                        <p class="text-sm text-gray-500">{{ $reservation->items->isNotEmpty() ? 'Property items' : ($reservation->facility->name ?? 'Facility') }}</p>
                                         <h3 class="text-lg font-semibold text-gray-900">{{ $reservation->purpose }}</h3>
                                         <p class="text-sm text-gray-600 mt-2">
                                             {{ $reservation->reservation_date->format('M d, Y') }} ·
@@ -414,9 +413,9 @@
         const propertiesSearch = document.getElementById('available-properties-search');
         const facilityCards = Array.from(document.querySelectorAll('[data-available-facility-card]'));
         const facilityNoResults = document.getElementById('available-facilities-no-results');
-        let propertyFacilities = [];
-        let propertyFacilitiesLoaded = false;
-        let propertyFacilitiesRequest = null;
+        let propertyItems = [];
+        let propertyItemsLoaded = false;
+        let propertyItemsRequest = null;
 
         function filterFacilities() {
             if (!facilitiesSearch) return;
@@ -432,22 +431,13 @@
             facilityNoResults?.classList.toggle('hidden', visibleCount > 0 || facilityCards.length === 0);
         }
 
-        function filterPropertyFacilities() {
-            if (!propertiesSearch || !propertyFacilitiesLoaded) return;
+        function filterPropertyItems() {
+            if (!propertiesSearch || !propertyItemsLoaded) return;
             const query = propertiesSearch.value.trim().toLowerCase();
             let visibleCount = 0;
 
-            propertiesList.querySelectorAll('[data-property-facility-card]').forEach((card) => {
-                const facilityMatches = (card.dataset.facilitySearch || '').includes(query);
-                let itemMatches = 0;
-
-                card.querySelectorAll('[data-property-item-row]').forEach((row) => {
-                    const matches = !query || facilityMatches || (row.dataset.itemSearch || '').includes(query);
-                    row.classList.toggle('hidden', !matches);
-                    if (matches) itemMatches += 1;
-                });
-
-                const matches = !query || facilityMatches || itemMatches > 0;
+            propertiesList.querySelectorAll('[data-property-item-card]').forEach((card) => {
+                const matches = (card.dataset.itemSearch || '').includes(query);
                 card.classList.toggle('hidden', !matches);
                 if (matches) visibleCount += 1;
             });
@@ -457,38 +447,38 @@
         }
 
         facilitiesSearch?.addEventListener('input', filterFacilities);
-        propertiesSearch?.addEventListener('input', filterPropertyFacilities);
+        propertiesSearch?.addEventListener('input', filterPropertyItems);
 
-        async function loadPropertyFacilities() {
-            if (propertyFacilitiesRequest) {
-                return propertyFacilitiesRequest;
+        async function loadPropertyItems() {
+            if (propertyItemsRequest) {
+                return propertyItemsRequest;
             }
 
             propertiesList.replaceChildren();
             const loadingMessage = document.createElement('p');
             loadingMessage.className = 'py-8 text-center text-sm text-slate-500';
-            loadingMessage.textContent = 'Loading room items...';
+            loadingMessage.textContent = 'Loading property items...';
             propertiesList.appendChild(loadingMessage);
 
-            propertyFacilitiesRequest = fetch(propertiesList.dataset.facilitiesUrl, {
+            propertyItemsRequest = fetch(propertiesList.dataset.itemsUrl, {
                 headers: { Accept: 'application/json' },
                 credentials: 'same-origin',
             })
                 .then((response) => {
                     if (!response.ok) {
-                        throw new Error('Room items could not be loaded.');
+                        throw new Error('Property items could not be loaded.');
                     }
                     return response.json();
                 })
-                .then((facilities) => {
-                    propertyFacilities = facilities;
-                    propertyFacilitiesLoaded = true;
+                .then((items) => {
+                    propertyItems = items;
+                    propertyItemsLoaded = true;
                     propertiesList.replaceChildren();
 
-                    if (!facilities.length) {
+                    if (!items.length) {
                         const emptyMessage = document.createElement('p');
                         emptyMessage.className = 'col-span-full py-12 text-center text-gray-500';
-                        emptyMessage.textContent = 'No facilities are available right now.';
+                        emptyMessage.textContent = 'No property items are available right now.';
                         propertiesList.appendChild(emptyMessage);
                         return;
                     }
@@ -496,73 +486,40 @@
                     const noResultsMessage = document.createElement('p');
                     noResultsMessage.dataset.propertyNoResults = 'true';
                     noResultsMessage.className = 'col-span-full hidden py-8 text-center text-sm text-slate-500';
-                    noResultsMessage.textContent = 'No rooms or items match your search.';
+                    noResultsMessage.textContent = 'No property items match your search.';
 
-                    facilities.forEach((facility) => {
+                    items.forEach((item) => {
                         const card = document.createElement('article');
-                        card.dataset.propertyFacilityCard = 'true';
-                        card.dataset.facilitySearch = `${facility.name} ${facility.building || ''}`.toLowerCase();
+                        card.dataset.propertyItemCard = 'true';
+                        card.dataset.itemSearch = item.name.toLowerCase();
                         card.className = 'rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-200 hover:shadow-md';
 
-                        const heading = document.createElement('div');
-                        heading.className = 'flex flex-col justify-between gap-3 sm:flex-row sm:items-start';
-                        const facilityDetails = document.createElement('div');
                         const name = document.createElement('h3');
                         name.className = 'text-lg font-semibold text-gray-900';
-                        name.textContent = facility.name;
-                        const building = document.createElement('p');
-                        building.className = 'mt-1 text-sm text-gray-500';
-                        building.textContent = facility.building || '';
-                        facilityDetails.append(name, building);
+                        name.textContent = item.name;
 
-                        const itemCount = document.createElement('span');
-                        itemCount.className = 'rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700';
-                        itemCount.textContent = `${facility.items.length} ${facility.items.length === 1 ? 'item' : 'items'}`;
-                        heading.append(facilityDetails, itemCount);
-                        card.appendChild(heading);
+                        const quantity = document.createElement('p');
+                        quantity.className = 'mt-2 text-sm text-gray-500';
+                        quantity.textContent = `${item.quantity} in stock`;
+                        card.append(name, quantity);
 
-                        if (!facility.items.length) {
-                            const emptyItems = document.createElement('p');
-                            emptyItems.className = 'mt-4 rounded-xl bg-indigo-50/70 px-4 py-3 text-sm text-slate-600';
-                            emptyItems.textContent = 'No reservable items are listed for this room.';
-                            card.appendChild(emptyItems);
-                        } else {
-                            const itemList = document.createElement('ul');
-                            itemList.className = 'mt-4 divide-y divide-gray-100';
-                            facility.items.forEach((item) => {
-                                const row = document.createElement('li');
-                                row.dataset.propertyItemRow = 'true';
-                                row.dataset.itemSearch = item.name.toLowerCase();
-                                row.className = 'flex items-center justify-between gap-3 py-2 text-sm';
-                                const itemName = document.createElement('span');
-                                itemName.className = 'font-medium text-gray-700';
-                                itemName.textContent = item.name;
-                                const quantity = document.createElement('span');
-                                quantity.className = 'text-gray-500';
-                                quantity.textContent = `${item.quantity} in stock`;
-                                row.append(itemName, quantity);
-                                itemList.appendChild(row);
-                            });
-                            card.appendChild(itemList);
-
-                            const reserveButton = document.createElement('button');
-                            reserveButton.type = 'button';
-                            reserveButton.dataset.propertyFacilityId = String(facility.id);
-                            reserveButton.className = 'mt-4 inline-flex w-full items-center justify-center rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-800';
-                            reserveButton.textContent = 'Reserve Items';
-                            card.appendChild(reserveButton);
-                        }
+                        const reserveButton = document.createElement('button');
+                        reserveButton.type = 'button';
+                        reserveButton.dataset.propertyItemId = String(item.id);
+                        reserveButton.className = 'mt-4 inline-flex w-full items-center justify-center rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-800';
+                        reserveButton.textContent = 'Reserve Item';
+                        card.appendChild(reserveButton);
 
                         propertiesList.appendChild(card);
                     });
                     propertiesList.appendChild(noResultsMessage);
-                    filterPropertyFacilities();
+                    filterPropertyItems();
                 })
                 .catch((error) => {
                     propertiesList.replaceChildren();
                     const errorMessage = document.createElement('p');
                     errorMessage.className = 'col-span-full py-8 text-center text-sm text-rose-700';
-                    errorMessage.textContent = error.message || 'Room items could not be loaded.';
+                    errorMessage.textContent = error.message || 'Property items could not be loaded.';
                     propertiesList.appendChild(errorMessage);
 
                     const retryButton = document.createElement('button');
@@ -570,16 +527,16 @@
                     retryButton.className = 'col-span-full mx-auto rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50';
                     retryButton.textContent = 'Try again';
                     retryButton.addEventListener('click', () => {
-                        propertyFacilitiesRequest = null;
-                        loadPropertyFacilities();
+                        propertyItemsRequest = null;
+                        loadPropertyItems();
                     });
                     propertiesList.appendChild(retryButton);
                 })
                 .finally(() => {
-                    propertyFacilitiesRequest = null;
+                    propertyItemsRequest = null;
                 });
 
-            return propertyFacilitiesRequest;
+            return propertyItemsRequest;
         }
 
         function selectReservationTab(tabName) {
@@ -605,8 +562,8 @@
                 statistics.classList.toggle('hidden', !selected);
             });
 
-            if (tabName === 'property' && !propertyFacilitiesLoaded) {
-                loadPropertyFacilities();
+            if (tabName === 'property' && !propertyItemsLoaded) {
+                loadPropertyItems();
             }
         }
 
@@ -630,7 +587,6 @@
         const modal = document.getElementById('property-booking-modal');
         const form = document.getElementById('property-booking-form');
         const itemsContainer = document.getElementById('property-booking-items');
-        const facilityIdInput = document.getElementById('property-booking-facility-id');
         const facilityLabel = document.getElementById('property-booking-facility');
         const dateInput = document.getElementById('property-booking-date');
         const startInput = document.getElementById('property-booking-start');
@@ -640,6 +596,7 @@
         let availabilityRequest = null;
         let availabilityVersion = 0;
         let modalItems = [];
+        let preferredItemId = null;
 
         function setBookingError(message) {
             errorBox.textContent = message;
@@ -670,7 +627,7 @@
             if (!availability.length) {
                 const emptyMessage = document.createElement('p');
                 emptyMessage.className = 'px-2 py-4 text-sm text-slate-500';
-                emptyMessage.textContent = 'No items are listed for this facility.';
+                emptyMessage.textContent = 'No property items are available.';
                 itemsContainer.appendChild(emptyMessage);
                 return;
             }
@@ -687,7 +644,7 @@
                 checkbox.className = 'h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500';
                 checkbox.dataset.itemId = String(item.id);
                 checkbox.disabled = item.available < 1;
-                checkbox.checked = selectedQuantities.has(String(item.id)) && item.available > 0;
+                checkbox.checked = (selectedQuantities.has(String(item.id)) || String(item.id) === preferredItemId) && item.available > 0;
 
                 const nameGroup = document.createElement('div');
                 const name = document.createElement('p');
@@ -746,7 +703,7 @@
             });
 
             try {
-                const response = await fetch(`/api/facilities/${facilityIdInput.value}/item-availability?${query}`, {
+                const response = await fetch(`/api/property-items/availability?${query}`, {
                     credentials: 'include',
                     headers: { Accept: 'application/json' },
                     signal: controller.signal,
@@ -773,19 +730,19 @@
                 return;
             }
 
-            const button = event.target.closest('[data-property-facility-id]');
+            const button = event.target.closest('[data-property-item-id]');
             if (!button) {
                 return;
             }
 
-            const facility = propertyFacilities.find((item) => String(item.id) === button.dataset.propertyFacilityId);
-            if (!facility) {
+            const item = propertyItems.find((propertyItem) => String(propertyItem.id) === button.dataset.propertyItemId);
+            if (!item) {
                 return;
             }
 
-            facilityIdInput.value = String(facility.id);
-            facilityLabel.textContent = [facility.building, facility.name].filter(Boolean).join(' — ');
-            modalItems = facility.items;
+            preferredItemId = String(item.id);
+            facilityLabel.textContent = 'Property inventory is independent of rooms and facilities.';
+            modalItems = propertyItems;
             form.reset();
             itemsContainer.replaceChildren();
             const now = new Date();
@@ -858,8 +815,7 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     },
                     body: JSON.stringify({
-                        facility: facilityIdInput.value,
-                        purpose: document.getElementById('property-booking-purpose').value,
+                            purpose: document.getElementById('property-booking-purpose').value,
                         date: dateInput.value,
                         start_time: startInput.value,
                         end_time: endInput.value,

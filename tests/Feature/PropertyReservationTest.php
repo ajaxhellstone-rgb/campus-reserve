@@ -38,7 +38,7 @@ class PropertyReservationTest extends TestCase
             ->assertSee('available-properties-list', false);
     }
 
-    public function test_property_facility_items_load_only_when_the_property_tab_is_opened(): void
+    public function test_independent_property_items_load_only_when_the_property_tab_is_opened(): void
     {
         $user = User::factory()->create();
         $facility = $this->createFacility();
@@ -55,9 +55,9 @@ class PropertyReservationTest extends TestCase
 
         $this->getJson(route('api.facilities.property-items'))
             ->assertOk()
-            ->assertJsonPath('0.id', $facility->id)
-            ->assertJsonPath('0.items.0.name', 'Projector')
-            ->assertJsonPath('0.items.0.quantity', 3);
+            ->assertJsonPath('0.id', FacilityItem::first()->id)
+            ->assertJsonPath('0.name', 'Projector')
+            ->assertJsonPath('0.quantity', 3);
     }
 
     public function test_reserve_page_shows_property_item_quantity_statistics(): void
@@ -225,7 +225,7 @@ class PropertyReservationTest extends TestCase
         $this->assertDatabaseCount('reservations', 1);
     }
 
-    public function test_user_can_reserve_facility_items_with_date_and_time(): void
+    public function test_user_can_reserve_property_items_without_a_facility(): void
     {
         $user = User::factory()->create();
         $facility = $this->createFacility();
@@ -237,7 +237,6 @@ class PropertyReservationTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/calendar/reserve', [
-                'facility' => (string) $facility->id,
                 'purpose' => 'Club meeting',
                 'date' => '2030-05-01',
                 'start_time' => '10:00',
@@ -251,6 +250,7 @@ class PropertyReservationTest extends TestCase
 
         $reservation = Reservation::firstOrFail();
         $this->assertSame('pending', $reservation->status);
+        $this->assertNull($reservation->facility_id);
         $this->assertDatabaseHas('notifications', [
             'notifiable_id' => $user->id,
             'type' => ReservationStatusChanged::class,
@@ -262,7 +262,7 @@ class PropertyReservationTest extends TestCase
         ]);
     }
 
-    public function test_user_cannot_reserve_items_assigned_to_another_facility(): void
+    public function test_property_reservation_can_use_items_without_facility_assignment(): void
     {
         $user = User::factory()->create();
         $facility = $this->createFacility();
@@ -281,7 +281,6 @@ class PropertyReservationTest extends TestCase
 
         $this->actingAs($user)
             ->postJson('/api/calendar/reserve', [
-                'facility' => (string) $facility->id,
                 'purpose' => 'Club meeting',
                 'date' => '2030-05-01',
                 'start_time' => '10:00',
@@ -290,10 +289,65 @@ class PropertyReservationTest extends TestCase
                     ['facility_item_id' => $item->id, 'quantity' => 1],
                 ],
             ])
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors('items');
+            ->assertOk()
+            ->assertJsonPath('success', true);
 
-        $this->assertDatabaseCount('reservations', 0);
+        $this->assertDatabaseCount('reservations', 1);
+        $this->assertDatabaseHas('reservations', [
+            'id' => 1,
+            'facility_id' => null,
+        ]);
+    }
+
+    public function test_property_reservation_can_be_edited_without_a_facility_and_excludes_its_own_stock(): void
+    {
+        $user = User::factory()->create();
+        $item = FacilityItem::create([
+            'facility_id' => null,
+            'name' => 'Projector',
+            'quantity' => 3,
+        ]);
+        $reservation = Reservation::create([
+            'user_id' => $user->id,
+            'facility_id' => null,
+            'reservation_date' => '2030-05-01',
+            'start_time' => '10:00',
+            'end_time' => '12:00',
+            'purpose' => 'Presentation',
+            'status' => 'approved',
+        ]);
+        $reservation->items()->attach($item, ['quantity' => 2]);
+
+        $otherReservation = Reservation::create([
+            'user_id' => User::factory()->create()->id,
+            'facility_id' => null,
+            'reservation_date' => '2030-05-01',
+            'start_time' => '10:00',
+            'end_time' => '12:00',
+            'purpose' => 'Another presentation',
+            'status' => 'approved',
+        ]);
+        $otherReservation->items()->attach($item, ['quantity' => 1]);
+
+        $this->actingAs($user)
+            ->get(route('reservations.edit', $reservation))
+            ->assertOk()
+            ->assertSee('Independent property reservation')
+            ->assertDontSee('name="facility_id"', false);
+
+        $this->put(route('reservations.update', $reservation), [
+            'purpose' => 'Updated presentation',
+            'reservation_date' => '2030-05-01',
+            'start_time' => '10:00',
+            'end_time' => '12:00',
+        ])->assertRedirect(route('reserve'));
+
+        $this->assertDatabaseHas('reservations', [
+            'id' => $reservation->id,
+            'facility_id' => null,
+            'purpose' => 'Updated presentation',
+            'status' => 'pending',
+        ]);
     }
 
     public function test_item_availability_counts_only_overlapping_approved_reservations(): void
@@ -326,8 +380,7 @@ class PropertyReservationTest extends TestCase
         });
 
         $this->actingAs($user)
-            ->getJson(route('api.facilities.items.availability', [
-                'facility' => $facility,
+            ->getJson(route('api.property-items.availability', [
                 'date' => '2030-05-01',
                 'start_time' => '10:30',
                 'end_time' => '11:30',

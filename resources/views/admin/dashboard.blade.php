@@ -120,7 +120,7 @@
                                 <div class="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
                                     <div>
                                         <p class="text-sm text-gray-500">Reservation #{{ $reservation->id }}</p>
-                                        <h3 class="text-lg font-semibold text-gray-900">{{ $reservation->facility->name }} — {{ $reservation->reservation_date->format('M d, Y') }}</h3>
+                                        <h3 class="text-lg font-semibold text-gray-900">{{ $reservation->items->isNotEmpty() ? 'Property items' : ($reservation->facility->name ?? 'Facility') }} — {{ $reservation->reservation_date->format('M d, Y') }}</h3>
                                         <p class="text-sm text-gray-600">
                                             @if($reservation->items->isNotEmpty())
                                                 Use: {{ $reservation->start_time->format('H:i') }} · Return: {{ $reservation->end_time->format('H:i') }}
@@ -184,7 +184,7 @@
                                         <p class="mt-1 text-base font-semibold text-gray-900 capitalize">{{ $log->action }}</p>
                                         <p class="text-sm text-gray-700 mt-1">{{ $log->details }}</p>
                                         @if($log->reservation)
-                                            <p class="text-xs text-gray-500 mt-2">Reservation #{{ $log->reservation->id }} — {{ $log->reservation->facility->name }}</p>
+                                            <p class="text-xs text-gray-500 mt-2">Reservation #{{ $log->reservation->id }}{{ $log->reservation->facility ? ' — '.$log->reservation->facility->name : ' — Property items' }}</p>
                                         @endif
                                     </div>
                                     <span class="px-3 py-1 rounded-full bg-gray-200 text-xs font-semibold uppercase text-gray-700">{{ $log->user?->name ?? 'Admin' }}</span>

@@ -39,6 +39,7 @@ class CalendarController extends Controller
 
         $query = Reservation::with('facility')
             ->where('status', 'approved')
+            ->whereNotNull('facility_id')
             ->where('reservation_date', '>=', $validated['start'])
             ->where('reservation_date', '<', $validated['end']);
 
@@ -125,7 +126,7 @@ class CalendarController extends Controller
         // Then I check if the room is actually available at that time
         $hasItemBookings = $request->has('items');
         $validated = $request->validate([
-            'facility' => 'required|string',
+            'facility' => $hasItemBookings ? ['nullable', 'string'] : ['required', 'string'],
             'purpose' => 'required|string|max:255',
             'date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
@@ -141,29 +142,34 @@ class CalendarController extends Controller
             ], 422);
         }
 
-        $facilityInput = $validated['facility'];
-        $facility = ctype_digit($facilityInput)
-            ? Facility::active()->findOrFail((int) $facilityInput)
-            : Facility::active()->where('name', $facilityInput)->firstOrFail();
-
-        $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
-            $facility->id,
-            $validated['date'],
-            $validated['start_time'],
-            $validated['end_time']
-        );
-        if ($maintenanceBlock) {
-            return response()->json([
-                'code' => 'facility_maintenance',
-                'error' => $maintenanceSchedule->validationMessage($maintenanceBlock),
-            ], 409);
+        $facility = null;
+        if (! $hasItemBookings) {
+            $facilityInput = $validated['facility'];
+            $facility = ctype_digit($facilityInput)
+                ? Facility::active()->findOrFail((int) $facilityInput)
+                : Facility::active()->where('name', $facilityInput)->firstOrFail();
         }
 
-        if (!$facility->isAvailable($validated['date'], $validated['start_time'], $validated['end_time'])) {
-            return response()->json([
-                'code' => 'schedule_occupied',
-                'error' => "This schedule and room is already occupied!\nPlease try another time or room!",
-            ], 409);
+        if ($facility) {
+            $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
+                $facility->id,
+                $validated['date'],
+                $validated['start_time'],
+                $validated['end_time']
+            );
+            if ($maintenanceBlock) {
+                return response()->json([
+                    'code' => 'facility_maintenance',
+                    'error' => $maintenanceSchedule->validationMessage($maintenanceBlock),
+                ], 409);
+            }
+
+            if (! $facility->isAvailable($validated['date'], $validated['start_time'], $validated['end_time'])) {
+                return response()->json([
+                    'code' => 'schedule_occupied',
+                    'error' => "This schedule and room is already occupied!\nPlease try another time or room!",
+                ], 409);
+            }
         }
 
         try {
@@ -187,12 +193,6 @@ class CalendarController extends Controller
 
                     foreach ($selectedItems as $selection) {
                         $item = $lockedItems->get((int) $selection['facility_item_id']);
-                        if ($item->facility_id !== $facility->id) {
-                            throw ValidationException::withMessages([
-                                'items' => 'Selected items must belong to the facility being reserved.',
-                            ]);
-                        }
-
                         $availableQuantity = $itemAvailability->availableQuantity(
                             $item,
                             $validated['date'],
@@ -210,7 +210,7 @@ class CalendarController extends Controller
 
                 $reservation = Reservation::create([
                     'user_id' => Auth::id(),
-                    'facility_id' => $facility->id,
+                    'facility_id' => $facility?->id,
                     'reservation_date' => $validated['date'],
                     'start_time' => $validated['start_time'],
                     'end_time' => $validated['end_time'],
@@ -227,6 +227,10 @@ class CalendarController extends Controller
                 return $reservation;
             });
         } catch (UniqueConstraintViolationException $exception) {
+            if (! $facility) {
+                throw $exception;
+            }
+
             $sameStartTimeExists = Reservation::query()
                 ->where('facility_id', $facility->id)
                 ->whereDate('reservation_date', $validated['date'])
@@ -312,10 +316,46 @@ class CalendarController extends Controller
         return response()->json(['items' => $items]);
     }
 
+    public function propertyItemAvailability(
+        Request $request,
+        FacilityItemAvailability $itemAvailability,
+        ReservationTimeWindow $reservationTimeWindow
+    ) {
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+        ]);
+
+        if (! $reservationTimeWindow->allows($validated['start_time'], $validated['end_time'])) {
+            return response()->json([
+                'message' => $reservationTimeWindow->validationMessage(),
+            ], 422);
+        }
+
+        $items = FacilityItem::query()->orderBy('name')->get();
+        $availableQuantities = $itemAvailability->availableQuantities(
+            $items,
+            $validated['date'],
+            $validated['start_time'],
+            $validated['end_time']
+        );
+
+        return response()->json([
+            'items' => $items->map(fn (FacilityItem $item) => [
+                'id' => $item->id,
+                'name' => $item->name,
+                'stock' => $item->quantity,
+                'available' => $availableQuantities[$item->id],
+            ]),
+        ]);
+    }
+
     public function pending(Request $request)
     {
         $pendingReservations = Reservation::with('facility')
             ->where('user_id', Auth::id())
+            ->whereNotNull('facility_id')
             ->where('status', 'pending')
             ->orderBy('reservation_date')
             ->orderBy('start_time')

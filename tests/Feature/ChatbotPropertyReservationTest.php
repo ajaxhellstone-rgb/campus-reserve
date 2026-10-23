@@ -26,16 +26,15 @@ class ChatbotPropertyReservationTest extends TestCase
             'is_admin' => true,
             'is_super_admin' => false,
         ]);
-        $facility = $this->createFacility();
         $item = FacilityItem::create([
-            'facility_id' => $facility->id,
+            'facility_id' => null,
             'name' => 'Projector',
             'quantity' => 3,
         ]);
 
         $prompt = $this->actingAs($user)
             ->postJson(route('chatbot.respond'), [
-                'message' => 'Reserve 2 projectors in Lecture Room 1 on May 1 2030 from 10 AM to 12 PM',
+                'message' => 'Reserve 2 projectors on May 1 2030 from 10 AM to 12 PM',
             ]);
         $prompt->assertOk();
         $this->assertStringContainsString('What is the purpose', $prompt->json('reply'));
@@ -52,6 +51,7 @@ class ChatbotPropertyReservationTest extends TestCase
 
         $reservation = Reservation::firstOrFail();
         $this->assertSame('pending', $reservation->status);
+        $this->assertNull($reservation->facility_id);
         $this->assertSame('Classroom presentation', $reservation->purpose);
         $this->assertDatabaseHas('reservation_items', [
             'reservation_id' => $reservation->id,
@@ -92,16 +92,15 @@ class ChatbotPropertyReservationTest extends TestCase
     public function test_chatbot_asks_for_use_and_return_times_when_property_booking_times_are_missing(): void
     {
         $user = User::factory()->create();
-        $facility = $this->createFacility();
         FacilityItem::create([
-            'facility_id' => $facility->id,
+            'facility_id' => null,
             'name' => 'Projector',
             'quantity' => 2,
         ]);
 
         $response = $this->actingAs($user)
             ->postJson(route('chatbot.respond'), [
-                'message' => 'I want to reserve a projector in Lecture Room 1 tomorrow',
+                'message' => 'I want to reserve a projector tomorrow',
             ]);
 
         $response->assertOk();
@@ -251,16 +250,15 @@ class ChatbotPropertyReservationTest extends TestCase
     public function test_chatbot_reports_when_requested_item_quantity_is_unavailable(): void
     {
         $user = User::factory()->create();
-        $facility = $this->createFacility();
         FacilityItem::create([
-            'facility_id' => $facility->id,
+            'facility_id' => null,
             'name' => 'Projector',
             'quantity' => 1,
         ]);
 
         $response = $this->actingAs($user)
             ->postJson(route('chatbot.respond'), [
-                'message' => 'Reserve 2 projectors in Lecture Room 1 on May 1 2030 from 10 AM to 12 PM',
+                'message' => 'Reserve 2 projectors on May 1 2030 from 10 AM to 12 PM',
             ]);
         $response->assertOk();
         $this->assertStringContainsString('What is the purpose', $response->json('reply'));

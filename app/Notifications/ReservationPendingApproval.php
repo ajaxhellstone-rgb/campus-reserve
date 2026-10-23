@@ -27,7 +27,9 @@ class ReservationPendingApproval extends Notification
     {
         $reservation = $this->reservation;
         $userName = optional($reservation->user)->name ?? 'A user';
-        $facilityName = optional($reservation->facility)->name ?? 'a facility';
+        $facilityName = $reservation->items->isNotEmpty()
+            ? 'property items'
+            : (optional($reservation->facility)->name ?? 'a facility');
         $date = optional($reservation->reservation_date)?->format('M d, Y') ?? 'a date';
         $start = optional($reservation->start_time)?->format('H:i') ?? '--:--';
         $end = optional($reservation->end_time)?->format('H:i') ?? '--:--';
