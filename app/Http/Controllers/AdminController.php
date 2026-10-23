@@ -278,6 +278,7 @@ class AdminController extends Controller
         $validated = $request->validate([
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'current_password' => ['required', 'current_password'],
         ]);
 
         $reservationTimeWindow->update($validated['start_time'], $validated['end_time']);
@@ -305,6 +306,7 @@ class AdminController extends Controller
             'start_time' => ['nullable', 'required_unless:is_all_day,1', 'date_format:H:i'],
             'end_time' => ['nullable', 'required_unless:is_all_day,1', 'date_format:H:i', 'after:start_time'],
             'reason' => ['required', 'string', 'max:255'],
+            'current_password' => ['required', 'current_password'],
         ]);
 
         $isAllDay = $request->boolean('is_all_day');
@@ -374,9 +376,12 @@ class AdminController extends Controller
                 : 'Maintenance block scheduled. Overlapping reservations were automatically rejected and their owners notified.');
     }
 
-    public function destroyMaintenanceBlock(FacilityMaintenanceBlock $block)
+    public function destroyMaintenanceBlock(Request $request, FacilityMaintenanceBlock $block)
     {
         $this->requireAdmin();
+        $request->validate([
+            'current_password' => ['required', 'current_password'],
+        ]);
 
         $facilityName = $block->facility->name;
         $description = "Removed facility maintenance block for {$facilityName} on {$block->maintenance_date->format('Y-m-d')}.";

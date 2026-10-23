@@ -193,7 +193,8 @@ class FacilityMaintenanceSchedulingTest extends TestCase
             ->assertOk()
             ->assertSee('Facility maintenance')
             ->assertSee('Room repairs')
-            ->assertSee('maintenance_current_password', false);
+            ->assertSee('password_confirmation_dialog', false)
+            ->assertSee('data-password-confirm', false);
 
         $this->delete(route('admin.reservation-settings.maintenance.destroy', $block), [
             'current_password' => 'password',
@@ -203,6 +204,44 @@ class FacilityMaintenanceSchedulingTest extends TestCase
 
         $this->assertDatabaseMissing('facility_maintenance_blocks', ['id' => $block->id]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'facility_maintenance_removed']);
+    }
+
+    public function test_reservation_settings_actions_require_the_correct_password(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $facility = $this->createFacility();
+        $block = FacilityMaintenanceBlock::create([
+            'facility_id' => $facility->id,
+            'maintenance_date' => '2030-05-01',
+            'is_all_day' => true,
+            'reason' => 'Room repairs',
+        ]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.reservation-settings.update'), [
+                'start_time' => '08:00',
+                'end_time' => '22:00',
+                'current_password' => 'incorrect',
+            ])
+            ->assertSessionHasErrors('current_password');
+        $this->assertDatabaseMissing('reservation_settings', ['id' => 1]);
+
+        $this->post(route('admin.reservation-settings.maintenance.store'), [
+            'facility_id' => $facility->id,
+            'maintenance_date' => '2030-05-02',
+            'is_all_day' => '1',
+            'reason' => 'Electrical maintenance',
+            'current_password' => 'incorrect',
+        ])->assertSessionHasErrors('current_password');
+        $this->assertDatabaseMissing('facility_maintenance_blocks', [
+            'facility_id' => $facility->id,
+            'maintenance_date' => '2030-05-02 00:00:00',
+        ]);
+
+        $this->delete(route('admin.reservation-settings.maintenance.destroy', $block), [
+            'current_password' => 'incorrect',
+        ])->assertSessionHasErrors('current_password');
+        $this->assertDatabaseHas('facility_maintenance_blocks', ['id' => $block->id]);
     }
 
     private function createFacility(): Facility

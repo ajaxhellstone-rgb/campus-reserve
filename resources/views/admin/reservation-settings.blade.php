@@ -40,7 +40,7 @@
                     </div>
 
                     @if($settingsStorageAvailable)
-                        <form method="POST" action="{{ route('admin.reservation-settings.update') }}" data-confirm-message="Save the reservation hours?" class="space-y-6">
+                        <form method="POST" action="{{ route('admin.reservation-settings.update') }}" data-password-confirm class="space-y-6">
                             @csrf
                             @method('PUT')
                             <div class="grid gap-5 sm:grid-cols-2">
@@ -55,13 +55,7 @@
                                     @error('end_time')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                                 </div>
                             </div>
-                            <div>
-                                <label for="current_password" class="mb-2 block text-sm font-medium text-gray-700">Confirm password</label>
-                                <div class="relative w-full sm:max-w-md">
-                                    <input id="current_password" name="current_password" type="password" required autocomplete="current-password" class="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-green-700 focus:outline-none focus:ring-1 focus:ring-green-700">
-                                </div>
-                                @error('current_password')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
-                            </div>
+                            <input type="hidden" name="current_password">
                             <div class="flex justify-end border-t border-gray-100 pt-5">
                                 <button type="submit" class="rounded-full bg-green-800 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-900">Save reservation hours</button>
                             </div>
@@ -84,8 +78,9 @@
                     @endunless
 
                     @if($maintenanceStorageAvailable)
-                        <form method="POST" action="{{ route('admin.reservation-settings.maintenance.store') }}" class="space-y-5">
+                        <form method="POST" action="{{ route('admin.reservation-settings.maintenance.store') }}" data-password-confirm class="space-y-5">
                             @csrf
+                            <input type="hidden" name="current_password">
                             <div class="grid gap-5 sm:grid-cols-2">
                                 <div>
                                     <label for="maintenance_facility_id" class="mb-2 block text-sm font-medium text-gray-700">Room or facility</label>
@@ -128,12 +123,6 @@
                                 <input id="maintenance_reason" name="reason" type="text" value="{{ old('reason') }}" maxlength="255" required placeholder="e.g. Electrical maintenance" class="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-green-700 focus:outline-none focus:ring-1 focus:ring-green-700">
                                 @error('reason')<p class="mt-1 text-sm text-red-600">{{ $message }}</p>@enderror
                             </div>
-                            <div>
-                                <label for="maintenance_current_password" class="mb-2 block text-sm font-medium text-gray-700">Confirm password</label>
-                                <div class="relative w-full sm:max-w-md">
-                                    <input id="maintenance_current_password" name="current_password" type="password" required autocomplete="current-password" class="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-green-700 focus:outline-none focus:ring-1 focus:ring-green-700">
-                                </div>
-                            </div>
                             <div class="flex justify-end border-t border-gray-100 pt-5">
                                 <button type="submit" class="rounded-full bg-green-800 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-900">Block availability</button>
                             </div>
@@ -152,11 +141,10 @@
                                             · {{ $block->reason }}
                                         </p>
                                     </div>
-                                    <form method="POST" action="{{ route('admin.reservation-settings.maintenance.destroy', $block) }}" class="flex items-center gap-3" data-confirm-message="Remove this maintenance block?">
+                                    <form method="POST" action="{{ route('admin.reservation-settings.maintenance.destroy', $block) }}" class="flex items-center gap-3" data-password-confirm>
                                         @csrf
                                         @method('DELETE')
-                                        <label class="sr-only" for="maintenance_delete_password_{{ $block->id }}">Confirm password</label>
-                                        <input id="maintenance_delete_password_{{ $block->id }}" name="current_password" type="password" required autocomplete="current-password" placeholder="Confirm password" class="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm sm:w-44">
+                                        <input type="hidden" name="current_password">
                                         <button type="submit" class="rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">Remove</button>
                                     </form>
                                 </div>
@@ -170,11 +158,69 @@
         </main>
     </div>
 </div>
+<dialog id="password_confirmation_dialog" class="w-[calc(100%-2rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-slate-950/50">
+    <form id="password_confirmation_form" class="space-y-5 p-6">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-900">Confirm password</h2>
+            <p class="mt-1 text-sm text-gray-600">Enter your password to continue with this change.</p>
+        </div>
+        <div>
+            <label for="password_confirmation_input" class="mb-2 block text-sm font-medium text-gray-700">Password</label>
+            <input id="password_confirmation_input" type="password" autocomplete="current-password" required class="w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-green-700 focus:outline-none focus:ring-1 focus:ring-green-700">
+        </div>
+        <div class="flex justify-end gap-3">
+            <button id="password_confirmation_cancel" type="button" class="rounded-full border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancel</button>
+            <button type="submit" class="rounded-full bg-green-800 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-green-900">Confirm</button>
+        </div>
+    </form>
+</dialog>
 @endsection
 
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        var passwordDialog = document.getElementById('password_confirmation_dialog');
+        var passwordForm = document.getElementById('password_confirmation_form');
+        var passwordInput = document.getElementById('password_confirmation_input');
+        var cancelPasswordButton = document.getElementById('password_confirmation_cancel');
+        var pendingForm = null;
+
+        document.querySelectorAll('form[data-password-confirm]').forEach(function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.dataset.passwordConfirmed === 'true') {
+                    delete form.dataset.passwordConfirmed;
+                    return;
+                }
+
+                event.preventDefault();
+                pendingForm = form;
+                passwordInput.value = '';
+                passwordDialog.showModal();
+                passwordInput.focus();
+            });
+        });
+
+        passwordForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            if (!pendingForm || !passwordForm.reportValidity()) return;
+
+            pendingForm.querySelector('input[name="current_password"]').value = passwordInput.value;
+            pendingForm.dataset.passwordConfirmed = 'true';
+            passwordDialog.close();
+            pendingForm.requestSubmit();
+            passwordInput.value = '';
+            pendingForm = null;
+        });
+
+        cancelPasswordButton.addEventListener('click', function() {
+            passwordDialog.close();
+        });
+
+        passwordDialog.addEventListener('close', function() {
+            passwordInput.value = '';
+            pendingForm = null;
+        });
+
         var allDayInput = document.getElementById('maintenance_all_day');
         var timeFields = document.getElementById('maintenance_time_fields');
         var startInput = document.getElementById('maintenance_start_time');

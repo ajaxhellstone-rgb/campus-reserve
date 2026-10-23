@@ -64,6 +64,20 @@ class AdminDashboardPerformanceTest extends TestCase
             ->assertSee('Property items');
     }
 
+    public function test_admin_sidebar_uses_the_profile_picture_saved_in_profile_settings(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+            'profile_picture' => 'profile_pictures/admin-avatar.webp',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('src="'.asset('storage/profile_pictures/admin-avatar.webp').'"', false)
+            ->assertSee('alt="'.$admin->name.' profile picture"', false);
+    }
+
     public function test_overview_graph_shows_total_approved_and_rejected_reservations(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
