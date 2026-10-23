@@ -174,6 +174,17 @@
                     <h2 class="text-xl font-semibold text-gray-900">Edit Reservations</h2>
                     <p class="text-sm text-gray-600">Adjust approved reservation dates, schedules, or purpose. Deleting a reservation removes it from the client’s list and sends them a notification.</p>
                 </div>
+                <form method="GET" action="{{ route('admin.dashboard') }}" class="mb-4 flex flex-col gap-2 sm:w-64">
+                    <input type="hidden" name="role" value="{{ $role ?? 'all' }}">
+                    <input type="hidden" name="search" value="{{ $search ?? '' }}">
+                    <input type="hidden" name="member_sort" value="{{ $memberSort ?? 'joined_newest' }}">
+                    <label for="reservation-sort" class="text-sm font-medium text-slate-700">Sort approved reservations</label>
+                    <select id="reservation-sort" name="reservation_sort" onchange="this.form.submit()" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100">
+                        <option value="recent" {{ ($reservationSort ?? 'recent') === 'recent' ? 'selected' : '' }}>Most recent date</option>
+                        <option value="oldest" {{ ($reservationSort ?? '') === 'oldest' ? 'selected' : '' }}>Oldest date</option>
+                        <option value="alphabetical" {{ ($reservationSort ?? '') === 'alphabetical' ? 'selected' : '' }}>Alphabetical (room / item)</option>
+                    </select>
+                </form>
 
                 @if($approvedReservations->isEmpty())
                     <p class="text-gray-500">No approved reservations to edit.</p>
@@ -494,6 +505,11 @@
                 const formData = new FormData(form);
                 url.searchParams.set('search', String(formData.get('search') || '').trim());
                 url.searchParams.set('role', String(formData.get('role') || 'all'));
+                url.searchParams.set('member_sort', String(formData.get('member_sort') || 'joined_newest'));
+                const currentUrl = new URL(window.location.href);
+                if (currentUrl.searchParams.has('reservation_sort')) {
+                    url.searchParams.set('reservation_sort', currentUrl.searchParams.get('reservation_sort'));
+                }
                 if (!pageUrl) url.searchParams.delete('page');
             }
             url.hash = '#members';
@@ -566,7 +582,7 @@
 
         memberContent.addEventListener('change', function(event) {
             if (!(event.target instanceof HTMLSelectElement)
-                || event.target.name !== 'role'
+                || !['role', 'member_sort'].includes(event.target.name)
                 || event.target.form?.id !== 'member-filter-form') return;
             loadMembers(membersUrl().toString(), true);
         });

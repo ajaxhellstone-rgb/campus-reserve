@@ -12,6 +12,12 @@
                 <option value="admin" {{ ($role ?? '') === 'admin' ? 'selected' : '' }}>Staff only</option>
                 <option value="super_admin" {{ ($role ?? '') === 'super_admin' ? 'selected' : '' }}>Admins only</option>
             </select>
+            <label class="sr-only" for="member-sort">Sort members</label>
+            <select id="member-sort" name="member_sort" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100">
+                <option value="name" {{ ($memberSort ?? 'joined_newest') === 'name' ? 'selected' : '' }}>Name (A–Z)</option>
+                <option value="joined_newest" {{ ($memberSort ?? 'joined_newest') === 'joined_newest' ? 'selected' : '' }}>Joined (newest)</option>
+                <option value="joined_oldest" {{ ($memberSort ?? '') === 'joined_oldest' ? 'selected' : '' }}>Joined (oldest)</option>
+            </select>
             <div class="relative">
                 <label class="sr-only" for="search">Search members</label>
                 <input id="search" name="search" type="search" value="{{ $search ?? '' }}" placeholder="Search name or email" class="w-full rounded-full border border-slate-300 bg-slate-50 py-2 pl-4 pr-20 text-sm focus:border-indigo-400 focus:ring-indigo-200 sm:w-80" autocomplete="off">
@@ -56,6 +62,7 @@
                                             @csrf
                                             <input type="hidden" name="return_search" value="{{ $search ?? '' }}">
                                             <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
+                                            <input type="hidden" name="return_member_sort" value="{{ $memberSort ?? 'joined_newest' }}">
                                             <select name="role" class="w-24 shrink-0 rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200">
                                                 <option value="user" {{ ! $user->is_admin ? 'selected' : '' }}>Member</option>
                                                 <option value="admin" {{ $user->is_admin ? 'selected' : '' }}>Staff</option>
@@ -67,6 +74,7 @@
                                             @method('DELETE')
                                             <input type="hidden" name="return_search" value="{{ $search ?? '' }}">
                                             <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
+                                            <input type="hidden" name="return_member_sort" value="{{ $memberSort ?? 'joined_newest' }}">
                                             <button type="submit" class="shrink-0 whitespace-nowrap rounded-full bg-red-600 px-3 py-2 text-xs text-white transition hover:bg-red-700">Delete</button>
                                         </form>
                                     @else

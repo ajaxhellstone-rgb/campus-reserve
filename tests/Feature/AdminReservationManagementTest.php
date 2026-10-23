@@ -35,6 +35,55 @@ class AdminReservationManagementTest extends TestCase
             ->assertSee('Save changes');
     }
 
+    public function test_approved_reservations_can_be_sorted_by_date_or_room_name(): void
+    {
+        $admin = $this->createAdmin();
+        $user = User::factory()->create();
+        $alphaRoom = $this->createFacility();
+        $alphaRoom->update(['name' => 'Alpha Room']);
+        $middleRoom = Facility::create([
+            'name' => 'Middle Room',
+            'building' => 'Main Building',
+            'type' => 'Classroom',
+            'capacity' => 30,
+            'is_active' => true,
+        ]);
+        $zuluRoom = Facility::create([
+            'name' => 'Zulu Room',
+            'building' => 'Main Building',
+            'type' => 'Classroom',
+            'capacity' => 30,
+            'is_active' => true,
+        ]);
+
+        $this->createReservation($user, $alphaRoom)->update(['reservation_date' => now()->addDays(2)]);
+        $this->createReservation($user, $middleRoom)->update(['reservation_date' => now()->addDays(3)]);
+        $propertyReservation = $this->createReservation($user, $zuluRoom);
+        $propertyReservation->update([
+            'facility_id' => null,
+            'reservation_date' => now()->addDay(),
+        ]);
+        $keyboard = FacilityItem::create([
+            'facility_id' => null,
+            'name' => 'Keyboard',
+            'quantity' => 1,
+        ]);
+        $propertyReservation->items()->attach($keyboard, ['quantity' => 1]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard', ['reservation_sort' => 'recent']))
+            ->assertOk()
+            ->assertSeeInOrder(['Middle Room', 'Alpha Room', 'Keyboard']);
+
+        $this->get(route('admin.dashboard', ['reservation_sort' => 'oldest']))
+            ->assertOk()
+            ->assertSeeInOrder(['Keyboard', 'Alpha Room', 'Middle Room']);
+
+        $this->get(route('admin.dashboard', ['reservation_sort' => 'alphabetical']))
+            ->assertOk()
+            ->assertSeeInOrder(['Alpha Room', 'Keyboard', 'Middle Room']);
+    }
+
     public function test_admin_can_edit_an_approved_reservation_directly(): void
     {
         $admin = $this->createAdmin();

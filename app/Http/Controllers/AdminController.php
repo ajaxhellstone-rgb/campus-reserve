@@ -7,12 +7,14 @@ use App\Models\Facility;
 use App\Models\FacilityMaintenanceBlock;
 use App\Models\FacilityItem;
 use App\Models\Reservation;
+use App\Models\User;
 use App\Services\FacilityItemAvailability;
 use App\Services\FacilityMaintenanceSchedule;
 use App\Services\ReservationNotificationDispatcher;
 use App\Services\ReservationDateWindow;
 use App\Services\ReservationTimeWindow;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -47,6 +49,9 @@ class AdminController extends Controller
         $role = $request->validate([
             'role' => ['nullable', 'in:all,user,admin,super_admin'],
         ])['role'] ?? 'all';
+        $memberSort = $request->validate([
+            'member_sort' => ['nullable', 'in:name,joined_newest,joined_oldest'],
+        ])['member_sort'] ?? 'joined_newest';
         $users = \App\Models\User::query();
 
         if ($role === 'user') {
@@ -67,10 +72,33 @@ class AdminController extends Controller
             });
         }
 
-        $users = $users->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
+        if ($memberSort === 'name') {
+            $allUsers = $users->get()
+                ->sortBy(fn (User $user) => mb_strtolower($user->name))
+                ->values();
+            $currentPage = LengthAwarePaginator::resolveCurrentPage();
+            $users = new LengthAwarePaginator(
+                $allUsers->forPage($currentPage, 15)->values(),
+                $allUsers->count(),
+                15,
+                $currentPage,
+                [
+                    'path' => LengthAwarePaginator::resolveCurrentPath(),
+                    'query' => $request->query(),
+                ]
+            );
+        } else {
+            $users->orderBy('created_at', $memberSort === 'joined_oldest' ? 'asc' : 'desc')
+                ->orderBy('id', $memberSort === 'joined_oldest' ? 'asc' : 'desc');
+            $users = $users->paginate(15)->withQueryString();
+        }
+
+        if ($memberSort === 'name') {
+            $users->withQueryString();
+        }
 
         if ($request->ajax()) {
-            return response()->view('admin.partials.members', compact('users', 'search', 'role'));
+            return response()->view('admin.partials.members', compact('users', 'search', 'role', 'memberSort'));
         }
 
         $pendingReservations = Reservation::with(['user', 'facility', 'items'])
@@ -80,10 +108,30 @@ class AdminController extends Controller
             ->paginate(15, ['*'], 'pendingPage')
             ->withQueryString();
 
-        $approvedReservations = Reservation::with(['user', 'facility', 'items'])
-            ->where('status', 'approved')
-            ->orderByDesc('reservation_date')
-            ->orderByDesc('start_time')
+        $reservationSort = $request->validate([
+            'reservation_sort' => ['nullable', 'in:recent,oldest,alphabetical'],
+        ])['reservation_sort'] ?? 'recent';
+        $approvedReservationsQuery = Reservation::with(['user', 'facility', 'items'])
+            ->where('status', 'approved');
+
+        if ($reservationSort === 'alphabetical') {
+            $approvedReservationsQuery->orderByRaw("COALESCE(
+                (SELECT LOWER(facilities.name) FROM facilities WHERE facilities.id = reservations.facility_id),
+                (SELECT LOWER(facility_items.name)
+                 FROM reservation_items
+                 INNER JOIN facility_items ON facility_items.id = reservation_items.facility_item_id
+                 WHERE reservation_items.reservation_id = reservations.id
+                 ORDER BY LOWER(facility_items.name)
+                 LIMIT 1),
+                ''
+            ) ASC");
+        } else {
+            $approvedReservationsQuery->orderBy('reservation_date', $reservationSort === 'oldest' ? 'asc' : 'desc')
+                ->orderBy('start_time', $reservationSort === 'oldest' ? 'asc' : 'desc');
+        }
+
+        $approvedReservations = $approvedReservationsQuery
+            ->orderBy('id', 'desc')
             ->paginate(20, ['*'], 'approvedPage')
             ->withQueryString()
             ->fragment('reservations');
@@ -118,6 +166,8 @@ class AdminController extends Controller
             'users',
             'search',
             'role',
+            'memberSort',
+            'reservationSort',
             'maximumReservationDate',
         ));
     }

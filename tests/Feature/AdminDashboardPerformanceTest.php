@@ -161,4 +161,37 @@ class AdminDashboardPerformanceTest extends TestCase
             ->assertDontSee('Admin Dashboard')
             ->assertDontSee('Pending Reservations');
     }
+
+    public function test_ajax_member_list_can_be_sorted_by_name_and_joined_date(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        User::factory()->create([
+            'name' => 'Zebra Member',
+            'email' => 'zebra.member@example.com',
+            'created_at' => now()->subDays(2),
+        ]);
+        User::factory()->create([
+            'name' => 'Alpha Member',
+            'email' => 'alpha.member@example.com',
+            'created_at' => now()->subDay(),
+        ]);
+
+        $request = $this->actingAs($admin);
+        $ajaxHeaders = [
+            'X-Requested-With' => 'XMLHttpRequest',
+            'Accept' => 'text/html',
+        ];
+
+        $request->get(route('admin.dashboard', ['role' => 'user', 'member_sort' => 'name']), $ajaxHeaders)
+            ->assertOk()
+            ->assertSeeInOrder(['Alpha Member', 'Zebra Member']);
+
+        $request->get(route('admin.dashboard', ['role' => 'user', 'member_sort' => 'joined_oldest']), $ajaxHeaders)
+            ->assertOk()
+            ->assertSeeInOrder(['Zebra Member', 'Alpha Member']);
+
+        $request->get(route('admin.dashboard', ['role' => 'user', 'member_sort' => 'joined_newest']), $ajaxHeaders)
+            ->assertOk()
+            ->assertSeeInOrder(['Alpha Member', 'Zebra Member']);
+    }
 }
