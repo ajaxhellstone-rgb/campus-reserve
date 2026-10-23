@@ -15,8 +15,11 @@ use Illuminate\Support\Facades\Notification;
 // Calendar management subpage (not in navbar)
 Route::middleware('auth')->get('/calendar/manage', function (ReservationTimeWindow $reservationTimeWindow) {
     $reservationHours = $reservationTimeWindow->current();
+    $calendarFacilities = Facility::active()
+        ->orderBy('name')
+        ->get(['id', 'name']);
 
-    return view('calendar-manage', compact('reservationHours'));
+    return view('calendar-manage', compact('reservationHours', 'calendarFacilities'));
 });
 use App\Http\Controllers\DebugController;
 use App\Http\Controllers\FacilityController;

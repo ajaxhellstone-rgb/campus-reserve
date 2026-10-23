@@ -43,6 +43,14 @@ class CalendarFacilityFilterTest extends TestCase
             ->assertSee('Room 101')
             ->assertSee('Room 202');
 
+        $this->get('/calendar/manage')
+            ->assertOk()
+            ->assertSee('calendarFacilityFilter', false)
+            ->assertSee('All facilities')
+            ->assertSee('Room 101')
+            ->assertSee('Room 202')
+            ->assertSee("query.set('facility_id', facilityFilter.value)", false);
+
         $this->getJson('/api/calendar/events?start=2030-05-01&end=2030-05-08&facility_id='.$selectedFacility->id)
             ->assertOk()
             ->assertJsonCount(2)
