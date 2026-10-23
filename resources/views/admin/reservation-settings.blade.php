@@ -158,7 +158,7 @@
         </main>
     </div>
 </div>
-<dialog id="password_confirmation_dialog" class="w-[calc(100%-2rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-slate-950/50">
+<dialog id="password_confirmation_dialog" class="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl p-0 shadow-2xl backdrop:bg-slate-950/50">
     <form id="password_confirmation_form" class="space-y-5 p-6">
         <div>
             <h2 class="text-lg font-semibold text-gray-900">Confirm password</h2>
