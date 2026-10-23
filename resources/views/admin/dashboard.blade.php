@@ -179,7 +179,7 @@
                     <p class="text-gray-500">No approved reservations to edit.</p>
                 @else
                     <div class="overflow-hidden rounded-2xl border border-slate-200">
-                        <div class="max-h-[32rem] overflow-auto" style="scrollbar-width: auto; scrollbar-color: #fbbf24 #fffbeb;" tabindex="0" aria-label="Scrollable approved reservations">
+                        <div class="h-[32rem] overflow-y-scroll overflow-x-auto" style="scrollbar-width: auto; scrollbar-color: #fbbf24 #fffbeb;" tabindex="0" aria-label="Scrollable approved reservations">
                             <table class="min-w-full divide-y divide-slate-200 bg-white">
                                 <thead class="sticky top-0 z-10 bg-green-50">
                                     <tr>
