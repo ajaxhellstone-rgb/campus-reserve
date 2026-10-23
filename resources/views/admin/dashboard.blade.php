@@ -174,12 +174,12 @@
                     <h2 class="text-xl font-semibold text-gray-900">Edit Reservations</h2>
                     <p class="text-sm text-gray-600">Adjust approved reservation dates, schedules, or purpose. Deleting a reservation removes it from the client’s list and sends them a notification.</p>
                 </div>
-                <form method="GET" action="{{ route('admin.dashboard') }}" class="mb-4 flex flex-col gap-2 sm:w-64">
+                <form id="approved-reservation-filter-form" method="GET" action="{{ route('admin.dashboard') }}#reservations" class="mb-4 flex flex-col gap-2 sm:w-64">
                     <input type="hidden" name="role" value="{{ $role ?? 'all' }}">
                     <input type="hidden" name="search" value="{{ $search ?? '' }}">
                     <input type="hidden" name="member_sort" value="{{ $memberSort ?? 'joined_newest' }}">
                     <label for="reservation-sort" class="text-sm font-medium text-slate-700">Sort approved reservations</label>
-                    <select id="reservation-sort" name="reservation_sort" onchange="this.form.submit()" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100">
+                    <select id="reservation-sort" name="reservation_sort" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100">
                         <option value="recent" {{ ($reservationSort ?? 'recent') === 'recent' ? 'selected' : '' }}>Most recent date</option>
                         <option value="oldest" {{ ($reservationSort ?? '') === 'oldest' ? 'selected' : '' }}>Oldest date</option>
                         <option value="alphabetical" {{ ($reservationSort ?? '') === 'alphabetical' ? 'selected' : '' }}>Alphabetical (room / item)</option>
@@ -427,6 +427,62 @@
             }
             window.scrollTo(0, 0);
         }
+
+        function loadApprovedReservations(url, updateHistory) {
+            url.hash = '#reservations';
+            fetch(url, {
+                headers: { 'Accept': 'text/html' },
+                credentials: 'same-origin',
+            })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Approved reservations could not be updated. Please try again.');
+                    return response.text();
+                })
+                .then(function(html) {
+                    const updatedDocument = new DOMParser().parseFromString(html, 'text/html');
+                    const updatedSection = updatedDocument.querySelector('#edit-reservations-section');
+                    const currentSection = document.querySelector('#edit-reservations-section');
+                    if (!updatedSection || !currentSection) {
+                        throw new Error('The updated approved reservation list could not be displayed.');
+                    }
+                    currentSection.replaceWith(updatedSection);
+                    if (updateHistory) {
+                        window.history.pushState({}, '', url);
+                    }
+                    activateDashboardSection('reservations', false);
+                })
+                .catch(function(error) {
+                    dashboardError.textContent = error.message;
+                    dashboardError.classList.remove('hidden');
+                });
+        }
+
+        function approvedReservationsUrl(form) {
+            const url = new URL(form.action, window.location.origin);
+            const params = new URLSearchParams(new FormData(form));
+            url.search = params.toString();
+            url.hash = '#reservations';
+            return url;
+        }
+
+        document.addEventListener('change', function(event) {
+            if (!(event.target instanceof HTMLSelectElement) || event.target.id !== 'reservation-sort') return;
+            const form = event.target.form;
+            if (!form) return;
+            const url = approvedReservationsUrl(form);
+            url.searchParams.delete('approvedPage');
+            loadApprovedReservations(url, true);
+        });
+
+        document.addEventListener('click', function(event) {
+            if (!(event.target instanceof Element)) return;
+            const link = event.target.closest('#edit-reservations-section nav[aria-label="Pagination Navigation"] a');
+            if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            const url = new URL(link.href);
+            url.hash = '#reservations';
+            loadApprovedReservations(url, true);
+        });
 
         function activateDashboardSectionFromLocation() {
             const hash = window.location.hash.slice(1);

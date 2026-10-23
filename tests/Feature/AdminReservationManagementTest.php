@@ -30,6 +30,9 @@ class AdminReservationManagementTest extends TestCase
             ->assertSee('aria-label="Scrollable approved reservations"', false)
             ->assertSee('data-edit-reservation', false)
             ->assertSee('approved-reservation-edit-modal', false)
+            ->assertSee('id="approved-reservation-filter-form"', false)
+            ->assertSee('action="'.route('admin.dashboard').'#reservations"', false)
+            ->assertDontSee('onchange="this.form.submit()"', false)
             ->assertSee('name="reservation_date"', false)
             ->assertSee('>Delete</button>', false)
             ->assertSee('Save changes');
