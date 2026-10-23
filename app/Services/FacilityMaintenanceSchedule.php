@@ -32,7 +32,12 @@ class FacilityMaintenanceSchedule
             ->first();
     }
 
-    public function forDateRange(string $start, string $end, ?string $facilityName = null): Collection
+    public function forDateRange(
+        string $start,
+        string $end,
+        ?string $facilityName = null,
+        ?int $facilityId = null
+    ): Collection
     {
         if (! $this->isAvailable()) {
             return new Collection();
@@ -46,6 +51,7 @@ class FacilityMaintenanceSchedule
                 'facility',
                 fn ($facilityQuery) => $facilityQuery->where('name', $facilityName)
             ))
+            ->when($facilityId, fn ($query) => $query->where('facility_id', $facilityId))
             ->orderBy('maintenance_date')
             ->orderBy('start_time')
             ->get();

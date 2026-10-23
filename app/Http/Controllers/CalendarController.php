@@ -34,6 +34,7 @@ class CalendarController extends Controller
             'start' => ['required', 'date_format:Y-m-d'],
             'end' => ['required', 'date_format:Y-m-d', 'after:start'],
             'facility' => ['sometimes', 'string', 'max:100'],
+            'facility_id' => ['sometimes', 'integer', 'exists:facilities,id'],
         ]);
 
         $query = Reservation::with('facility')
@@ -41,7 +42,9 @@ class CalendarController extends Controller
             ->where('reservation_date', '>=', $validated['start'])
             ->where('reservation_date', '<', $validated['end']);
 
-        if (! empty($validated['facility'])) {
+        if (! empty($validated['facility_id'])) {
+            $query->where('facility_id', $validated['facility_id']);
+        } elseif (! empty($validated['facility'])) {
             $facilityName = $validated['facility'];
             $query->whereHas('facility', function ($q) use ($facilityName) {
                 $q->where('name', $facilityName);
@@ -74,7 +77,12 @@ class CalendarController extends Controller
 
         $hours = $reservationTimeWindow->current();
         $maintenanceEvents = $maintenanceSchedule
-            ->forDateRange($validated['start'], $validated['end'], $validated['facility'] ?? null)
+            ->forDateRange(
+                $validated['start'],
+                $validated['end'],
+                $validated['facility'] ?? null,
+                isset($validated['facility_id']) ? (int) $validated['facility_id'] : null
+            )
             ->map(function (FacilityMaintenanceBlock $block) use ($hours) {
                 $date = $block->maintenance_date->format('Y-m-d');
                 $startTime = $block->is_all_day ? $hours['start_time'] : $block->start_time;

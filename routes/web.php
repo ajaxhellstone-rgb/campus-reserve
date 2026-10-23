@@ -53,8 +53,11 @@ Route::middleware('auth')->group(function () {
         ->name('api.facilities.property-items');
     Route::get('/calendar', function (ReservationTimeWindow $reservationTimeWindow) {
         $reservationHours = $reservationTimeWindow->current();
+        $calendarFacilities = Facility::active()
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
-        return view('calendar', compact('reservationHours'));
+        return view('calendar', compact('reservationHours', 'calendarFacilities'));
     })->name('calendar');
 
     Route::get('/api/calendar/events', [CalendarController::class, 'events']);

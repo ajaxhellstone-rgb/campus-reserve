@@ -65,6 +65,15 @@
                     </aside>
                 </div>
                 <main class="calendar-main min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+                    <div class="mb-4 flex flex-col gap-2 sm:max-w-sm">
+                        <label for="calendarFacilityFilter" class="text-sm font-medium text-slate-700">Show reservations for</label>
+                        <select id="calendarFacilityFilter" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
+                            <option value="">All facilities</option>
+                            @foreach($calendarFacilities as $facility)
+                                <option value="{{ $facility->id }}">{{ $facility->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="calendar-mobile-date-bar mb-4 hidden items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
                         <button id="calendarMobilePrevBtn" type="button" aria-label="Previous date" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700">&lsaquo;</button>
                         <span id="calendarMobileDateTitle" class="text-sm font-semibold text-slate-900"></span>
@@ -362,6 +371,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
         var searchInput = document.getElementById('eventSearch');
+        var facilityFilter = document.getElementById('calendarFacilityFilter');
         var pendingReservationsList = document.getElementById('pendingReservationsList');
         var viewButtons = document.querySelectorAll('[data-view]');
         var eventInfoModal = document.getElementById('eventInfoModal');
@@ -559,6 +569,9 @@
                     start: info.startStr.slice(0, 10),
                     end: info.endStr.slice(0, 10)
                 });
+                if (facilityFilter && facilityFilter.value) {
+                    query.set('facility_id', facilityFilter.value);
+                }
                 fetch('/api/calendar/events?' + query, { credentials: 'include' })
                     .then(function(response) {
                         if (!response.ok) {
@@ -627,6 +640,11 @@
         });
 
         calendar.render();
+        if (facilityFilter) {
+        facilityFilter.addEventListener('change', function() {
+            calendar.refetchEvents();
+        });
+        }
         fetchPendingReservations();
 
         function fetchPendingReservations() {
