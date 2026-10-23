@@ -286,7 +286,6 @@
                 <span class="text-sm font-semibold text-gray-900">New password</span>
                 <div class="relative mt-2">
                     <input id="password-modal-new" form="profile-settings-form" type="password" name="password" class="w-full rounded-3xl border border-gray-300 px-4 py-3 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-black" autocomplete="new-password">
-                    <button type="button" data-password-toggle="password-modal-new" class="absolute inset-y-0 right-3 z-10 bg-transparent px-1 text-xs font-semibold text-gray-600 hover:text-black" aria-label="Show new password">Show</button>
                 </div>
                 <p class="mt-2 text-xs leading-5 text-gray-500">Use 5-30 characters, including uppercase and lowercase letters, a number, and a symbol.</p>
             </label>
@@ -294,7 +293,6 @@
                 <span class="text-sm font-semibold text-gray-900">Confirm new password</span>
                 <div class="relative mt-2">
                     <input id="password-modal-confirm" form="profile-settings-form" type="password" name="password_confirmation" class="w-full rounded-3xl border border-gray-300 px-4 py-3 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-black" autocomplete="new-password">
-                    <button type="button" data-password-toggle="password-modal-confirm" class="absolute inset-y-0 right-3 z-10 bg-transparent px-1 text-xs font-semibold text-gray-600 hover:text-black" aria-label="Show password confirmation">Show</button>
                 </div>
             </label>
             <p id="password-modal-error" class="hidden text-sm font-medium text-red-600"></p>
@@ -413,22 +411,11 @@
             }
         });
 
-        document.querySelectorAll('[data-password-toggle]').forEach(function(toggle) {
-            toggle.addEventListener('click', function() {
-                const input = document.getElementById(this.dataset.passwordToggle);
-                const isVisible = input.type === 'text';
-                input.type = isVisible ? 'password' : 'text';
-                this.textContent = isVisible ? 'Show' : 'Hide';
-                this.setAttribute('aria-label', `${isVisible ? 'Show' : 'Hide'} ${input.id === 'password-modal-new' ? 'new password' : 'password confirmation'}`);
-            });
-        });
-
         function resetPasswordVisibility() {
-            document.querySelectorAll('[data-password-toggle]').forEach(function(toggle) {
-                const input = document.getElementById(toggle.dataset.passwordToggle);
-                input.type = 'password';
-                toggle.textContent = 'Show';
-                toggle.setAttribute('aria-label', input.id === 'password-modal-new' ? 'Show new password' : 'Show password confirmation');
+            [passwordModalNew, passwordModalConfirm].forEach(function(input) {
+                if (input.type === 'text') {
+                    input.nextElementSibling?.click();
+                }
             });
         }
 

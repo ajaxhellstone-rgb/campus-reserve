@@ -34,7 +34,7 @@ class MobileNavigationTest extends TestCase
             ->assertOk()
             ->assertSee('Profile settings')
             ->assertSee('Notifications')
-            ->assertSee('Admin dashboard')
+            ->assertSee('Staff dashboard')
             ->assertSee('Log out');
     }
 
@@ -45,12 +45,17 @@ class MobileNavigationTest extends TestCase
         $this->actingAs($user)
             ->get(route('calendar'))
             ->assertOk()
-            ->assertSee("matches ? 'listWeek' : 'timeGridWeek'", false)
+            ->assertSee("initialView: 'timeGridWeek'", false)
+            ->assertSee('calendar-mobile-reserve', false)
+            ->assertDontSee('>Today</button>', false)
             ->assertSee('calendar-page-layout', false);
 
         $this->get('/calendar/manage')
             ->assertOk()
-            ->assertSee("matches ? 'dayGridMonth' : 'timeGridWeek'", false)
+            ->assertSee("initialView: 'timeGridWeek'", false)
+        ->assertDontSee('>Today</button>', false)
+        ->assertDontSee('Reserve this day')
+            ->assertDontSee('Reserve selected day')
             ->assertSee('calendar-manage-layout', false);
     }
 }

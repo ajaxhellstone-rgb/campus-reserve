@@ -1,16 +1,16 @@
-<section class="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
+<section id="member-management-section" class="scroll-mt-6 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-6">
     <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h2 class="text-xl font-semibold text-gray-900">Member Management</h2>
-            <p class="text-sm text-gray-600">Search members and update admin access.</p>
+            <p class="text-sm text-gray-600">Search members and update staff access.</p>
         </div>
         <form id="member-filter-form" method="GET" action="{{ route('admin.dashboard') }}" class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <label class="sr-only" for="role-filter">Filter members by role</label>
             <select id="role-filter" name="role" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100">
                 <option value="all" {{ ($role ?? 'all') === 'all' ? 'selected' : '' }}>All roles</option>
                 <option value="user" {{ ($role ?? '') === 'user' ? 'selected' : '' }}>Members only</option>
-                <option value="admin" {{ ($role ?? '') === 'admin' ? 'selected' : '' }}>Admins only</option>
-                <option value="super_admin" {{ ($role ?? '') === 'super_admin' ? 'selected' : '' }}>Head admins only</option>
+                <option value="admin" {{ ($role ?? '') === 'admin' ? 'selected' : '' }}>Staff only</option>
+                <option value="super_admin" {{ ($role ?? '') === 'super_admin' ? 'selected' : '' }}>Admins only</option>
             </select>
             <div class="relative">
                 <label class="sr-only" for="search">Search members</label>
@@ -41,9 +41,9 @@
                             <td class="px-4 py-4 text-sm text-gray-700">{{ $user->email }}</td>
                             <td class="px-4 py-4 text-sm text-gray-700">
                                 @if($user->isSuperAdmin())
-                                    <span class="inline-flex items-center rounded-full bg-indigo-800 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">Head Admin</span>
+                                    <span class="inline-flex items-center rounded-full bg-indigo-800 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">Admin</span>
                                 @elseif($user->is_admin)
-                                    <span class="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-800">Admin</span>
+                                    <span class="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-green-800">Staff</span>
                                 @else
                                     <span class="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-700">Member</span>
                                 @endif
@@ -58,7 +58,7 @@
                                             <input type="hidden" name="return_role" value="{{ $role ?? 'all' }}">
                                             <select name="role" class="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200">
                                                 <option value="user" {{ ! $user->is_admin ? 'selected' : '' }}>Member</option>
-                                                <option value="admin" {{ $user->is_admin ? 'selected' : '' }}>Admin</option>
+                                                <option value="admin" {{ $user->is_admin ? 'selected' : '' }}>Staff</option>
                                             </select>
                                             <button type="submit" class="ml-2 rounded-full bg-indigo-700 px-3 py-2 text-xs text-white transition hover:bg-indigo-800">Save</button>
                                         </form>
@@ -73,7 +73,7 @@
                                         <span class="text-xs text-gray-500">Protected</span>
                                     @endif
                                 @else
-                                    <span class="text-xs text-gray-500">Head admin only</span>
+                                    <span class="text-xs text-gray-500">Admin only</span>
                                 @endif
                             </td>
                         </tr>

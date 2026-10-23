@@ -76,6 +76,27 @@ class AdminUserRoleTest extends TestCase
         $this->assertTrue($member->fresh()->is_admin);
     }
 
+    public function test_member_management_uses_staff_and_admin_role_labels(): void
+    {
+        $headAdmin = User::factory()->create([
+            'is_admin' => true,
+            'is_super_admin' => true,
+        ]);
+        User::factory()->create([
+            'is_admin' => true,
+            'is_super_admin' => false,
+        ]);
+
+        $this->actingAs($headAdmin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSeeText('Staff')
+            ->assertSeeText('Admins only')
+            ->assertSeeText('Staff only')
+            ->assertDontSeeText('Head Admin')
+            ->assertDontSeeText('Head admins only');
+    }
+
     public function test_member_role_changes_require_the_admins_current_password(): void
     {
         $headAdmin = User::factory()->create([

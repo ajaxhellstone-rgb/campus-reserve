@@ -4,10 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Facility;
+use App\Models\FacilityMaintenanceBlock;
 use App\Models\FacilityItem;
 use App\Models\Reservation;
 use App\Services\FacilityItemAvailability;
+use App\Services\FacilityMaintenanceSchedule;
 use App\Services\ReservationNotificationDispatcher;
+use App\Services\ReservationTimeWindow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -81,12 +84,29 @@ class AdminController extends Controller
             ->take(20)
             ->get();
 
+        $reservationDecisionTotals = Reservation::query()
+            ->selectRaw('status, COUNT(*) as total')
+            ->whereIn('status', ['approved', 'rejected'])
+            ->groupBy('status')
+            ->pluck('total', 'status');
+        $approvedReservationCount = (int) $reservationDecisionTotals->get('approved', 0);
+        $rejectedReservationCount = (int) $reservationDecisionTotals->get('rejected', 0);
+
         $auditLogs = AuditLog::with(['user', 'reservation.facility'])
             ->latest()
             ->take(25)
             ->get();
 
-        return view('admin.dashboard', compact('pendingReservations', 'recentReservations', 'auditLogs', 'users', 'search', 'role'));
+        return view('admin.dashboard', compact(
+            'pendingReservations',
+            'recentReservations',
+            'approvedReservationCount',
+            'rejectedReservationCount',
+            'auditLogs',
+            'users',
+            'search',
+            'role',
+        ));
     }
 
     private function reservationActionResponse(Request $request, string $message, ?AuditLog $auditLog = null)
@@ -219,6 +239,159 @@ class AdminController extends Controller
         return view('admin.property-management', compact('facilities', 'items'));
     }
 
+    public function reservationSettings(
+        ReservationTimeWindow $reservationTimeWindow,
+        FacilityMaintenanceSchedule $maintenanceSchedule
+    )
+    {
+        $this->requireAdmin();
+
+        $reservationHours = $reservationTimeWindow->current();
+        $settingsStorageAvailable = $reservationTimeWindow->isAvailable();
+        $maintenanceStorageAvailable = $maintenanceSchedule->isAvailable();
+        $facilities = Facility::active()->orderBy('name')->get();
+        $maintenanceBlocks = $maintenanceStorageAvailable
+            ? FacilityMaintenanceBlock::with('facility')
+                ->whereDate('maintenance_date', '>=', today())
+                ->orderBy('maintenance_date')
+                ->orderBy('start_time')
+                ->get()
+            : collect();
+
+        return view('admin.reservation-settings', compact(
+            'reservationHours',
+            'settingsStorageAvailable',
+            'maintenanceStorageAvailable',
+            'facilities',
+            'maintenanceBlocks'
+        ));
+    }
+
+    public function updateReservationSettings(Request $request, ReservationTimeWindow $reservationTimeWindow)
+    {
+        $this->requireAdmin();
+
+        if (! $reservationTimeWindow->isAvailable()) {
+            return back()->with('error', 'Reservation settings cannot be saved until the reservation settings database migration has been applied.');
+        }
+
+        $validated = $request->validate([
+            'start_time' => ['required', 'date_format:H:i'],
+            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+        ]);
+
+        $reservationTimeWindow->update($validated['start_time'], $validated['end_time']);
+
+        return redirect()
+            ->route('admin.reservation-settings')
+            ->with('status', 'Reservation hours updated successfully.');
+    }
+
+    public function storeMaintenanceBlock(
+        Request $request,
+        FacilityMaintenanceSchedule $maintenanceSchedule,
+        ReservationNotificationDispatcher $reservationNotifications
+    ) {
+        $this->requireAdmin();
+
+        if (! $maintenanceSchedule->isAvailable()) {
+            return back()->with('error', 'Maintenance scheduling is unavailable until its database migration has been applied.');
+        }
+
+        $validated = $request->validate([
+            'facility_id' => ['required', 'integer', Rule::exists('facilities', 'id')->where('is_active', true)],
+            'maintenance_date' => ['required', 'date', 'after_or_equal:today'],
+            'is_all_day' => ['required', 'boolean'],
+            'start_time' => ['nullable', 'required_unless:is_all_day,1', 'date_format:H:i'],
+            'end_time' => ['nullable', 'required_unless:is_all_day,1', 'date_format:H:i', 'after:start_time'],
+            'reason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $isAllDay = $request->boolean('is_all_day');
+        $startTime = $isAllDay ? null : $validated['start_time'];
+        $endTime = $isAllDay ? null : $validated['end_time'];
+        $facility = Facility::findOrFail($validated['facility_id']);
+
+        [$block, $overlappingReservations] = DB::transaction(function () use (
+            $validated,
+            $facility,
+            $isAllDay,
+            $startTime,
+            $endTime
+        ) {
+            $block = FacilityMaintenanceBlock::create([
+                'facility_id' => $facility->id,
+                'maintenance_date' => $validated['maintenance_date'],
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'is_all_day' => $isAllDay,
+                'reason' => $validated['reason'],
+            ]);
+
+            $overlappingReservations = Reservation::query()
+                ->where('facility_id', $facility->id)
+                ->whereDate('reservation_date', $validated['maintenance_date'])
+                ->whereIn('status', ['pending', 'approved'])
+                ->when(! $isAllDay, fn ($query) => $query
+                    ->where('start_time', '<', $endTime)
+                    ->where('end_time', '>', $startTime))
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($overlappingReservations as $reservation) {
+                $reservation->update([
+                    'status' => 'rejected',
+                    'rejected_at' => now(),
+                    'admin_remarks' => "Automatically rejected due to facility maintenance: {$validated['reason']}.",
+                ]);
+
+                AuditLog::create([
+                    'user_id' => Auth::id(),
+                    'reservation_id' => $reservation->id,
+                    'action' => 'rejected',
+                    'details' => "Automatically rejected due to facility maintenance: {$validated['reason']}.",
+                ]);
+            }
+
+            AuditLog::create([
+                'user_id' => Auth::id(),
+                'reservation_id' => null,
+                'action' => 'facility_maintenance_created',
+                'details' => "Scheduled maintenance for {$facility->name} on {$validated['maintenance_date']}: {$validated['reason']}.",
+            ]);
+
+            return [$block, $overlappingReservations];
+        });
+
+        foreach ($overlappingReservations as $reservation) {
+            $reservationNotifications->notifyBorrower($reservation);
+        }
+
+        return redirect()
+            ->route('admin.reservation-settings')
+            ->with('status', $overlappingReservations->isEmpty()
+                ? 'Maintenance block scheduled successfully.'
+                : 'Maintenance block scheduled. Overlapping reservations were automatically rejected and their owners notified.');
+    }
+
+    public function destroyMaintenanceBlock(FacilityMaintenanceBlock $block)
+    {
+        $this->requireAdmin();
+
+        $facilityName = $block->facility->name;
+        $description = "Removed facility maintenance block for {$facilityName} on {$block->maintenance_date->format('Y-m-d')}.";
+        $block->delete();
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'reservation_id' => null,
+            'action' => 'facility_maintenance_removed',
+            'details' => $description,
+        ]);
+
+        return redirect()->route('admin.reservation-settings')->with('status', 'Maintenance block removed.');
+    }
+
     public function storeFacilityItem(Request $request)
     {
         $this->requireAdmin();
@@ -285,7 +458,9 @@ class AdminController extends Controller
         Request $request,
         Reservation $reservation,
         FacilityItemAvailability $itemAvailability,
-        ReservationNotificationDispatcher $reservationNotifications
+        ReservationNotificationDispatcher $reservationNotifications,
+        ReservationTimeWindow $reservationTimeWindow,
+        FacilityMaintenanceSchedule $maintenanceSchedule
     )
     {
         // Mark the reservation as approved and send the user a notification
@@ -296,10 +471,34 @@ class AdminController extends Controller
                 return response()->json(['message' => 'Only pending reservations can be approved.'], 409);
             }
 
+            if (! $reservationTimeWindow->allows(
+                $reservation->start_time->format('H:i'),
+                $reservation->end_time->format('H:i')
+            )) {
+                $approvalError = $reservationTimeWindow->validationMessage();
+
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => $approvalError], 409);
+                }
+
+                return back()->with('error', $approvalError);
+            }
+
             return back()->with('error', 'Only pending reservations can be approved.');
         }
 
-        $approvalError = DB::transaction(function () use ($request, $reservation, $itemAvailability) {
+        $approvalError = DB::transaction(function () use ($request, $reservation, $itemAvailability, $maintenanceSchedule) {
+            $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
+                $reservation->facility_id,
+                $reservation->reservation_date->format('Y-m-d'),
+                $reservation->start_time->format('H:i'),
+                $reservation->end_time->format('H:i')
+            );
+
+            if ($maintenanceBlock) {
+                return $maintenanceSchedule->validationMessage($maintenanceBlock);
+            }
+
             $conflictingApproved = Reservation::where('facility_id', $reservation->facility_id)
                 ->where('reservation_date', $reservation->reservation_date)
                 ->where('status', 'approved')

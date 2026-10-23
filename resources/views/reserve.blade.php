@@ -232,13 +232,16 @@
                         </div>
                         <div>
                             <label for="property-booking-start" class="block text-sm font-medium text-slate-700">Time to use</label>
-                            <input id="property-booking-start" type="time" value="06:00" required class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                            <input id="property-booking-start" type="time" value="{{ $reservationHours['start_time'] }}" min="{{ $reservationHours['start_time'] }}" max="{{ $reservationHours['end_time'] }}" required class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
                         </div>
                         <div>
                             <label for="property-booking-end" class="block text-sm font-medium text-slate-700">Time to return</label>
-                            <input id="property-booking-end" type="time" value="07:00" required class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                            <input id="property-booking-end" type="time" value="{{ $reservationHours['end_time'] }}" min="{{ $reservationHours['start_time'] }}" max="{{ $reservationHours['end_time'] }}" required class="mt-2 h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
                         </div>
                     </div>
+                    <p class="text-xs font-medium text-green-900">
+                        Reservations allowed {{ date('g:i A', strtotime($reservationHours['start_time'])) }}–{{ date('g:i A', strtotime($reservationHours['end_time'])) }}.
+                    </p>
 
                     <div>
                         <div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -395,6 +398,8 @@
 </div>
 <script>
     (() => {
+        const reservationOpenTime = @json($reservationHours['start_time']);
+        const reservationCloseTime = @json($reservationHours['end_time']);
         const tabButtons = Array.from(document.querySelectorAll('[data-reservation-tab]'));
         const tabPanels = {
             facility: document.getElementById('facility-reservation-panel'),
@@ -785,8 +790,10 @@
             itemsContainer.replaceChildren();
             const now = new Date();
             dateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            startInput.value = '06:00';
-            endInput.value = '07:00';
+            startInput.value = reservationOpenTime;
+            const [openHour, openMinute] = reservationOpenTime.split(':').map(Number);
+            const defaultEnd = `${String(openHour + 1).padStart(2, '0')}:${String(openMinute).padStart(2, '0')}`;
+            endInput.value = defaultEnd > reservationCloseTime ? reservationCloseTime : defaultEnd;
             setBookingError('');
             renderItems(modalItems.map((item) => ({ ...item, available: item.quantity })));
             setModalOpen(true);

@@ -86,7 +86,7 @@
                 <a href="{{ route('notifications.index') }}" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Notifications</a>
                 <a href="/profile" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Profile settings</a>
                 @if(auth()->user()->isAdmin())
-                    <a href="{{ route('admin.dashboard') }}" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Admin dashboard</a>
+                    <a href="{{ route('admin.dashboard') }}" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-green-50">Staff dashboard</a>
                 @endif
                 <form method="POST" action="{{ route('logout') }}" class="px-4 pb-2 pt-1">
                     @csrf

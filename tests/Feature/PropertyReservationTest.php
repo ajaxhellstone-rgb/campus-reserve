@@ -162,6 +162,9 @@ class PropertyReservationTest extends TestCase
             ])
             ->assertJsonFragment([
                 'id' => $otherReservation->id,
+                'title' => $facility->name,
+                'start' => '2030-05-01T11:00:00',
+                'end' => '2030-05-01T12:00:00',
                 'purpose' => null,
                 'is_owner' => false,
             ])

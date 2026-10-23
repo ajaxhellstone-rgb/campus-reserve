@@ -2,16 +2,21 @@
 
 // ...existing code...
 use App\Models\Facility;
+use App\Models\FacilityMaintenanceBlock;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use App\Services\ReservationNotificationDispatcher;
+use App\Services\FacilityMaintenanceSchedule;
+use App\Services\ReservationTimeWindow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 
 // Calendar management subpage (not in navbar)
-Route::middleware('auth')->get('/calendar/manage', function () {
-    return view('calendar-manage');
+Route::middleware('auth')->get('/calendar/manage', function (ReservationTimeWindow $reservationTimeWindow) {
+    $reservationHours = $reservationTimeWindow->current();
+
+    return view('calendar-manage', compact('reservationHours'));
 });
 use App\Http\Controllers\DebugController;
 use App\Http\Controllers\FacilityController;
@@ -115,7 +120,7 @@ Route::middleware('web')->group(function () {
 Route::middleware('auth')->group(function () {
     // Authenticated user routes. All of these pages require the user to be signed in.
     // Reserve page (Dashboard) - requires login
-    Route::get('/reserve', function (Request $request) {
+    Route::get('/reserve', function (Request $request, ReservationTimeWindow $reservationTimeWindow) {
         $user = auth()->user();
         $reservationSearch = trim((string) $request->query('reservation_search', ''));
         $reservationsQuery = Reservation::with(['facility', 'items'])
@@ -163,6 +168,7 @@ Route::middleware('auth')->group(function () {
         $facilities = Facility::active()
             ->orderBy('name')
             ->get(['id', 'name', 'building', 'capacity']);
+        $reservationHours = $reservationTimeWindow->current();
 
         return view('reserve', compact(
             'reservations',
@@ -171,6 +177,7 @@ Route::middleware('auth')->group(function () {
             'borrowedItemCount',
             'returnedItemCount',
             'facilities',
+            'reservationHours',
             'reservationSearch'
         ));
     })->name('reserve');
@@ -188,7 +195,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/reserve/reservations/{reservation}', function (
         Illuminate\Http\Request $request,
         Reservation $reservation,
-        ReservationNotificationDispatcher $reservationNotifications
+        ReservationNotificationDispatcher $reservationNotifications,
+        ReservationTimeWindow $reservationTimeWindow,
+        FacilityMaintenanceSchedule $maintenanceSchedule
     ) {
         $reservation = Reservation::where('user_id', auth()->id())->findOrFail($reservation->id);
 
@@ -201,6 +210,12 @@ Route::middleware('auth')->group(function () {
             'notes' => 'nullable|string|max:500',
         ]);
 
+        if (! $reservationTimeWindow->allows($request->start_time, $request->end_time)) {
+            return back()
+                ->withInput()
+                ->withErrors(['start_time' => $reservationTimeWindow->validationMessage()]);
+        }
+
         $facility = Facility::findOrFail($request->facility_id);
         if ($reservation->items()->exists() && $facility->id !== $reservation->facility_id) {
             return back()->withInput()->with('error', 'Property reservation items must remain assigned to their original facility. Cancel this reservation and create a new one to reserve items in another facility.');
@@ -208,6 +223,16 @@ Route::middleware('auth')->group(function () {
 
         if (! $facility->isAvailable($request->reservation_date, $request->start_time, $request->end_time, $reservation->id)) {
             return back()->withInput()->with('error', 'Selected time slot is unavailable. Please choose another slot.');
+        }
+
+        $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
+            $facility->id,
+            $request->reservation_date,
+            $request->start_time,
+            $request->end_time
+        );
+        if ($maintenanceBlock) {
+            return back()->withInput()->with('error', $maintenanceSchedule->validationMessage($maintenanceBlock));
         }
 
         $reservation->update([
@@ -302,6 +327,10 @@ Route::middleware('auth')->group(function () {
             Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
             Route::get('/facilities/create', [AdminController::class, 'createFacility'])->name('admin.facilities.create');
             Route::get('/property-management', [AdminController::class, 'propertyManagement'])->name('admin.property-management.index');
+            Route::get('/reservation-settings', [AdminController::class, 'reservationSettings'])->name('admin.reservation-settings');
+            Route::put('/reservation-settings', [AdminController::class, 'updateReservationSettings'])->name('admin.reservation-settings.update');
+            Route::post('/reservation-settings/maintenance', [AdminController::class, 'storeMaintenanceBlock'])->name('admin.reservation-settings.maintenance.store');
+            Route::delete('/reservation-settings/maintenance/{block}', [AdminController::class, 'destroyMaintenanceBlock'])->name('admin.reservation-settings.maintenance.destroy');
             Route::post('/property-management/items', [AdminController::class, 'storeFacilityItem'])->name('admin.property-management.items.store');
             Route::put('/property-management/items/{item}', [AdminController::class, 'updateFacilityItem'])->name('admin.property-management.items.update');
             Route::delete('/property-management/items/{item}', [AdminController::class, 'destroyFacilityItem'])->name('admin.property-management.items.destroy');

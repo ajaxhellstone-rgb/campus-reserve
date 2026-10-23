@@ -1,26 +1,26 @@
 @extends('layouts.app')
 
-@section('title', 'Admin Dashboard - Campus Reserve')
+@section('title', 'Staff Dashboard - Campus Reserve')
 
 @section('content')
-<!-- Admin dashboard layout: pending approvals, audit logs, and user management sections. -->
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-slate-50 to-cyan-50 py-6 sm:py-10">
-    <div class="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
-        <div class="relative mb-6 overflow-hidden rounded-3xl border border-white/80 bg-gradient-to-r from-indigo-100/90 via-pink-50 to-cyan-100/80 p-5 shadow-sm sm:mb-8 sm:p-9">
-            <div aria-hidden="true" class="absolute -right-10 -top-20 h-56 w-56 rounded-full bg-white/50 blur-3xl"></div>
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <p class="relative text-sm font-semibold uppercase tracking-[0.16em] text-indigo-700">Campus Reserve</p>
-                    <h1 class="relative mt-1 text-3xl font-semibold tracking-tight text-slate-950">Admin Dashboard</h1>
-                    <p class="relative mt-2 text-slate-600">Approve or reject reservations, manage members, and review audit activity.</p>
+<!-- Admin overview groups existing reservation, member, and audit tools beside contextual navigation. -->
+<div class="min-h-screen bg-[#f5f3f7]">
+    <div class="flex min-h-screen flex-col md:flex-row">
+        @include('admin.partials.sidebar')
+
+        <main class="min-w-0 flex-1 px-3 py-5 sm:px-6 sm:py-8 xl:px-10">
+            <div class="mx-auto max-w-[1600px]">
+                <section id="overview" data-admin-section="overview">
+                <div class="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold text-green-800">Campus Reserve / Workspace</p>
+                        <h1 class="mt-1 text-3xl font-semibold tracking-tight text-slate-950">Dashboard overview</h1>
+                        <p class="mt-2 text-sm text-slate-500 sm:text-base">Reservations, members, and administration activity in one place.</p>
+                    </div>
+                    <a href="/reserve" class="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-green-300 hover:text-green-900 md:hidden">
+                        Open user portal
+                    </a>
                 </div>
-                <div class="flex flex-wrap items-center gap-3">
-                    <a href="{{ route('admin.facilities.create') }}" class="inline-flex items-center rounded-full bg-indigo-700 px-4 py-2 text-white transition-colors hover:bg-indigo-800">Facility Management</a>
-                    <a href="{{ route('admin.property-management.index') }}" class="inline-flex items-center rounded-full bg-violet-700 px-4 py-2 text-white transition-colors hover:bg-violet-800">Property Management</a>
-                    <a href="/reserve" class="inline-flex items-center rounded-full border border-indigo-200 bg-white/80 px-4 py-2 text-indigo-800 transition-colors hover:bg-white">Back to User Portal</a>
-                </div>
-            </div>
-        </div>
 
         @if(session('status'))
             <div class="mb-6 bg-green-100 border border-green-300 text-green-800 px-4 py-3 rounded">{{ session('status') }}</div>
@@ -32,27 +32,75 @@
             <div class="mb-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-red-800" role="alert">{{ $errors->first('current_password') }}</div>
         @endif
 
-        <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6 xl:grid-cols-4">
-            <div class="rounded-3xl border border-indigo-100 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
+        <div class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-5 xl:grid-cols-4">
+            <div class="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm sm:p-5">
                 <p class="text-sm font-medium text-gray-500">Pending Reservations</p>
                 <p id="pending-reservations-total" class="mt-2 text-2xl font-bold text-gray-900 sm:mt-4 sm:text-3xl">{{ $pendingReservations->total() }}</p>
             </div>
-            <div class="rounded-3xl border border-pink-100 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
+            <div class="rounded-2xl border border-green-100 bg-white p-4 shadow-sm sm:p-5">
                 <p class="text-sm font-medium text-gray-500">Recent Decisions</p>
                 <p id="recent-decisions-total" class="mt-2 text-2xl font-bold text-gray-900 sm:mt-4 sm:text-3xl">{{ $recentReservations->count() }}</p>
             </div>
-            <div class="rounded-3xl border border-cyan-100 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
+            <div class="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm sm:p-5">
                 <p class="text-sm font-medium text-gray-500">Audit Log Entries</p>
                 <p id="audit-log-total" class="mt-2 text-2xl font-bold text-gray-900 sm:mt-4 sm:text-3xl">{{ $auditLogs->count() }}</p>
             </div>
-            <div class="rounded-3xl border border-violet-100 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
+            <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                 <p class="text-sm font-medium text-gray-500">Members</p>
                 <p class="mt-2 text-2xl font-bold text-gray-900 sm:mt-4 sm:text-3xl">{{ $users->total() ?? 0 }}</p>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-            <section class="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6 xl:col-span-2">
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <a href="#reservations" data-admin-section-link="reservations" class="rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-green-300 hover:text-green-900">Review reservations <span class="ml-1 text-slate-400">→</span></a>
+                    <a href="#members" data-admin-section-link="members" class="rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-green-300 hover:text-green-900">Manage members <span class="ml-1 text-slate-400">→</span></a>
+                    <a href="#audit" data-admin-section-link="audit" class="rounded-2xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-green-300 hover:text-green-900">View audit activity <span class="ml-1 text-slate-400">→</span></a>
+                </div>
+
+                @php
+                    $maxDecisionCount = max($approvedReservationCount, $rejectedReservationCount, 1);
+                @endphp
+                <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="reservation-outcomes-title">
+                    <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <h2 id="reservation-outcomes-title" class="text-xl font-semibold text-slate-900">Reservation outcomes</h2>
+                            <p class="mt-1 text-sm text-slate-500">Total approved and rejected reservations.</p>
+                        </div>
+                        <span class="text-xs font-medium text-slate-400">All time</span>
+                    </div>
+
+                    <div class="space-y-5" role="img" aria-label="Bar chart comparing total approved and rejected reservations">
+                        <div data-reservation-outcome="approved" data-total="{{ $approvedReservationCount }}">
+                            <div class="mb-2 flex items-center justify-between gap-4">
+                                <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                                    <span class="h-2.5 w-2.5 rounded-full bg-green-600" aria-hidden="true"></span>
+                                    Approved
+                                </span>
+                                <span class="text-sm font-semibold tabular-nums text-slate-900">{{ number_format($approvedReservationCount) }}</span>
+                            </div>
+                            <div class="h-3 overflow-hidden rounded-full bg-slate-100">
+                                <div class="h-full rounded-full bg-green-600 transition-[width]" style="width: {{ round(($approvedReservationCount / $maxDecisionCount) * 100, 1) }}%"></div>
+                            </div>
+                        </div>
+
+                        <div data-reservation-outcome="rejected" data-total="{{ $rejectedReservationCount }}">
+                            <div class="mb-2 flex items-center justify-between gap-4">
+                                <span class="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+                                    <span class="h-2.5 w-2.5 rounded-full bg-rose-500" aria-hidden="true"></span>
+                                    Rejected
+                                </span>
+                                <span class="text-sm font-semibold tabular-nums text-slate-900">{{ number_format($rejectedReservationCount) }}</span>
+                            </div>
+                            <div class="h-3 overflow-hidden rounded-full bg-slate-100">
+                                <div class="h-full rounded-full bg-rose-500 transition-[width]" style="width: {{ round(($rejectedReservationCount / $maxDecisionCount) * 100, 1) }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                </section>
+
+                <section id="reservations" data-admin-section="reservations" class="hidden">
+            <section id="pending-reservations-section" class="scroll-mt-6 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-6">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                     <div>
                         <h2 class="text-xl font-semibold text-gray-900">Pending Reservations</h2>
@@ -115,8 +163,10 @@
                     </div>
                 @endif
             </section>
+                </section>
 
-            <section class="rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
+                <section id="audit" data-admin-section="audit" class="hidden">
+            <section id="audit-activity-section" class="scroll-mt-6 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-6">
                 <div class="mb-4">
                     <h2 class="text-xl font-semibold text-gray-900">Audit Log</h2>
                     <p class="text-sm text-gray-600">Track administrator actions and reservation activity.</p>
@@ -144,13 +194,17 @@
                     @endif
                 </div>
             </section>
-        </div>
+                </section>
 
+                <section id="members" data-admin-section="members" class="hidden">
         <p id="member-management-status" class="mt-3 hidden text-sm text-emerald-700" role="status" aria-live="polite"></p>
         <p id="member-management-error" class="mt-3 hidden text-sm text-rose-700" role="alert"></p>
         <div id="member-management-content" data-endpoint="{{ route('admin.dashboard') }}" aria-busy="false">
             @include('admin.partials.members')
         </div>
+                </section>
+            </div>
+        </main>
     </div>
 </div>
 @include('admin.partials.password-confirmation')
@@ -166,6 +220,53 @@
         const dashboardError = document.getElementById('dashboard-action-error');
         let activeRequest = null;
         let searchTimer = null;
+        const dashboardSections = Array.from(document.querySelectorAll('[data-admin-section]'));
+        const dashboardSectionLinks = Array.from(document.querySelectorAll('[data-admin-section-link]'));
+        const legacySectionNames = {
+            'pending-reservations-section': 'reservations',
+            'member-management-section': 'members',
+            'audit-activity-section': 'audit',
+        };
+
+        function activateDashboardSection(sectionName, updateHistory) {
+            const section = dashboardSections.find(function(item) {
+                return item.dataset.adminSection === sectionName;
+            });
+            if (!section) return;
+
+            dashboardSections.forEach(function(item) {
+                item.classList.toggle('hidden', item !== section);
+            });
+            dashboardSectionLinks.forEach(function(link) {
+                const isActive = link.dataset.adminSectionLink === sectionName;
+                link.classList.toggle('bg-green-50', isActive);
+                link.classList.toggle('text-green-900', isActive);
+                link.classList.toggle('font-semibold', isActive);
+                link.classList.toggle('text-slate-600', !isActive);
+                link.classList.toggle('font-medium', !isActive);
+                link.setAttribute('aria-current', isActive ? 'page' : 'false');
+            });
+
+            if (updateHistory) {
+                window.history.pushState({}, '', `#${sectionName}`);
+            }
+            window.scrollTo(0, 0);
+        }
+
+        function activateDashboardSectionFromLocation() {
+            const hash = window.location.hash.slice(1);
+            const sectionName = legacySectionNames[hash] || hash || 'overview';
+            activateDashboardSection(sectionName, false);
+        }
+
+        dashboardSectionLinks.forEach(function(link) {
+            link.addEventListener('click', function(event) {
+                event.preventDefault();
+                activateDashboardSection(link.dataset.adminSectionLink, true);
+            });
+        });
+        window.addEventListener('popstate', activateDashboardSectionFromLocation);
+        activateDashboardSectionFromLocation();
 
         function showMessage(element, message) {
             element.textContent = message;
@@ -231,6 +332,7 @@
                 url.searchParams.set('role', String(formData.get('role') || 'all'));
                 if (!pageUrl) url.searchParams.delete('page');
             }
+            url.hash = '#members';
             return url;
         }
 
@@ -299,7 +401,9 @@
         });
 
         memberContent.addEventListener('change', function(event) {
-            if (!(event.target instanceof HTMLSelectElement) || event.target.name !== 'role') return;
+            if (!(event.target instanceof HTMLSelectElement)
+                || event.target.name !== 'role'
+                || event.target.form?.id !== 'member-filter-form') return;
             loadMembers(membersUrl().toString(), true);
         });
 

@@ -46,6 +46,55 @@ class AdminDashboardPerformanceTest extends TestCase
             ->assertSee('pendingPage=2');
     }
 
+    public function test_dashboard_management_areas_have_separate_navigation_sections(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('data-admin-section="overview"', false)
+            ->assertSee('data-admin-section="reservations"', false)
+            ->assertSee('data-admin-section="members"', false)
+            ->assertSee('data-admin-section="audit"', false)
+            ->assertSee('data-admin-section-link="reservations"', false)
+            ->assertSee('data-admin-section-link="members"', false)
+            ->assertSee('data-admin-section-link="audit"', false)
+            ->assertSee('Facilities')
+            ->assertSee('Property items');
+    }
+
+    public function test_overview_graph_shows_total_approved_and_rejected_reservations(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $facility = Facility::create([
+            'name' => 'Lecture Room 1',
+            'building' => 'Main Building',
+            'type' => 'Classroom',
+            'capacity' => 30,
+            'is_active' => true,
+        ]);
+
+        foreach (['approved', 'approved', 'rejected'] as $index => $status) {
+            Reservation::create([
+                'user_id' => $admin->id,
+                'facility_id' => $facility->id,
+                'reservation_date' => now()->addDays($index + 1)->toDateString(),
+                'start_time' => '10:00',
+                'end_time' => '11:00',
+                'purpose' => "Decision {$index}",
+                'status' => $status,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Reservation outcomes')
+            ->assertSee('data-reservation-outcome="approved" data-total="2"', false)
+            ->assertSee('data-reservation-outcome="rejected" data-total="1"', false);
+    }
+
     public function test_ajax_member_pagination_returns_only_the_member_section(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

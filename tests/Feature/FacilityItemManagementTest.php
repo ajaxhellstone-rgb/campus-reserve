@@ -33,13 +33,24 @@ class FacilityItemManagementTest extends TestCase
         $this->actingAs($admin)
             ->get(route('admin.dashboard'))
             ->assertOk()
-            ->assertSee('Facility Management')
-            ->assertSee('Property Management');
+            ->assertSeeText('Facilities')
+            ->assertSeeText('Property items')
+            ->assertSee(route('admin.facilities.create'))
+            ->assertSee(route('admin.property-management.index'));
 
         $this->get(route('admin.property-management.index'))
             ->assertOk()
             ->assertSee('Projector')
-            ->assertSee('Main Building');
+            ->assertSee('Main Building')
+            ->assertSee('Admin dashboard navigation')
+            ->assertSee('Property items')
+            ->assertSee('aria-current="page"', false);
+
+        $this->get(route('admin.facilities.create'))
+            ->assertOk()
+            ->assertSee('Admin dashboard navigation')
+            ->assertSee('Facility Management')
+            ->assertSee('aria-current="page"', false);
     }
 
     public function test_facility_management_omits_amenities_and_facility_booking_shows_item_options(): void

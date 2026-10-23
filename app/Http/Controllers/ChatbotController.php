@@ -8,7 +8,9 @@ use App\Models\Reservation;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use App\Services\FacilityItemAvailability;
+use App\Services\FacilityMaintenanceSchedule;
 use App\Services\ReservationNotificationDispatcher;
+use App\Services\ReservationTimeWindow;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,7 +35,9 @@ class ChatbotController extends Controller
     public function respond(
         Request $request,
         FacilityItemAvailability $itemAvailability,
-        ReservationNotificationDispatcher $reservationNotifications
+        ReservationNotificationDispatcher $reservationNotifications,
+        ReservationTimeWindow $reservationTimeWindow,
+        FacilityMaintenanceSchedule $maintenanceSchedule
     ): JsonResponse {
         $message = trim((string) $request->input('message'));
         $normalized = $this->normalizeMessage($message);
@@ -160,6 +164,21 @@ class ChatbotController extends Controller
             if (!$facility || !$date || !$startTime || !$endTime) {
                 session()->forget('chatbot_reservation');
                 return response()->json(['reply' => 'I need the room, date, and time again before I can submit the request.']);
+            }
+
+            if (! $reservationTimeWindow->allows($startTime, $endTime)) {
+                return response()->json(['reply' => $reservationTimeWindow->validationMessage()]);
+            }
+
+            $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
+                $facility->id,
+                $date,
+                $startTime,
+                $endTime
+            );
+            if ($maintenanceBlock) {
+                session()->forget('chatbot_reservation');
+                return response()->json(['reply' => $maintenanceSchedule->validationMessage($maintenanceBlock)]);
             }
 
             if (!$facility->isAvailable($date, $startTime, $endTime)) {

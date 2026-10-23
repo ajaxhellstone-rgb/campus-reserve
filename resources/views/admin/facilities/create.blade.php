@@ -3,12 +3,12 @@
 @section('title', 'Facility Management - Campus Reserve')
 
 @section('content')
-<div class="min-h-screen bg-gray-50 py-10">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+<div class="min-h-screen bg-[#f5f3f7]">
+    <div class="flex min-h-screen flex-col md:flex-row">
+        @include('admin.partials.sidebar')
+        <main class="min-w-0 flex-1 px-3 py-5 sm:px-6 sm:py-8 xl:px-10">
+    <div class="mx-auto max-w-[1600px]">
         <div class="mb-8">
-            <a href="{{ route('admin.dashboard') }}" class="mb-4 inline-flex items-center text-sm text-gray-600 hover:text-gray-900">
-                &larr; Back to Admin Dashboard
-            </a>
             <h1 class="text-3xl font-bold text-gray-900">Facility Management</h1>
             <p class="mt-2 text-gray-600">Add facilities and control the website cards shown to visitors. Manage facility items and quantities in Property Management.</p>
         </div>
@@ -23,7 +23,7 @@
             <div class="mb-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-red-800" role="alert">{{ $errors->first('current_password') }}</div>
         @endif
 
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="grid grid-cols-1 gap-6">
             <section class="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
                 <div class="mb-6">
                     <h2 class="text-2xl font-bold text-gray-900">Add Facility</h2>
@@ -118,6 +118,8 @@
                 </div>
             </aside>
         </div>
+    </div>
+        </main>
     </div>
 </div>
 

@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Reservation;
 use App\Models\Facility;
+use App\Models\FacilityMaintenanceBlock;
 use App\Models\FacilityItem;
 use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use App\Services\FacilityItemAvailability;
+use App\Services\FacilityMaintenanceSchedule;
 use App\Services\ReservationNotificationDispatcher;
+use App\Services\ReservationTimeWindow;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +22,11 @@ use Illuminate\Validation\ValidationException;
 class CalendarController extends Controller
 {
     // Get approved reservations in the visible calendar range and format them as events.
-    public function events(Request $request)
+    public function events(
+        Request $request,
+        FacilityMaintenanceSchedule $maintenanceSchedule,
+        ReservationTimeWindow $reservationTimeWindow
+    )
     {
         // The shared calendar shows approved facility bookings, while keeping
         // each user's reservation purpose private from other users.
@@ -64,6 +71,36 @@ class CalendarController extends Controller
                 ],
             ];
         });
+
+        $hours = $reservationTimeWindow->current();
+        $maintenanceEvents = $maintenanceSchedule
+            ->forDateRange($validated['start'], $validated['end'], $validated['facility'] ?? null)
+            ->map(function (FacilityMaintenanceBlock $block) use ($hours) {
+                $date = $block->maintenance_date->format('Y-m-d');
+                $startTime = $block->is_all_day ? $hours['start_time'] : $block->start_time;
+                $endTime = $block->is_all_day ? $hours['end_time'] : $block->end_time;
+
+                return [
+                    'id' => 'maintenance-'.$block->id,
+                    'title' => 'Unavailable: '.$block->facility->name,
+                    'start' => $date.'T'.$startTime.':00',
+                    'end' => $date.'T'.$endTime.':00',
+                    'color' => '#FEE2E2',
+                    'extendedProps' => [
+                        'type' => 'maintenance',
+                        'is_maintenance' => true,
+                        'is_all_day' => $block->is_all_day,
+                        'reason' => $block->reason,
+                        'purpose' => $block->reason,
+                        'status' => 'unavailable',
+                        'room' => $block->facility->name,
+                        'date' => $date,
+                        'is_owner' => false,
+                    ],
+                ];
+            });
+
+        $events = $events->concat($maintenanceEvents)->values();
         return response()->json($events);
     }
 
@@ -71,7 +108,9 @@ class CalendarController extends Controller
     public function store(
         Request $request,
         FacilityItemAvailability $itemAvailability,
-        ReservationNotificationDispatcher $reservationNotifications
+        ReservationNotificationDispatcher $reservationNotifications,
+        ReservationTimeWindow $reservationTimeWindow,
+        FacilityMaintenanceSchedule $maintenanceSchedule
     )
     {
         // First, I validate that all the required info is provided
@@ -88,10 +127,29 @@ class CalendarController extends Controller
             'items.*.quantity' => ['required', 'integer', 'min:1'],
         ]);
 
+        if (! $reservationTimeWindow->allows($validated['start_time'], $validated['end_time'])) {
+            return response()->json([
+                'error' => $reservationTimeWindow->validationMessage(),
+            ], 422);
+        }
+
         $facilityInput = $validated['facility'];
         $facility = ctype_digit($facilityInput)
             ? Facility::active()->findOrFail((int) $facilityInput)
             : Facility::active()->where('name', $facilityInput)->firstOrFail();
+
+        $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
+            $facility->id,
+            $validated['date'],
+            $validated['start_time'],
+            $validated['end_time']
+        );
+        if ($maintenanceBlock) {
+            return response()->json([
+                'code' => 'facility_maintenance',
+                'error' => $maintenanceSchedule->validationMessage($maintenanceBlock),
+            ], 409);
+        }
 
         if (!$facility->isAvailable($validated['date'], $validated['start_time'], $validated['end_time'])) {
             return response()->json([
@@ -196,7 +254,9 @@ class CalendarController extends Controller
     public function itemAvailability(
         Request $request,
         Facility $facility,
-        FacilityItemAvailability $itemAvailability
+        FacilityItemAvailability $itemAvailability,
+        ReservationTimeWindow $reservationTimeWindow,
+        FacilityMaintenanceSchedule $maintenanceSchedule
     ) {
         abort_unless($facility->is_active, 404);
 
@@ -205,6 +265,24 @@ class CalendarController extends Controller
             'start_time' => ['required', 'date_format:H:i'],
             'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
         ]);
+
+        if (! $reservationTimeWindow->allows($validated['start_time'], $validated['end_time'])) {
+            return response()->json([
+                'message' => $reservationTimeWindow->validationMessage(),
+            ], 422);
+        }
+
+        $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
+            $facility->id,
+            $validated['date'],
+            $validated['start_time'],
+            $validated['end_time']
+        );
+        if ($maintenanceBlock) {
+            return response()->json([
+                'message' => $maintenanceSchedule->validationMessage($maintenanceBlock),
+            ], 409);
+        }
 
         $items = $facility->items()
             ->orderBy('name')
@@ -253,15 +331,10 @@ class CalendarController extends Controller
     private function getReservationColor($reservationId)
     {
         $colors = [
-            '#166534', '#15803D', '#16A34A', '#14532D',
-            '#B45309', '#D97706', '#92400E', '#F59E0B',
-            '#166534', '#15803D', '#16A34A', '#14532D',
-            '#B45309', '#D97706', '#92400E', '#F59E0B',
-            '#166534', '#15803D', '#16A34A', '#14532D',
-            '#B45309', '#D97706', '#92400E', '#F59E0B',
+            '#DCEBE0', '#EAF0DE', '#F4E8CE', '#E2EDE8',
+            '#F0E6D3', '#DDE9DF', '#E7EBDD', '#EFE8DA',
         ];
         
-        // I cycle through the colors based on the reservation ID so each one gets a different color
         $colorIndex = (intval($reservationId) % count($colors));
         return $colors[$colorIndex];
     }
