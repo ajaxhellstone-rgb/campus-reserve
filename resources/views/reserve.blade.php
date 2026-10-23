@@ -119,7 +119,7 @@
             </div>
 
         </div>
-        <div id="property-reservation-statistics" data-reservation-statistics="property" class="mb-6 hidden grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6" hidden>
+        <div id="property-reservation-statistics" data-reservation-statistics="property" class="mb-6 grid grid-cols-2 gap-3 sm:mb-8 sm:gap-6">
             <div class="rounded-3xl border border-slate-200/80 bg-white/90 p-4 shadow-sm sm:p-6">
                 <div class="flex items-center">
                     <div class="rounded-2xl bg-indigo-100 p-3">
@@ -148,21 +148,11 @@
             </div>
         </div>
 
-        <!-- Facility and property reservation tabs -->
-        <div class="mb-8 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 shadow-sm shadow-indigo-950/5">
-            <div class="flex border-b border-slate-200 px-3 pt-4 sm:px-6 sm:pt-5" role="tablist" aria-label="Reservation type">
-                <button id="facility-reservation-tab" type="button" role="tab" aria-selected="true" aria-controls="facility-reservation-panel" data-reservation-tab="facility" class="flex-1 border-b-2 border-indigo-700 px-2 py-3 text-sm font-semibold text-indigo-800 sm:flex-none sm:px-4">
-                    Reserve Facility
-                </button>
-                <button id="property-reservation-tab" type="button" role="tab" aria-selected="false" aria-controls="property-reservation-panel" data-reservation-tab="property" class="flex-1 border-b-2 border-transparent px-2 py-3 text-sm font-semibold text-slate-500 hover:text-indigo-700 sm:flex-none sm:px-4">
-                    Reserve Property
-                </button>
-            </div>
-
-            <section id="facility-reservation-panel" role="tabpanel" aria-labelledby="facility-reservation-tab" class="p-4 sm:p-6">
-                <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div class="mb-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <section id="facility-reservation-panel" class="min-w-0 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
+                <div class="mb-5">
                     <h2 class="text-xl font-semibold text-gray-900">Available Facilities</h2>
-                    <label class="block w-full sm:max-w-sm">
+                    <label class="mt-4 block">
                         <span class="sr-only">Search available facilities</span>
                         <input id="available-facilities-search" type="search" placeholder="Search rooms or buildings" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" autocomplete="off">
                     </label>
@@ -170,7 +160,7 @@
                 @if($facilities->isEmpty())
                     <div id="available-facilities-empty" class="py-12 text-center text-gray-500">No facilities are available right now.</div>
                 @else
-                    <div id="available-facilities-list" class="reservation-options-scroll grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" tabindex="0" aria-label="Available facilities">
+                    <div id="available-facilities-list" class="reservation-options-scroll grid grid-cols-1 gap-4 2xl:grid-cols-2" tabindex="0" aria-label="Available facilities">
                         @foreach($facilities as $facility)
                             <div data-available-facility-card data-search="{{ strtolower($facility->name . ' ' . ($facility->building ?? '') . ' ' . ($facility->capacity ?? '')) }}" class="rounded-2xl border border-slate-200 bg-white p-1 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
                                 <div class="p-4">
@@ -190,9 +180,9 @@
                 @endif
             </section>
 
-            <section id="property-reservation-panel" role="tabpanel" aria-labelledby="property-reservation-tab" class="hidden p-4 sm:p-6" hidden>
+            <section id="property-reservation-panel" class="min-w-0 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
                 <h2 class="mb-2 text-xl font-semibold text-gray-900">Available Property Items</h2>
-                <p class="mb-6 text-sm text-gray-600">Browse property inventory and reserve item quantities for a date and time. Property reservations are independent of rooms and facilities.</p>
+                <p class="mb-4 text-sm text-gray-600">Browse and reserve property inventory. Property reservations are independent of facilities.</p>
                 <label class="mb-4 block">
                     <span class="sr-only">Search available property items</span>
                     <input id="available-properties-search" type="search" placeholder="Search property items" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" autocomplete="off">
@@ -203,7 +193,7 @@
                     tabindex="0"
                     aria-label="Available property items"
                     aria-live="polite">
-                    <p class="py-8 text-center text-sm text-slate-500">Property items load when you open this tab.</p>
+                    <p class="py-8 text-center text-sm text-slate-500">Loading property items...</p>
                 </div>
             </section>
         </div>
@@ -399,15 +389,6 @@
     (() => {
         const reservationOpenTime = @json($reservationHours['start_time']);
         const reservationCloseTime = @json($reservationHours['end_time']);
-        const tabButtons = Array.from(document.querySelectorAll('[data-reservation-tab]'));
-        const tabPanels = {
-            facility: document.getElementById('facility-reservation-panel'),
-            property: document.getElementById('property-reservation-panel'),
-        };
-        const tabStatistics = {
-            facility: document.getElementById('facility-reservation-statistics'),
-            property: document.getElementById('property-reservation-statistics'),
-        };
         const propertiesList = document.getElementById('available-properties-list');
         const facilitiesSearch = document.getElementById('available-facilities-search');
         const propertiesSearch = document.getElementById('available-properties-search');
@@ -539,42 +520,7 @@
             return propertyItemsRequest;
         }
 
-        function selectReservationTab(tabName) {
-            tabButtons.forEach((button) => {
-                const selected = button.dataset.reservationTab === tabName;
-                button.setAttribute('aria-selected', String(selected));
-                button.classList.toggle('border-indigo-700', selected);
-                button.classList.toggle('text-indigo-800', selected);
-                button.classList.toggle('border-transparent', !selected);
-                button.classList.toggle('text-slate-500', !selected);
-                button.classList.toggle('hover:text-indigo-700', !selected);
-            });
-
-            Object.entries(tabPanels).forEach(([name, panel]) => {
-                const selected = name === tabName;
-                panel.hidden = !selected;
-                panel.classList.toggle('hidden', !selected);
-            });
-
-            Object.entries(tabStatistics).forEach(([name, statistics]) => {
-                const selected = name === tabName;
-                statistics.hidden = !selected;
-                statistics.classList.toggle('hidden', !selected);
-            });
-
-            if (tabName === 'property' && !propertyItemsLoaded) {
-                loadPropertyItems();
-            }
-        }
-
-        tabButtons.forEach((button) => {
-            button.addEventListener('click', () => selectReservationTab(button.dataset.reservationTab));
-        });
-
-        const requestedTab = new URLSearchParams(window.location.search).get('tab');
-        if (requestedTab === 'property') {
-            selectReservationTab('property');
-        }
+        loadPropertyItems();
 
         const feedback = document.getElementById('property-booking-feedback');
         const savedFeedback = sessionStorage.getItem('propertyBookingFeedback');

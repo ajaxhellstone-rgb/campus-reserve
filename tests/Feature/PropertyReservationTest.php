@@ -15,7 +15,7 @@ class PropertyReservationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_reserve_page_shows_reservation_tabs_without_eager_loading_property_items(): void
+    public function test_reserve_page_shows_both_reservation_sections_without_eager_loading_property_items(): void
     {
         $user = User::factory()->create();
         $facility = $this->createFacility();
@@ -30,15 +30,17 @@ class PropertyReservationTest extends TestCase
             ->assertOk()
             ->assertSee('Welcome,')
             ->assertDontSee('Welcome back,')
-            ->assertSee('Reserve Facility')
-            ->assertSee('Reserve Property')
+            ->assertSee('Available Facilities')
+            ->assertSee('Available Property Items')
+            ->assertSee('lg:grid-cols-2', false)
+            ->assertDontSee('data-reservation-tab', false)
             ->assertDontSee('Projector')
             ->assertDontSee('3 in stock')
             ->assertSee('available-facilities-list', false)
             ->assertSee('available-properties-list', false);
     }
 
-    public function test_independent_property_items_load_only_when_the_property_tab_is_opened(): void
+    public function test_property_items_are_loaded_from_the_independent_inventory_endpoint(): void
     {
         $user = User::factory()->create();
         $facility = $this->createFacility();
