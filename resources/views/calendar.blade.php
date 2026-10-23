@@ -377,6 +377,8 @@
         var currentSearch = '';
         var cachedEvents = [];
             var suggestionsEl = document.getElementById('searchSuggestions');
+        var reservationOpenTime = @json($reservationHours['start_time']);
+        var reservationCloseTime = @json($reservationHours['end_time']);
         var minimumCalendarYear = new Date().getFullYear() - 1;
         var calendarTitle = document.getElementById('calendarCurrentTitle');
         var previousCalendarButton = document.getElementById('calendarPrevBtn');
@@ -518,6 +520,8 @@
             selectable: false,
             editable: false,
             allDaySlot: false,
+            slotMinTime: reservationOpenTime + ':00',
+            slotMaxTime: reservationCloseTime + ':00',
             dayHeaderContent: function(info) {
                 var weekday = info.date.toLocaleDateString('en-US', { weekday: 'short' });
                 var container = document.createElement('div');

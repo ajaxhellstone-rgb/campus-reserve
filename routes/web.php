@@ -51,8 +51,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/chatbot/reset', [ChatbotController::class, 'reset'])->name('chatbot.reset');
     Route::get('/api/property-facilities', [FacilityController::class, 'propertyItems'])
         ->name('api.facilities.property-items');
-    Route::get('/calendar', function () {
-        return view('calendar');
+    Route::get('/calendar', function (ReservationTimeWindow $reservationTimeWindow) {
+        $reservationHours = $reservationTimeWindow->current();
+
+        return view('calendar', compact('reservationHours'));
     })->name('calendar');
 
     Route::get('/api/calendar/events', [CalendarController::class, 'events']);

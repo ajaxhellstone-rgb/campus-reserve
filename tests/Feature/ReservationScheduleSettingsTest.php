@@ -99,6 +99,13 @@ class ReservationScheduleSettingsTest extends TestCase
         ]);
 
         $this->actingAs($user);
+        $this->get('/calendar')
+            ->assertOk()
+            ->assertSee('"07:00"', false)
+            ->assertSee('"19:00"', false)
+            ->assertSee("slotMinTime: reservationOpenTime + ':00'", false)
+            ->assertSee("slotMaxTime: reservationCloseTime + ':00'", false);
+
         $this->get('/calendar/manage')
             ->assertOk()
             ->assertSee('Reservations allowed 7:00 AM–7:00 PM.')
