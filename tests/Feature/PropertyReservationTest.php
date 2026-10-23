@@ -60,6 +60,18 @@ class PropertyReservationTest extends TestCase
             ->assertJsonPath('0.quantity', 3);
     }
 
+    public function test_property_reservation_dialog_uses_the_clicked_item_without_a_selection_checkbox(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('reserve'))
+            ->assertOk()
+            ->assertSee('Selected item and quantity')
+            ->assertSee('Reserve Item')
+            ->assertDontSee("checkbox.type = 'checkbox';", false);
+    }
+
     public function test_reserve_page_shows_property_item_quantity_statistics(): void
     {
         $user = User::factory()->create();

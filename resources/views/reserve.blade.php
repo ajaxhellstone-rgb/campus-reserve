@@ -244,7 +244,7 @@
 
                     <div>
                         <div class="flex flex-wrap items-baseline justify-between gap-2">
-                            <h3 class="text-sm font-semibold text-slate-900">Select items and quantities</h3>
+                            <h3 class="text-sm font-semibold text-slate-900">Selected item and quantity</h3>
                             <p class="text-xs text-slate-500">Available quantity updates for the selected time.</p>
                         </div>
                         <div id="property-booking-items" class="mt-3 max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-slate-200 p-3"></div>
@@ -253,7 +253,7 @@
                     <p id="property-booking-error" class="hidden whitespace-pre-line rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800" role="alert"></p>
                     <div class="flex justify-end gap-3 border-t border-slate-100 pt-5">
                         <button type="button" id="property-booking-cancel" class="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Cancel</button>
-                        <button type="submit" id="property-booking-submit" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Reserve Items</button>
+                        <button type="submit" id="property-booking-submit" class="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">Reserve Item</button>
                     </div>
                 </form>
             </div>
@@ -614,68 +614,46 @@
         }
 
         function renderItems(availability = modalItems) {
-            const selectedQuantities = new Map(
-                Array.from(itemsContainer.querySelectorAll('[data-item-id]'))
-                    .filter((checkbox) => checkbox.checked)
-                    .map((checkbox) => [
-                        checkbox.dataset.itemId,
-                        Number(itemsContainer.querySelector(`[data-quantity-for="${checkbox.dataset.itemId}"]`).value),
-                    ])
-            );
+            const previousQuantity = itemsContainer.querySelector(`[data-quantity-for="${preferredItemId}"]`)?.value;
             itemsContainer.replaceChildren();
 
-            if (!availability.length) {
+            const selectedItem = availability.find((item) => String(item.id) === preferredItemId);
+            if (!selectedItem) {
                 const emptyMessage = document.createElement('p');
                 emptyMessage.className = 'px-2 py-4 text-sm text-slate-500';
-                emptyMessage.textContent = 'No property items are available.';
+                emptyMessage.textContent = 'This property item is no longer available.';
                 itemsContainer.appendChild(emptyMessage);
                 return;
             }
 
-            availability.forEach((item) => {
-                const row = document.createElement('div');
-                row.className = 'flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5';
+            const row = document.createElement('div');
+            row.className = 'flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5';
 
-                const itemInfo = document.createElement('div');
-                itemInfo.className = 'flex min-w-0 items-center gap-3';
+            const nameGroup = document.createElement('div');
+            const name = document.createElement('p');
+            name.className = 'text-sm font-medium text-slate-800';
+            name.textContent = selectedItem.name;
 
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.className = 'h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-500';
-                checkbox.dataset.itemId = String(item.id);
-                checkbox.disabled = item.available < 1;
-                checkbox.checked = (selectedQuantities.has(String(item.id)) || String(item.id) === preferredItemId) && item.available > 0;
+            const available = document.createElement('p');
+            available.className = 'text-xs text-slate-500';
+            available.dataset.availableFor = String(selectedItem.id);
+            available.textContent = `${selectedItem.available} available`;
+            nameGroup.append(name, available);
 
-                const nameGroup = document.createElement('div');
-                const name = document.createElement('p');
-                name.className = 'text-sm font-medium text-slate-800';
-                name.textContent = item.name;
+            const quantity = document.createElement('input');
+            quantity.type = 'number';
+            quantity.min = '1';
+            quantity.max = String(selectedItem.available);
+            quantity.value = String(previousQuantity
+                ? Math.min(Number(previousQuantity), selectedItem.available)
+                : 1);
+            quantity.disabled = selectedItem.available < 1;
+            quantity.setAttribute('aria-label', `Quantity of ${selectedItem.name}`);
+            quantity.className = 'w-24 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 disabled:bg-slate-100';
+            quantity.dataset.quantityFor = String(selectedItem.id);
 
-                const available = document.createElement('p');
-                available.className = 'text-xs text-slate-500';
-                available.dataset.availableFor = String(item.id);
-                available.textContent = `${item.available} available`;
-                nameGroup.append(name, available);
-                itemInfo.append(checkbox, nameGroup);
-
-                const quantity = document.createElement('input');
-                quantity.type = 'number';
-                quantity.min = '1';
-                quantity.max = String(item.available);
-                const previousQuantity = selectedQuantities.get(String(item.id));
-                quantity.value = String(previousQuantity ? Math.min(previousQuantity, item.available) : 1);
-                quantity.disabled = !checkbox.checked;
-                quantity.setAttribute('aria-label', `Quantity of ${item.name}`);
-                quantity.className = 'w-24 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 disabled:bg-slate-100';
-                quantity.dataset.quantityFor = String(item.id);
-
-                checkbox.addEventListener('change', () => {
-                    quantity.disabled = !checkbox.checked || item.available < 1;
-                });
-
-                row.append(itemInfo, quantity);
-                itemsContainer.appendChild(row);
-            });
+            row.append(nameGroup, quantity);
+            itemsContainer.appendChild(row);
         }
 
         async function refreshAvailability() {
@@ -717,7 +695,9 @@
                 }
 
                 renderItems(data.items);
-                submitButton.disabled = false;
+                submitButton.disabled = !data.items.some((item) =>
+                    String(item.id) === preferredItemId && item.available > 0
+                );
             } catch (error) {
                 if (error.name !== 'AbortError' && version === availabilityVersion) {
                     setBookingError(error.message || 'Could not check item availability. Please try again.');
@@ -742,7 +722,7 @@
 
             preferredItemId = String(item.id);
             facilityLabel.textContent = 'Property inventory is independent of rooms and facilities.';
-            modalItems = propertyItems;
+            modalItems = [item];
             form.reset();
             itemsContainer.replaceChildren();
             const now = new Date();
@@ -784,23 +764,21 @@
                 return;
             }
 
-            const selectedItems = Array.from(itemsContainer.querySelectorAll('[data-item-id]:checked')).map((checkbox) => {
-                const quantityInput = itemsContainer.querySelector(`[data-quantity-for="${checkbox.dataset.itemId}"]`);
-                return {
-                    facility_item_id: Number(checkbox.dataset.itemId),
-                    quantity: Number(quantityInput.value),
-                };
-            });
-
-            if (!selectedItems.length) {
-                setBookingError('Select at least one item to reserve.');
+            const quantityInput = itemsContainer.querySelector(`[data-quantity-for="${preferredItemId}"]`);
+            if (!preferredItemId || !quantityInput || quantityInput.disabled) {
+                setBookingError('This item is currently unavailable for the selected time.');
                 return;
             }
 
-            if (selectedItems.some((item) => !Number.isInteger(item.quantity) || item.quantity < 1)) {
-                setBookingError('Enter a quantity of at least one for each selected item.');
+            const quantity = Number(quantityInput.value);
+            if (!Number.isInteger(quantity) || quantity < 1 || quantity > Number(quantityInput.max)) {
+                setBookingError(`Enter a quantity from 1 to ${quantityInput.max}.`);
                 return;
             }
+            const selectedItems = [{
+                facility_item_id: Number(preferredItemId),
+                quantity,
+            }];
 
             submitButton.disabled = true;
             submitButton.textContent = 'Submitting...';
@@ -840,7 +818,7 @@
                     : error.message || 'Reservation could not be submitted. Please try again.');
             } finally {
                 submitButton.disabled = false;
-                submitButton.textContent = 'Reserve Items';
+                submitButton.textContent = 'Reserve Item';
             }
         });
     })();
