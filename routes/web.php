@@ -367,6 +367,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/reservation-settings', [AdminController::class, 'reservationSettings'])->name('admin.reservation-settings');
             Route::put('/reservation-settings', [AdminController::class, 'updateReservationSettings'])->name('admin.reservation-settings.update');
             Route::post('/reservation-settings/maintenance', [AdminController::class, 'storeMaintenanceBlock'])->name('admin.reservation-settings.maintenance.store');
+            Route::put('/reservation-settings/maintenance/{block}', [AdminController::class, 'updateMaintenanceBlock'])->name('admin.reservation-settings.maintenance.update');
             Route::delete('/reservation-settings/maintenance/{block}', [AdminController::class, 'destroyMaintenanceBlock'])->name('admin.reservation-settings.maintenance.destroy');
             Route::post('/property-management/items', [AdminController::class, 'storeFacilityItem'])->name('admin.property-management.items.store');
             Route::put('/property-management/items/{item}', [AdminController::class, 'updateFacilityItem'])->name('admin.property-management.items.update');

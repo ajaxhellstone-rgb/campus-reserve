@@ -459,6 +459,97 @@ class AdminController extends Controller
         return redirect()->route('admin.reservation-settings')->with('status', 'Maintenance block removed.');
     }
 
+    public function updateMaintenanceBlock(
+        Request $request,
+        FacilityMaintenanceBlock $block,
+        FacilityMaintenanceSchedule $maintenanceSchedule,
+        ReservationNotificationDispatcher $reservationNotifications
+    ) {
+        $this->requireAdmin();
+
+        if (! $maintenanceSchedule->isAvailable()) {
+            return back()->with('error', 'Maintenance scheduling is unavailable until its database migration has been applied.');
+        }
+
+        $validated = $request->validate([
+            'facility_id' => ['required', 'integer', Rule::exists('facilities', 'id')->where('is_active', true)],
+            'maintenance_date' => ['required', 'date', 'after_or_equal:today'],
+            'is_all_day' => ['required', 'boolean'],
+            'start_time' => ['nullable', 'required_unless:is_all_day,1', 'date_format:H:i'],
+            'end_time' => ['nullable', 'required_unless:is_all_day,1', 'date_format:H:i', 'after:start_time'],
+            'reason' => ['required', 'string', 'max:255'],
+            'current_password' => ['required', 'current_password'],
+        ]);
+
+        $isAllDay = $request->boolean('is_all_day');
+        $startTime = $isAllDay ? null : $validated['start_time'];
+        $endTime = $isAllDay ? null : $validated['end_time'];
+        $facility = Facility::findOrFail($validated['facility_id']);
+
+        $overlappingReservations = DB::transaction(function () use (
+            $block,
+            $validated,
+            $facility,
+            $isAllDay,
+            $startTime,
+            $endTime
+        ) {
+            $block = FacilityMaintenanceBlock::query()->lockForUpdate()->findOrFail($block->id);
+            $block->update([
+                'facility_id' => $facility->id,
+                'maintenance_date' => $validated['maintenance_date'],
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'is_all_day' => $isAllDay,
+                'reason' => $validated['reason'],
+            ]);
+
+            $overlappingReservations = Reservation::query()
+                ->where('facility_id', $facility->id)
+                ->whereDate('reservation_date', $validated['maintenance_date'])
+                ->whereIn('status', ['pending', 'approved'])
+                ->when(! $isAllDay, fn ($query) => $query
+                    ->where('start_time', '<', $endTime)
+                    ->where('end_time', '>', $startTime))
+                ->lockForUpdate()
+                ->get();
+
+            foreach ($overlappingReservations as $reservation) {
+                $reservation->update([
+                    'status' => 'rejected',
+                    'rejected_at' => now(),
+                    'admin_remarks' => "Automatically rejected due to facility maintenance: {$validated['reason']}.",
+                ]);
+
+                AuditLog::create([
+                    'user_id' => Auth::id(),
+                    'reservation_id' => $reservation->id,
+                    'action' => 'rejected',
+                    'details' => "Automatically rejected due to facility maintenance: {$validated['reason']}.",
+                ]);
+            }
+
+            AuditLog::create([
+                'user_id' => Auth::id(),
+                'reservation_id' => null,
+                'action' => 'facility_maintenance_updated',
+                'details' => "Updated maintenance for {$facility->name} on {$validated['maintenance_date']}: {$validated['reason']}.",
+            ]);
+
+            return $overlappingReservations;
+        });
+
+        foreach ($overlappingReservations as $reservation) {
+            $reservationNotifications->notifyBorrower($reservation);
+        }
+
+        return redirect()
+            ->route('admin.reservation-settings')
+            ->with('status', $overlappingReservations->isEmpty()
+                ? 'Maintenance block updated successfully.'
+                : 'Maintenance block updated. Overlapping reservations were automatically rejected and their owners notified.');
+    }
+
     public function storeFacilityItem(Request $request)
     {
         $this->requireAdmin();

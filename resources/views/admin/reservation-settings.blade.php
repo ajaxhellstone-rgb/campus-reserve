@@ -141,18 +141,87 @@
                                             · {{ $block->reason }}
                                         </p>
                                     </div>
-                                    <form method="POST" action="{{ route('admin.reservation-settings.maintenance.destroy', $block) }}" class="flex items-center gap-3" data-password-confirm>
-                                        @csrf
-                                        @method('DELETE')
-                                        <input type="hidden" name="current_password">
-                                        <button type="submit" class="rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">Remove</button>
-                                    </form>
+                                    <div class="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            data-edit-maintenance
+                                            data-edit-action="{{ route('admin.reservation-settings.maintenance.update', $block) }}"
+                                            data-facility-id="{{ $block->facility_id }}"
+                                            data-maintenance-date="{{ $block->maintenance_date->toDateString() }}"
+                                            data-all-day="{{ $block->is_all_day ? '1' : '0' }}"
+                                            data-start-time="{{ $block->start_time ? substr($block->start_time, 0, 5) : '' }}"
+                                            data-end-time="{{ $block->end_time ? substr($block->end_time, 0, 5) : '' }}"
+                                            data-reason="{{ $block->reason }}"
+                                            class="rounded-xl border border-green-200 bg-white px-4 py-2 text-sm font-semibold text-green-800 hover:bg-green-50">
+                                            Edit
+                                        </button>
+                                        <form method="POST" action="{{ route('admin.reservation-settings.maintenance.destroy', $block) }}" class="flex items-center gap-3" data-password-confirm>
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="current_password">
+                                            <button type="submit" class="rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50">Remove</button>
+                                        </form>
+                                    </div>
                                 </div>
                             @empty
                                 <p class="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No upcoming maintenance blocks.</p>
                             @endforelse
                         </div>
                     </div>
+
+                    <dialog id="maintenance-edit-dialog" class="w-full max-w-2xl rounded-3xl border border-slate-200 p-0 shadow-2xl backdrop:bg-slate-950/60">
+                        <form id="maintenance-edit-form" method="POST" action="#" data-password-confirm class="space-y-5 p-6 sm:p-8">
+                            @csrf
+                            @method('PUT')
+                            <input type="hidden" name="current_password">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <h3 class="text-xl font-semibold text-slate-900">Edit scheduled maintenance</h3>
+                                    <p class="mt-1 text-sm text-slate-600">Update the facility, date, time, or reason.</p>
+                                </div>
+                                <button id="maintenance-edit-close" type="button" class="rounded-full p-2 text-xl leading-none text-slate-500 hover:bg-slate-100" aria-label="Close maintenance editor">&times;</button>
+                            </div>
+                            <div class="grid gap-5 sm:grid-cols-2">
+                                <label class="block text-sm font-medium text-gray-700">
+                                    Room or facility
+                                    <select id="maintenance-edit-facility" name="facility_id" required class="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 focus:border-green-700 focus:outline-none focus:ring-1 focus:ring-green-700">
+                                        @foreach($facilities as $facility)
+                                            <option value="{{ $facility->id }}">{{ $facility->name }}{{ $facility->building ? ' — '.$facility->building : '' }}</option>
+                                        @endforeach
+                                    </select>
+                                </label>
+                                <label class="block text-sm font-medium text-gray-700">
+                                    Date
+                                    <input id="maintenance-edit-date" name="maintenance_date" type="date" min="{{ now()->toDateString() }}" required class="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-green-700 focus:outline-none focus:ring-1 focus:ring-green-700">
+                                </label>
+                            </div>
+                            <div>
+                                <input type="hidden" name="is_all_day" value="0">
+                                <label class="inline-flex items-center gap-3 text-sm font-medium text-gray-700">
+                                    <input id="maintenance-edit-all-day" name="is_all_day" type="checkbox" value="1" class="rounded border-gray-300 text-green-800 focus:ring-green-700">
+                                    Unavailable all day
+                                </label>
+                            </div>
+                            <div id="maintenance-edit-time-fields" class="grid gap-5 sm:grid-cols-2">
+                                <label class="block text-sm font-medium text-gray-700">
+                                    Unavailable from
+                                    <input id="maintenance-edit-start" name="start_time" type="time" required class="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-green-700 focus:outline-none focus:ring-1 focus:ring-green-700">
+                                </label>
+                                <label class="block text-sm font-medium text-gray-700">
+                                    Unavailable until
+                                    <input id="maintenance-edit-end" name="end_time" type="time" required class="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-green-700 focus:outline-none focus:ring-1 focus:ring-green-700">
+                                </label>
+                            </div>
+                            <label class="block text-sm font-medium text-gray-700">
+                                Reason
+                                <input id="maintenance-edit-reason" name="reason" type="text" maxlength="255" required class="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 focus:border-green-700 focus:outline-none focus:ring-1 focus:ring-green-700">
+                            </label>
+                            <div class="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+                                <button id="maintenance-edit-cancel" type="button" class="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancel</button>
+                                <button type="submit" class="rounded-xl bg-green-800 px-6 py-3 text-sm font-semibold text-white hover:bg-green-900">Save changes</button>
+                            </div>
+                        </form>
+                    </dialog>
                 </section>
             </div>
         </main>
@@ -221,23 +290,57 @@
             pendingForm = null;
         });
 
-        var allDayInput = document.getElementById('maintenance_all_day');
-        var timeFields = document.getElementById('maintenance_time_fields');
-        var startInput = document.getElementById('maintenance_start_time');
-        var endInput = document.getElementById('maintenance_end_time');
+        function bindMaintenanceTimeFields(allDayInput, timeFields, startInput, endInput) {
+            if (!allDayInput || !timeFields || !startInput || !endInput) return;
 
-        if (!allDayInput || !timeFields || !startInput || !endInput) return;
+            function updateTimeFields() {
+                timeFields.classList.toggle('hidden', allDayInput.checked);
+                startInput.disabled = allDayInput.checked;
+                endInput.disabled = allDayInput.checked;
+                startInput.required = !allDayInput.checked;
+                endInput.required = !allDayInput.checked;
+            }
 
-        function updateMaintenanceTimeFields() {
-            timeFields.classList.toggle('hidden', allDayInput.checked);
-            startInput.disabled = allDayInput.checked;
-            endInput.disabled = allDayInput.checked;
-            startInput.required = !allDayInput.checked;
-            endInput.required = !allDayInput.checked;
+            allDayInput.addEventListener('change', updateTimeFields);
+            updateTimeFields();
         }
 
-        allDayInput.addEventListener('change', updateMaintenanceTimeFields);
-        updateMaintenanceTimeFields();
+        bindMaintenanceTimeFields(
+            document.getElementById('maintenance_all_day'),
+            document.getElementById('maintenance_time_fields'),
+            document.getElementById('maintenance_start_time'),
+            document.getElementById('maintenance_end_time')
+        );
+
+        var editDialog = document.getElementById('maintenance-edit-dialog');
+        var editAllDayInput = document.getElementById('maintenance-edit-all-day');
+        bindMaintenanceTimeFields(
+            editAllDayInput,
+            document.getElementById('maintenance-edit-time-fields'),
+            document.getElementById('maintenance-edit-start'),
+            document.getElementById('maintenance-edit-end')
+        );
+
+        document.querySelectorAll('[data-edit-maintenance]').forEach(function(button) {
+            button.addEventListener('click', function() {
+                document.getElementById('maintenance-edit-form').action = button.dataset.editAction;
+                document.getElementById('maintenance-edit-facility').value = button.dataset.facilityId;
+                document.getElementById('maintenance-edit-date').value = button.dataset.maintenanceDate;
+                editAllDayInput.checked = button.dataset.allDay === '1';
+                document.getElementById('maintenance-edit-start').value = button.dataset.startTime;
+                document.getElementById('maintenance-edit-end').value = button.dataset.endTime;
+                document.getElementById('maintenance-edit-reason').value = button.dataset.reason;
+                editAllDayInput.dispatchEvent(new Event('change'));
+                editDialog.showModal();
+            });
+        });
+
+        document.getElementById('maintenance-edit-close').addEventListener('click', function() {
+            editDialog.close();
+        });
+        document.getElementById('maintenance-edit-cancel').addEventListener('click', function() {
+            editDialog.close();
+        });
     });
 </script>
 @endpush

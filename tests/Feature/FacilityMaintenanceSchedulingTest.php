@@ -213,6 +213,86 @@ class FacilityMaintenanceSchedulingTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'facility_maintenance_removed']);
     }
 
+    public function test_admin_can_edit_maintenance_and_reject_newly_overlapping_reservations(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $admin = User::factory()->create(['is_admin' => true]);
+        $user = User::factory()->create();
+        $facility = $this->createFacility();
+        $reservation = $this->createReservation($user, $facility, 'approved', '10:00', '11:00');
+        $block = FacilityMaintenanceBlock::create([
+            'facility_id' => $facility->id,
+            'maintenance_date' => '2030-05-03',
+            'start_time' => '13:00',
+            'end_time' => '14:00',
+            'is_all_day' => false,
+            'reason' => 'Initial maintenance',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.reservation-settings'))
+            ->assertOk()
+            ->assertSee('data-edit-maintenance', false)
+            ->assertSee('maintenance-edit-dialog', false)
+            ->assertSee('Save changes');
+
+        $this->put(route('admin.reservation-settings.maintenance.update', $block), [
+            'facility_id' => $facility->id,
+            'maintenance_date' => '2030-05-01',
+            'is_all_day' => '0',
+            'start_time' => '09:30',
+            'end_time' => '10:30',
+            'reason' => 'Updated repairs',
+            'current_password' => 'password',
+        ])
+            ->assertRedirect(route('admin.reservation-settings'))
+            ->assertSessionHas('status', 'Maintenance block updated. Overlapping reservations were automatically rejected and their owners notified.');
+
+        $this->assertDatabaseHas('facility_maintenance_blocks', [
+            'id' => $block->id,
+            'maintenance_date' => '2030-05-01 00:00:00',
+            'start_time' => '09:30',
+            'end_time' => '10:30',
+            'reason' => 'Updated repairs',
+        ]);
+        $this->assertSame('rejected', $reservation->fresh()->status);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'facility_maintenance_updated',
+            'details' => "Updated maintenance for {$facility->name} on 2030-05-01: Updated repairs.",
+        ]);
+        \Illuminate\Support\Facades\Notification::assertSentTo($user, ReservationStatusChanged::class);
+    }
+
+    public function test_maintenance_edit_requires_password_and_valid_input(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $facility = $this->createFacility();
+        $block = FacilityMaintenanceBlock::create([
+            'facility_id' => $facility->id,
+            'maintenance_date' => '2030-05-01',
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+            'is_all_day' => false,
+            'reason' => 'Room repairs',
+        ]);
+
+        $this->actingAs($admin)
+            ->putJson(route('admin.reservation-settings.maintenance.update', $block), [
+                'facility_id' => $facility->id,
+                'maintenance_date' => '2030-05-02',
+                'is_all_day' => '0',
+                'start_time' => '12:00',
+                'end_time' => '11:00',
+                'reason' => '',
+                'current_password' => 'password',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['end_time', 'reason']);
+
+        $this->assertSame('2030-05-01', $block->fresh()->maintenance_date->toDateString());
+    }
+
     public function test_reservation_settings_actions_require_the_correct_password(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
