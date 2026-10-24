@@ -60,6 +60,20 @@ Local development uses the SQLite database at `database/database.sqlite`, file-b
 
 Set `DB_CONNECTION=pgsql` and the appropriate database credentials in your private `.env` only when you intentionally want local development to use the remote database; that requires an internet connection.
 
+### Local OWASP ZAP passive scan
+
+The `zap-passive-scan.yaml` Automation Framework plan requests only selected public pages and the read-only facilities API on `127.0.0.1`. It runs passive analysis only; it does not authenticate, submit forms, or run an active scan. Keep `.env` on the local SQLite database and do not point this plan at the Render deployment.
+
+Start the local app with `php artisan serve --host=127.0.0.1 --port=8000`, then run the plan from the repository root in PowerShell (adjust the JAR path if ZAP is installed elsewhere or upgraded):
+
+```powershell
+$zapJar = 'C:\Program Files\ZAP\Zed Attack Proxy\zap-2.17.0.jar'
+$zapHome = Join-Path $env:TEMP 'campusreserve-zap-profile'
+java -jar $zapJar -dir $zapHome -port 18080 -cmd -silent -autorun zap-passive-scan.yaml
+```
+
+The HTML report is written to `zap-reports\campusreserve-zap-passive.html`, which is excluded from Git. ZAP passive findings are observations for follow-up, not proof that the application is secure or a substitute for authorized active testing.
+
 ## Render demo deployment
 
 This repository includes a Render Blueprint (`render.yaml`) and Dockerfile. In Render, create a new Blueprint and connect `ajaxhellstone-rgb/campus-reserve` on the `main` branch. The web service must be configured with the intended PostgreSQL connection (`DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, and `DB_SSLMODE`) and the same Laravel `APP_KEY` used to encrypt existing user data. These values are intentionally not synchronized from the Blueprint. Database migrations run when the container starts.

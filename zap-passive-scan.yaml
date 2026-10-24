@@ -1,0 +1,42 @@
+env:
+  contexts:
+    - name: campusreserve-local-public
+      urls:
+        - http://127.0.0.1:8000
+      includePaths:
+        - '^http://127\.0\.0\.1:8000/(?:|login|signup|about|contact|api/facilities)/?(?:\?.*)?$'
+      excludePaths:
+        - '^http://127\.0\.0\.1:8000/(?:admin|auth|calendar|credentials|debug|notifications|profile|reserve|2fa|reset-password|security|logout)(?:/|$)'
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    continueOnFailure: false
+    progressToStdout: true
+
+jobs:
+  - type: passiveScan-config
+    parameters:
+      scanOnlyInScope: true
+
+  - type: requestor
+    requests:
+      - url: http://127.0.0.1:8000/
+      - url: http://127.0.0.1:8000/login
+      - url: http://127.0.0.1:8000/signup
+      - url: http://127.0.0.1:8000/about
+      - url: http://127.0.0.1:8000/contact
+      - url: http://127.0.0.1:8000/api/facilities
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 3
+
+  - type: report
+    parameters:
+      template: risk-confidence-html
+      reportDir: zap-reports
+      reportFile: campusreserve-zap-passive.html
+      reportTitle: Campus Reserve - Local Passive Security Scan
+      reportDescription: >-
+        OWASP ZAP passive analysis of selected public pages and the read-only
+        facilities API on the local development server. No active scan was run.
