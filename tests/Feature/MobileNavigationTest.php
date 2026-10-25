@@ -79,7 +79,8 @@ class MobileNavigationTest extends TestCase
             ->get(route('calendar'))
             ->assertOk()
             ->assertSee("initialView: 'timeGridWeek'", false)
-            ->assertSee('calendar-mobile-reserve', false)
+            ->assertDontSee('calendar-mobile-reserve', false)
+            ->assertDontSee('open_facility_calendar', false)
             ->assertDontSee('>Today</button>', false)
             ->assertSee('calendar-page-layout', false);
 

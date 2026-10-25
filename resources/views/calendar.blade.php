@@ -79,7 +79,6 @@
                         <span id="calendarMobileDateTitle" class="text-sm font-semibold text-slate-900"></span>
                         <button id="calendarMobileNextBtn" type="button" aria-label="Next date" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700">&rsaquo;</button>
                     </div>
-                    <a href="{{ route('reserve', ['open_facility_calendar' => 1]) }}" class="calendar-mobile-reserve mb-4 hidden rounded-xl bg-green-800 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-green-900">Reserve</a>
                     <div class="mb-5 flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
                         <div class="calendar-desktop-date-nav flex items-center gap-3">
                             <button id="calendarPrevBtn" type="button" aria-label="Previous dates" class="rounded-full border border-slate-200 bg-white px-3 py-2 text-slate-600 transition hover:bg-slate-50">&lsaquo;</button>
@@ -92,7 +91,6 @@
                                 <button data-view="dayGridMonth" class="hidden rounded-lg px-3 py-1.5 text-sm text-slate-600 transition hover:bg-white md:inline-flex">Month</button>
                                 <button data-view="listWeek" class="hidden rounded-lg px-3 py-1.5 text-sm text-slate-600 transition hover:bg-white md:inline-flex">List</button>
                             </div>
-                            <a href="{{ route('reserve', ['open_facility_calendar' => 1]) }}" class="inline-flex items-center justify-center rounded-xl bg-green-800 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-900">Reserve</a>
                         </div>
                     </div>
 
@@ -209,10 +207,6 @@
 
         .calendar-mobile-date-bar {
             display: flex;
-        }
-
-        .calendar-mobile-reserve {
-            display: block;
         }
 
         #calendar {
