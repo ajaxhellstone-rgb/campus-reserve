@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Facility;
 use App\Models\Reservation;
 use App\Models\User;
+use App\Services\UserNameSearchIndex;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -165,7 +166,7 @@ class AdminDashboardPerformanceTest extends TestCase
     public function test_ajax_member_search_matches_encrypted_names_across_all_roles(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
-        User::factory()->create([
+        $franz = User::factory()->create([
             'name' => 'Franz Example',
             'email' => 'franz.member@example.com',
         ]);
@@ -173,6 +174,13 @@ class AdminDashboardPerformanceTest extends TestCase
             'name' => 'Other Member',
             'email' => 'other.member@example.com',
         ]);
+        User::factory()->create([
+            'name' => 'fra ran anz decoy',
+            'email' => 'decoy.member@example.com',
+        ]);
+
+        $this->assertDatabaseHas('user_name_search_tokens', ['user_id' => $franz->id]);
+        $this->assertTrue(app(UserNameSearchIndex::class)->matchingUserIds('fRaNz')->contains($franz->id));
 
         $this->actingAs($admin)
             ->get(route('admin.dashboard', ['search' => 'fRaNz', 'role' => 'all']), [
@@ -183,8 +191,14 @@ class AdminDashboardPerformanceTest extends TestCase
             ->assertSee('Franz Example')
             ->assertSee('franz.member@example.com')
             ->assertDontSee('Other Member')
+            ->assertDontSee('fra ran anz decoy')
             ->assertDontSee('Admin Dashboard')
             ->assertDontSee('Pending Reservations');
+
+        $franz->update(['name' => 'Updated Member']);
+
+        $this->assertFalse(app(UserNameSearchIndex::class)->matchingUserIds('fRaNz')->contains($franz->id));
+        $this->assertTrue(app(UserNameSearchIndex::class)->matchingUserIds('Updated')->contains($franz->id));
     }
 
     public function test_member_search_remains_interactive_while_results_load(): void

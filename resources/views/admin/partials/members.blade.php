@@ -21,6 +21,7 @@
             <div class="relative">
                 <label class="sr-only" for="search">Search members</label>
                 <input id="search" name="search" type="search" value="{{ $search ?? '' }}" placeholder="Search name or email" class="w-full rounded-full border border-slate-300 bg-slate-50 py-2 pl-4 pr-20 text-sm focus:border-indigo-400 focus:ring-indigo-200 sm:w-80" autocomplete="off">
+                <span id="member-search-loading" class="pointer-events-none absolute inset-y-0 right-16 hidden items-center text-xs text-slate-500" role="status">Searching</span>
                 <button type="submit" class="absolute inset-y-0 right-0 inline-flex items-center pr-4 text-slate-500 hover:text-indigo-800">Search</button>
             </div>
         </form>

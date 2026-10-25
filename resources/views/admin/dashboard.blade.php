@@ -506,6 +506,8 @@
 
         function setLoading(loading) {
             memberContent.setAttribute('aria-busy', String(loading));
+            memberContent.querySelector('#member-search-loading')?.classList.toggle('hidden', !loading);
+            memberContent.querySelector('#member-search-loading')?.classList.toggle('inline-flex', loading);
         }
 
         function loadMembers(url, historyMode) {
@@ -653,7 +655,7 @@
             window.clearTimeout(searchTimer);
             searchTimer = window.setTimeout(function() {
                 loadMembers(membersUrl().toString(), 'replace');
-            }, 300);
+            }, 200);
         });
 
         memberContent.addEventListener('change', function(event) {

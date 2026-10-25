@@ -15,6 +15,7 @@ use App\Services\PropertyItemMaintenanceSchedule;
 use App\Services\ReservationNotificationDispatcher;
 use App\Services\ReservationDateWindow;
 use App\Services\ReservationTimeWindow;
+use App\Services\UserNameSearchIndex;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -42,7 +43,11 @@ class AdminController extends Controller
         }
     }
 
-    public function dashboard(Request $request, ReservationDateWindow $reservationDateWindow)
+    public function dashboard(
+        Request $request,
+        ReservationDateWindow $reservationDateWindow,
+        UserNameSearchIndex $userNameSearchIndex
+    )
     {
         // Show the admin dashboard with pending requests, recent activity, and user search
         $this->requireAdmin();
@@ -68,17 +73,27 @@ class AdminController extends Controller
             $searchEmailHash = filter_var($search, FILTER_VALIDATE_EMAIL)
                 ? hash('sha256', strtolower($search))
                 : null;
-            $allUsers = $memberSort === 'name'
-                ? $users->get()
-                : $users->orderBy('created_at', $memberSort === 'joined_oldest' ? 'asc' : 'desc')
-                    ->orderBy('id', $memberSort === 'joined_oldest' ? 'asc' : 'desc')
-                    ->get();
-            $allUsers = $allUsers
+            $candidateIds = $userNameSearchIndex->matchingUserIds($search);
+            if ($searchEmailHash !== null) {
+                $emailUserId = (clone $users)->where('email_hash', $searchEmailHash)->value('id');
+                if ($emailUserId !== null) {
+                    $candidateIds->push($emailUserId);
+                }
+            }
+
+            $allUsers = (clone $users)
+                ->whereIn('id', $candidateIds->unique())
+                ->when($memberSort !== 'name', fn ($query) => $query
+                    ->orderBy('created_at', $memberSort === 'joined_oldest' ? 'asc' : 'desc')
+                    ->orderBy('id', $memberSort === 'joined_oldest' ? 'asc' : 'desc'))
+                ->get()
                 ->filter(fn (User $user): bool =>
-                    mb_stripos($user->name, $search) !== false
-                    || ($searchEmailHash !== null && hash_equals($user->email_hash, $searchEmailHash))
-                )
-                ->values();
+                    $userNameSearchIndex->matches($user->name, $search)
+                    || ($searchEmailHash !== null
+                        && $user->email_hash !== null
+                        && hash_equals($user->email_hash, $searchEmailHash))
+                );
+            $allUsers = $allUsers->values();
 
             if ($memberSort === 'name') {
                 $allUsers = $allUsers

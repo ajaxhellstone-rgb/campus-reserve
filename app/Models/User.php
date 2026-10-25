@@ -7,10 +7,24 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Services\UserNameSearchIndex;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
+
+    protected static function booted(): void
+    {
+        static::created(function (User $user): void {
+            app(UserNameSearchIndex::class)->sync($user);
+        });
+
+        static::updated(function (User $user): void {
+            if ($user->wasChanged('name')) {
+                app(UserNameSearchIndex::class)->sync($user);
+            }
+        });
+    }
 
     /**
      * The attributes that can be assigned directly when creating or updating a user.
