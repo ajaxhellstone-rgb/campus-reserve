@@ -194,4 +194,29 @@ class AdminDashboardPerformanceTest extends TestCase
             ->assertOk()
             ->assertSeeInOrder(['Alpha Member', 'Zebra Member']);
     }
+
+    public function test_member_rows_display_each_profile_picture_before_the_member_name(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $member = User::factory()->create([
+            'name' => 'Member With Picture',
+            'profile_picture' => 'profile_pictures/member.webp',
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->get(route('admin.dashboard', ['role' => 'user']));
+
+        $response
+            ->assertOk()
+            ->assertSee('src="'.asset('storage/profile_pictures/member.webp').'"', false)
+            ->assertSee('alt=""', false)
+            ->assertSee('Member With Picture');
+
+        $html = $response->getContent();
+        $imagePosition = strpos($html, 'src="'.asset('storage/profile_pictures/member.webp').'"');
+        $namePosition = strpos($html, 'Member With Picture');
+        $this->assertNotFalse($imagePosition);
+        $this->assertNotFalse($namePosition);
+        $this->assertLessThan($namePosition, $imagePosition);
+    }
 }

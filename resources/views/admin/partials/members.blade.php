@@ -43,7 +43,18 @@
                 <tbody class="divide-y divide-slate-200">
                     @foreach($users as $user)
                         <tr class="hover:bg-indigo-50/50">
-                            <td class="px-4 py-4 text-sm text-gray-700">{{ $user->name }}</td>
+                            <td class="px-4 py-4 text-sm text-gray-700">
+                                <div class="flex min-w-0 items-center gap-3">
+                                    <img
+                                        src="{{ $user->profilePictureUrl() }}"
+                                        onerror="this.onerror=null;this.src='{{ asset('images/guest-avatar.svg') }}';"
+                                        alt=""
+                                        aria-hidden="true"
+                                        class="h-9 w-9 shrink-0 rounded-full border border-slate-200 object-cover"
+                                    >
+                                    <span class="truncate">{{ $user->name }}</span>
+                                </div>
+                            </td>
                             <td class="px-4 py-4 text-sm text-gray-700">{{ $user->email }}</td>
                             <td class="px-4 py-4 text-sm text-gray-700">
                                 @if($user->isSuperAdmin())
