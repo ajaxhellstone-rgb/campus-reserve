@@ -162,6 +162,31 @@ class AdminDashboardPerformanceTest extends TestCase
             ->assertDontSee('Pending Reservations');
     }
 
+    public function test_ajax_member_search_matches_encrypted_names_across_all_roles(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        User::factory()->create([
+            'name' => 'Franz Example',
+            'email' => 'franz.member@example.com',
+        ]);
+        User::factory()->create([
+            'name' => 'Other Member',
+            'email' => 'other.member@example.com',
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard', ['search' => 'fRaNz', 'role' => 'all']), [
+                'X-Requested-With' => 'XMLHttpRequest',
+                'Accept' => 'text/html',
+            ])
+            ->assertOk()
+            ->assertSee('Franz Example')
+            ->assertSee('franz.member@example.com')
+            ->assertDontSee('Other Member')
+            ->assertDontSee('Admin Dashboard')
+            ->assertDontSee('Pending Reservations');
+    }
+
     public function test_member_search_remains_interactive_while_results_load(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

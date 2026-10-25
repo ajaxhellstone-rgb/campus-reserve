@@ -65,16 +65,40 @@ class AdminController extends Controller
         }
 
         if ($search !== '') {
-            $users->where(function ($query) use ($search) {
-                $query->where('name', 'like', "%{$search}%");
+            $searchEmailHash = filter_var($search, FILTER_VALIDATE_EMAIL)
+                ? hash('sha256', strtolower($search))
+                : null;
+            $allUsers = $memberSort === 'name'
+                ? $users->get()
+                : $users->orderBy('created_at', $memberSort === 'joined_oldest' ? 'asc' : 'desc')
+                    ->orderBy('id', $memberSort === 'joined_oldest' ? 'asc' : 'desc')
+                    ->get();
+            $allUsers = $allUsers
+                ->filter(fn (User $user): bool =>
+                    mb_stripos($user->name, $search) !== false
+                    || ($searchEmailHash !== null && hash_equals($user->email_hash, $searchEmailHash))
+                )
+                ->values();
 
-                if (filter_var($search, FILTER_VALIDATE_EMAIL)) {
-                    $query->orWhere('email_hash', hash('sha256', strtolower($search)));
-                }
-            });
-        }
+            if ($memberSort === 'name') {
+                $allUsers = $allUsers
+                    ->sortBy(fn (User $user) => mb_strtolower($user->name))
+                    ->values();
+            }
 
-        if ($memberSort === 'name') {
+            $currentPage = LengthAwarePaginator::resolveCurrentPage();
+            $users = new LengthAwarePaginator(
+                $allUsers->forPage($currentPage, 15)->values(),
+                $allUsers->count(),
+                15,
+                $currentPage,
+                [
+                    'path' => LengthAwarePaginator::resolveCurrentPath(),
+                    'query' => $request->query(),
+                ]
+            );
+            $users->withQueryString();
+        } elseif ($memberSort === 'name') {
             $allUsers = $users->get()
                 ->sortBy(fn (User $user) => mb_strtolower($user->name))
                 ->values();
@@ -95,7 +119,7 @@ class AdminController extends Controller
             $users = $users->paginate(15)->withQueryString();
         }
 
-        if ($memberSort === 'name') {
+        if ($search === '' && $memberSort === 'name') {
             $users->withQueryString();
         }
 
