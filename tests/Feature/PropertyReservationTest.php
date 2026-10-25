@@ -39,6 +39,7 @@ class PropertyReservationTest extends TestCase
             ->assertSee('Welcome,')
             ->assertDontSee('Welcome back,')
             ->assertSee('Available Facilities')
+            ->assertSee('Main Building')
             ->assertSee('Available Property Items')
             ->assertSee('Reserve Now')
             ->assertSee('facility-reserve-now', false)

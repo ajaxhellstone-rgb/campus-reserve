@@ -168,7 +168,12 @@
                     <div id="available-facilities-list" class="reservation-options-scroll space-y-3" tabindex="0" aria-label="Available facilities">
                         @foreach($facilities as $facility)
                             <div data-available-facility-card data-search="{{ strtolower($facility->name . ' ' . ($facility->building ?? '') . ' ' . $facility->typeLabel . ' ' . ($facility->capacity ?? '')) }}" class="flex items-center justify-between gap-4 rounded-full border border-slate-100 bg-white px-5 py-4 shadow-sm transition hover:border-indigo-100 hover:shadow-md">
-                                <h3 class="min-w-0 text-lg font-semibold text-gray-900">{{ $facility->name }}</h3>
+                                <div class="min-w-0">
+                                    <h3 class="text-lg font-semibold text-gray-900">{{ $facility->name }}</h3>
+                                    @if($facility->building)
+                                        <p class="mt-1 text-sm text-gray-500">{{ $facility->building }}</p>
+                                    @endif
+                                </div>
                                 <div class="shrink-0 text-right text-sm text-gray-600">
                                     <p>{{ $facility->typeLabel }}</p>
                                     <p>Capacity: {{ $facility->capacity ?? 'N/A' }}</p>
