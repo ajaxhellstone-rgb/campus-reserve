@@ -541,6 +541,10 @@
                 weekdayLabel.className = 'text-[10px] font-medium uppercase tracking-wide text-slate-500';
                 weekdayLabel.textContent = weekday;
 
+                if (info.view.type === 'dayGridMonth') {
+                    return { domNodes: [weekdayLabel] };
+                }
+
                 var dateLabel = document.createElement('span');
                 dateLabel.className = 'text-sm font-semibold text-slate-800';
                 dateLabel.textContent = String(info.date.getDate());

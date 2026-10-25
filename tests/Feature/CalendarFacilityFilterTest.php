@@ -39,6 +39,8 @@ class CalendarFacilityFilterTest extends TestCase
             ->get(route('calendar'))
             ->assertOk()
             ->assertSee('calendarFacilityFilter', false)
+            ->assertSee("if (info.view.type === 'dayGridMonth')", false)
+            ->assertSee('return { domNodes: [weekdayLabel] };', false)
             ->assertSee('All facilities')
             ->assertSee('Room 101')
             ->assertSee('Room 202');
@@ -55,7 +57,9 @@ class CalendarFacilityFilterTest extends TestCase
             ->assertSee('All facilities')
             ->assertSee('Room 101')
             ->assertSee('Room 202')
-            ->assertSee("query.set('facility_id', facilityFilter.value)", false);
+            ->assertSee("query.set('facility_id', facilityFilter.value)", false)
+            ->assertSee("if (info.view.type === 'dayGridMonth')", false)
+            ->assertSee('return { domNodes: [weekdayLabel] };', false);
         $this->assertStringContainsString(
             "frame-ancestors 'self'",
             $embeddedCalendar->headers->get('Content-Security-Policy')
