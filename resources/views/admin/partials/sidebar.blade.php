@@ -22,7 +22,7 @@
 
     <div class="mt-6 hidden items-center gap-3 rounded-2xl bg-slate-50 p-3 md:flex">
         <img
-            src="{{ auth()->user()->profile_picture ? asset('storage/' . auth()->user()->profile_picture) : asset('images/guest-avatar.svg') }}"
+            src="{{ auth()->user()->profilePictureUrl() }}"
             onerror="this.onerror=null;this.src='{{ asset('images/guest-avatar.svg') }}';"
             alt="{{ auth()->user()->name }} profile picture"
             class="h-10 w-10 shrink-0 rounded-full object-cover"

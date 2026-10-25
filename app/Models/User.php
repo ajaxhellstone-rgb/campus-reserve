@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -80,6 +81,27 @@ class User extends Authenticatable
     public function otps()
     {
         return $this->hasMany(Otp::class);
+    }
+
+    public function storedProfilePicture(): HasOne
+    {
+        return $this->hasOne(UserProfilePicture::class);
+    }
+
+    public function profilePictureUrl(): string
+    {
+        $picture = $this->storedProfilePicture;
+
+        if ($picture) {
+            return route('profile.picture.show', [
+                'user' => $this->id,
+                'v' => $picture->updated_at->timestamp,
+            ]);
+        }
+
+        return $this->profile_picture
+            ? asset('storage/'.$this->profile_picture)
+            : asset('images/guest-avatar.svg');
     }
 
     /**

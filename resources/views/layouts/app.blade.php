@@ -38,7 +38,7 @@
                 </a>
                 <a href="/profile" class="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900">
                     <img
-                        src="{{ auth()->user()->profile_picture ? asset('storage/' . auth()->user()->profile_picture) : asset('images/guest-avatar.svg') }}"
+                        src="{{ auth()->user()->profilePictureUrl() }}"
                         onerror="this.onerror=null;this.src='{{ asset('images/guest-avatar.svg') }}';"
                         alt="Profile Picture"
                         class="w-8 h-8 rounded-full object-cover"

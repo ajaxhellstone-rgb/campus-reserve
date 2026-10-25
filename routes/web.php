@@ -332,6 +332,9 @@ Route::middleware('auth')->group(function () {
 
     // Profile settings
     Route::get('/profile', [AuthController::class, 'showProfile'])->name('profile.show');
+    Route::get('/profile/picture/{user}', [AuthController::class, 'showProfilePicture'])
+        ->whereNumber('user')
+        ->name('profile.picture.show');
     Route::post('/profile/name', [AuthController::class, 'updateProfileName'])
         ->name('profile.name.update')
         ->middleware('throttle:10,1');

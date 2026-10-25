@@ -74,7 +74,7 @@
                                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
                                     <div class="relative h-24 w-24 overflow-hidden rounded-3xl border border-gray-200 bg-gray-100">
                                         <img
-                                            src="{{ auth()->user()->profile_picture ? asset('storage/' . auth()->user()->profile_picture) : asset('images/guest-avatar.svg') }}"
+                                            src="{{ auth()->user()->profilePictureUrl() }}"
                                             onerror="this.onerror=null;this.src='{{ asset('images/guest-avatar.svg') }}';"
                                             alt="Profile picture"
                                             class="h-full w-full object-cover"

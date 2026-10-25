@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Otp;
 use App\Models\User;
+use App\Models\UserProfilePicture;
 use App\Notifications\PasswordChanged;
 use App\Notifications\PasswordResetLink;
 use Endroid\QrCode\QrCode;
@@ -719,15 +720,21 @@ class AuthController extends Controller
 
         $user = Auth::user();
         $previousPicture = $user->profile_picture;
-        $picturePath = $validated['profile_picture']->store('profile_pictures', 'public');
-
-        if (! $picturePath) {
+        $imageContents = file_get_contents($validated['profile_picture']->getRealPath());
+        if ($imageContents === false) {
             return response()->json([
                 'message' => 'The profile picture could not be saved. Please try again.',
             ], 500);
         }
 
-        $user->update(['profile_picture' => $picturePath]);
+        DB::transaction(function () use ($user, $validated, $imageContents): void {
+            $user->storedProfilePicture()->updateOrCreate([], [
+                'mime_type' => $validated['profile_picture']->getMimeType(),
+                'image_data' => base64_encode($imageContents),
+            ]);
+
+            $user->update(['profile_picture' => null]);
+        });
 
         if ($previousPicture
             && str_starts_with($previousPicture, 'profile_pictures/')
@@ -737,8 +744,20 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'Profile picture uploaded successfully.',
-            'picture_url' => Storage::disk('public')->url($picturePath),
+            'picture_url' => $user->profilePictureUrl(),
         ]);
+    }
+
+    public function showProfilePicture(User $user)
+    {
+        $picture = UserProfilePicture::where('user_id', $user->id)->firstOrFail();
+        $imageContents = base64_decode($picture->image_data, true);
+        abort_if($imageContents === false, 404);
+
+        return response($imageContents)
+            ->header('Content-Type', $picture->mime_type)
+            ->header('Cache-Control', 'private, max-age=3600')
+            ->header('X-Content-Type-Options', 'nosniff');
     }
 
     private function profileValidationResponse(Request $request, string $field, string $message)
