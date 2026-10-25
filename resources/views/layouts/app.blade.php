@@ -322,8 +322,6 @@
                     if (isClosed) input.focus();
                 });
                 close?.addEventListener('click', function() {
-                    resetServerChat().catch(() => {});
-                    resetVisibleChat();
                     panel.classList.add('invisible', 'pointer-events-none', 'translate-x-full', 'opacity-0');
                     panel.style.transform = 'translateX(100%)';
                     backdrop.classList.add('invisible', 'pointer-events-none', 'opacity-0');
