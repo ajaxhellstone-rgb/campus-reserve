@@ -25,6 +25,27 @@ class MobileNavigationTest extends TestCase
             ->assertSee('Log in');
     }
 
+    public function test_primary_navigation_highlights_the_current_page_on_desktop_and_mobile(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        foreach ([
+            route('home') => '/',
+            route('reserve') => '/reserve',
+            route('calendar') => '/calendar',
+            route('about') => '/about',
+            route('contact') => '/contact',
+        ] as $url => $path) {
+            $response = $this->get($url)->assertOk();
+
+            $this->assertSame(
+                2,
+                preg_match_all('/href="' . preg_quote($path, '/') . '"[^>]*aria-current="page"/', $response->getContent()),
+                "Expected desktop and mobile navigation to mark {$path} as current."
+            );
+        }
+    }
+
     public function test_authenticated_mobile_menu_includes_profile_notifications_and_admin(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
