@@ -203,7 +203,7 @@
         </div>
 
         <div id="facility-calendar-modal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-950/40 p-2 backdrop-blur-sm sm:p-4" role="dialog" aria-modal="true" aria-labelledby="facility-calendar-modal-title">
-            <div class="flex max-h-[96dvh] w-full max-w-[96rem] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl sm:p-5">
+            <div class="flex h-[99dvh] max-h-[99dvh] w-full max-w-[96rem] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl sm:p-5">
                 <div class="mb-3 flex shrink-0 items-center justify-between gap-3">
                     <h2 id="facility-calendar-modal-title" class="text-lg font-semibold text-slate-900 sm:text-xl">Reserve a facility</h2>
                     <button type="button" id="facility-calendar-close" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl leading-none text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" aria-label="Close facility reservation calendar">&times;</button>
@@ -212,7 +212,7 @@
                     id="facility-calendar-frame"
                     data-src="{{ route('calendar.manage', ['embedded' => 1]) }}"
                     title="Facility reservation calendar"
-                    class="h-[82dvh] min-h-[26rem] w-full flex-1 rounded-2xl border border-slate-100 bg-[#f3f7f4] sm:min-h-[34rem]"
+                    class="min-h-0 w-full flex-1 rounded-2xl border border-slate-100 bg-[#f3f7f4]"
                     loading="lazy">
                 </iframe>
             </div>
