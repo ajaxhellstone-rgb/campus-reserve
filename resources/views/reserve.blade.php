@@ -150,8 +150,13 @@
 
         <div class="mb-8 grid grid-cols-1 gap-5 lg:grid-cols-2">
             <section id="facility-reservation-panel" class="min-w-0 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
-                <div class="mb-5">
+                <div class="mb-5 flex items-center justify-between gap-3">
                     <h2 class="text-xl font-semibold text-gray-900">Available Facilities</h2>
+                    <a href="/calendar/manage" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2">
+                        Reserve Now
+                    </a>
+                </div>
+                <div class="mb-5">
                     <label class="mt-4 block">
                         <span class="sr-only">Search available facilities</span>
                         <input id="available-facilities-search" type="search" placeholder="Search rooms or buildings" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" autocomplete="off">
@@ -160,18 +165,13 @@
                 @if($facilities->isEmpty())
                     <div id="available-facilities-empty" class="py-12 text-center text-gray-500">No facilities are available right now.</div>
                 @else
-                    <div id="available-facilities-list" class="reservation-options-scroll grid grid-cols-1 gap-4 2xl:grid-cols-2" tabindex="0" aria-label="Available facilities">
+                    <div id="available-facilities-list" class="reservation-options-scroll space-y-3" tabindex="0" aria-label="Available facilities">
                         @foreach($facilities as $facility)
-                            <div data-available-facility-card data-search="{{ strtolower($facility->name . ' ' . ($facility->building ?? '') . ' ' . ($facility->capacity ?? '')) }}" class="rounded-2xl border border-slate-200 bg-white p-1 transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
-                                <div class="p-4">
-                                    <h3 class="text-lg font-semibold text-gray-900">{{ $facility->name }}</h3>
-                                    @if($facility->building)
-                                        <p class="mt-1 text-sm text-gray-500">{{ $facility->building }}</p>
-                                    @endif
-                                    <p class="mt-1 text-sm text-gray-600">Capacity: {{ $facility->capacity ?? 'N/A' }} people</p>
-                                    <a href="/calendar/manage" class="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-800">
-                                        Reserve Now
-                                    </a>
+                            <div data-available-facility-card data-search="{{ strtolower($facility->name . ' ' . ($facility->building ?? '') . ' ' . $facility->typeLabel . ' ' . ($facility->capacity ?? '')) }}" class="flex items-center justify-between gap-4 rounded-full border border-slate-100 bg-white px-5 py-4 shadow-sm transition hover:border-indigo-100 hover:shadow-md">
+                                <h3 class="min-w-0 text-lg font-semibold text-gray-900">{{ $facility->name }}</h3>
+                                <div class="shrink-0 text-right text-sm text-gray-600">
+                                    <p>{{ $facility->typeLabel }}</p>
+                                    <p>Capacity: {{ $facility->capacity ?? 'N/A' }}</p>
                                 </div>
                             </div>
                         @endforeach
@@ -181,8 +181,12 @@
             </section>
 
             <section id="property-reservation-panel" class="min-w-0 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
-                <h2 class="mb-2 text-xl font-semibold text-gray-900">Available Property Items</h2>
-                <p class="mb-4 text-sm text-gray-600">Browse and reserve property inventory. Property reservations are independent of facilities.</p>
+                <div class="mb-5 flex items-center justify-between gap-3">
+                    <h2 class="text-xl font-semibold text-gray-900">Available Property Items</h2>
+                    <button type="button" id="property-reserve-now" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" disabled>
+                        Reserve Now
+                    </button>
+                </div>
                 <label class="mb-4 block">
                     <span class="sr-only">Search available property items</span>
                     <input id="available-properties-search" type="search" placeholder="Search property items" class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100" autocomplete="off">
@@ -213,6 +217,10 @@
                     <div>
                         <label for="property-booking-purpose" class="block text-sm font-medium text-slate-700">Purpose</label>
                         <input id="property-booking-purpose" type="text" maxlength="255" required placeholder="e.g. club meeting" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">
+                    </div>
+                    <div>
+                        <label for="property-booking-item-select" class="block text-sm font-medium text-slate-700">Property item</label>
+                        <select id="property-booking-item-select" class="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"></select>
                     </div>
                     <div class="grid gap-4 sm:grid-cols-3">
                         <div>
@@ -390,6 +398,7 @@
         const reservationOpenTime = @json($reservationHours['start_time']);
         const reservationCloseTime = @json($reservationHours['end_time']);
         const propertiesList = document.getElementById('available-properties-list');
+        const propertyReserveButton = document.getElementById('property-reserve-now');
         const facilitiesSearch = document.getElementById('available-facilities-search');
         const propertiesSearch = document.getElementById('available-properties-search');
         const facilityCards = Array.from(document.querySelectorAll('[data-available-facility-card]'));
@@ -454,6 +463,7 @@
                 .then((items) => {
                     propertyItems = items;
                     propertyItemsLoaded = true;
+                    propertyReserveButton.disabled = items.length === 0;
                     propertiesList.replaceChildren();
 
                     if (!items.length) {
@@ -473,7 +483,7 @@
                         const card = document.createElement('article');
                         card.dataset.propertyItemCard = 'true';
                         card.dataset.itemSearch = item.name.toLowerCase();
-                        card.className = 'rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-indigo-200 hover:shadow-md';
+                        card.className = 'rounded-3xl border border-slate-200 bg-white p-5 shadow-sm';
 
                         const name = document.createElement('h3');
                         name.className = 'text-lg font-semibold text-gray-900';
@@ -483,14 +493,6 @@
                         quantity.className = 'mt-2 text-sm text-gray-500';
                         quantity.textContent = `${item.quantity} in stock`;
                         card.append(name, quantity);
-
-                        const reserveButton = document.createElement('button');
-                        reserveButton.type = 'button';
-                        reserveButton.dataset.propertyItemId = String(item.id);
-                        reserveButton.className = 'mt-4 inline-flex w-full items-center justify-center rounded-xl bg-indigo-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-800';
-                        reserveButton.textContent = 'Reserve Item';
-                        card.appendChild(reserveButton);
-
                         propertiesList.appendChild(card);
                     });
                     propertiesList.appendChild(noResultsMessage);
@@ -533,6 +535,7 @@
         const modal = document.getElementById('property-booking-modal');
         const form = document.getElementById('property-booking-form');
         const itemsContainer = document.getElementById('property-booking-items');
+        const itemSelect = document.getElementById('property-booking-item-select');
         const facilityLabel = document.getElementById('property-booking-facility');
         const dateInput = document.getElementById('property-booking-date');
         const startInput = document.getElementById('property-booking-start');
@@ -651,26 +654,25 @@
             }
         }
 
-        propertiesList.addEventListener('click', (event) => {
-            if (!(event.target instanceof Element)) {
+        function openPropertyBooking() {
+            if (!propertyItemsLoaded || propertyItems.length === 0) {
                 return;
             }
 
-            const button = event.target.closest('[data-property-item-id]');
-            if (!button) {
-                return;
-            }
-
-            const item = propertyItems.find((propertyItem) => String(propertyItem.id) === button.dataset.propertyItemId);
-            if (!item) {
-                return;
-            }
-
-            preferredItemId = String(item.id);
+            const firstAvailableItem = propertyItems.find((item) => item.quantity > 0) || propertyItems[0];
+            preferredItemId = String(firstAvailableItem.id);
             facilityLabel.textContent = 'Property inventory is independent of rooms and facilities.';
-            modalItems = [item];
+            modalItems = propertyItems;
             form.reset();
             itemsContainer.replaceChildren();
+            itemSelect.replaceChildren();
+            propertyItems.forEach((item) => {
+                const option = document.createElement('option');
+                option.value = String(item.id);
+                option.textContent = `${item.name} (${item.quantity} in stock)`;
+                itemSelect.appendChild(option);
+            });
+            itemSelect.value = preferredItemId;
             const now = new Date();
             dateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             startInput.value = reservationOpenTime;
@@ -681,7 +683,16 @@
             renderItems(modalItems.map((item) => ({ ...item, available: item.quantity })));
             setModalOpen(true);
             refreshAvailability();
-            document.getElementById('property-booking-purpose').focus();
+            itemSelect.focus();
+        }
+
+        propertyReserveButton.addEventListener('click', openPropertyBooking);
+
+        itemSelect.addEventListener('change', () => {
+            preferredItemId = itemSelect.value;
+            setBookingError('');
+            renderItems(modalItems.map((item) => ({ ...item, available: item.quantity })));
+            refreshAvailability();
         });
 
         [dateInput, startInput, endInput].forEach((input) => {

@@ -40,10 +40,14 @@ class PropertyReservationTest extends TestCase
             ->assertDontSee('Welcome back,')
             ->assertSee('Available Facilities')
             ->assertSee('Available Property Items')
+            ->assertSee('Reserve Now')
+            ->assertSee('property-reserve-now', false)
+            ->assertSee('property-booking-item-select', false)
             ->assertSee('lg:grid-cols-2', false)
             ->assertDontSee('data-reservation-tab', false)
             ->assertDontSee('Projector')
             ->assertDontSee('3 in stock')
+            ->assertDontSee('data-property-item-id', false)
             ->assertSee('available-facilities-list', false)
             ->assertSee('available-properties-list', false);
     }
@@ -70,7 +74,7 @@ class PropertyReservationTest extends TestCase
             ->assertJsonPath('0.quantity', 3);
     }
 
-    public function test_property_reservation_dialog_uses_the_clicked_item_without_a_selection_checkbox(): void
+    public function test_property_reservation_dialog_allows_item_selection_from_the_header_action(): void
     {
         $user = User::factory()->create();
 
@@ -79,6 +83,8 @@ class PropertyReservationTest extends TestCase
             ->assertOk()
             ->assertSee('Selected item and quantity')
             ->assertSee('Reserve Item')
+            ->assertSee('property-booking-item-select', false)
+            ->assertDontSee('dataset.propertyItemId', false)
             ->assertDontSee("checkbox.type = 'checkbox';", false);
     }
 
