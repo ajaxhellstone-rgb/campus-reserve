@@ -48,16 +48,27 @@ class CalendarFacilityFilterTest extends TestCase
             ->assertSee('facility-calendar-frame', false)
             ->assertSee(route('calendar.manage', ['embedded' => 1]), false);
 
-        $this->get(route('calendar.manage', ['embedded' => 1]))
+        $embeddedCalendar = $this->get(route('calendar.manage', ['embedded' => 1]))
             ->assertOk()
+            ->assertHeader('X-Frame-Options', 'SAMEORIGIN')
             ->assertSee('calendarFacilityFilter', false)
             ->assertSee('All facilities')
             ->assertSee('Room 101')
             ->assertSee('Room 202')
             ->assertSee("query.set('facility_id', facilityFilter.value)", false);
+        $this->assertStringContainsString(
+            "frame-ancestors 'self'",
+            $embeddedCalendar->headers->get('Content-Security-Policy')
+        );
 
         $this->get(route('calendar.manage'))
             ->assertRedirect(route('reserve', ['open_facility_calendar' => 1]));
+
+        $reservePage = $this->get(route('reserve'))->assertOk();
+        $this->assertStringContainsString(
+            "frame-ancestors 'none'",
+            $reservePage->headers->get('Content-Security-Policy')
+        );
 
         $this->getJson('/api/calendar/events?start=2030-05-01&end=2030-05-08&facility_id='.$selectedFacility->id)
             ->assertOk()

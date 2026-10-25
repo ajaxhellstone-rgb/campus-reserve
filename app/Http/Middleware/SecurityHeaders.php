@@ -35,6 +35,10 @@ class SecurityHeaders
             
             // Set up strong Content Security Policy rules
             // Controls what resources (scripts, images, etc) can load on this site
+            $frameAncestors = $request->is('calendar/manage') && $request->boolean('embedded')
+                ? "frame-ancestors 'self'"
+                : "frame-ancestors 'none'";
+
             $cspDirectives = [
                 "default-src 'self'",
                 "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net",
@@ -45,7 +49,7 @@ class SecurityHeaders
                 "form-action 'self'",
                 "base-uri 'self'",
                 "object-src 'none'",
-                "frame-ancestors 'none'",
+                $frameAncestors,
                 'block-all-mixed-content',
             ];
 
