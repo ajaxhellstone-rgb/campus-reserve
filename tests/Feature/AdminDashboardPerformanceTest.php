@@ -132,6 +132,10 @@ class AdminDashboardPerformanceTest extends TestCase
             ->assertSee('Member Management')
             ->assertSee('member-filter-form')
             ->assertSee('aria-label="Pagination Navigation"', false)
+            ->assertSee('Showing')
+            ->assertSee('Go to page 1')
+            ->assertDontSee('Previous')
+            ->assertDontSee('Next')
             ->assertDontSee('Admin Dashboard')
             ->assertDontSee('Pending Reservations')
             ->assertSee('page=1');

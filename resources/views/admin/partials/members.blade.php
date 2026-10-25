@@ -103,7 +103,7 @@
         </div>
 
         <div class="mt-4">
-            {{ $users->links() }}
+            {{ $users->links('vendor.pagination.members') }}
         </div>
     @endif
 </section>
