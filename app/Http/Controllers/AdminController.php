@@ -6,10 +6,12 @@ use App\Models\AuditLog;
 use App\Models\Facility;
 use App\Models\FacilityMaintenanceBlock;
 use App\Models\FacilityItem;
+use App\Models\PropertyItemMaintenanceBlock;
 use App\Models\Reservation;
 use App\Models\User;
 use App\Services\FacilityItemAvailability;
 use App\Services\FacilityMaintenanceSchedule;
+use App\Services\PropertyItemMaintenanceSchedule;
 use App\Services\ReservationNotificationDispatcher;
 use App\Services\ReservationDateWindow;
 use App\Services\ReservationTimeWindow;
@@ -303,7 +305,8 @@ class AdminController extends Controller
 
     public function reservationSettings(
         ReservationTimeWindow $reservationTimeWindow,
-        FacilityMaintenanceSchedule $maintenanceSchedule
+        FacilityMaintenanceSchedule $maintenanceSchedule,
+        PropertyItemMaintenanceSchedule $propertyItemMaintenanceSchedule
     )
     {
         $this->requireAdmin();
@@ -311,9 +314,18 @@ class AdminController extends Controller
         $reservationHours = $reservationTimeWindow->current();
         $settingsStorageAvailable = $reservationTimeWindow->isAvailable();
         $maintenanceStorageAvailable = $maintenanceSchedule->isAvailable();
+        $propertyMaintenanceStorageAvailable = $propertyItemMaintenanceSchedule->isAvailable();
         $facilities = Facility::active()->orderBy('name')->get();
+        $propertyItems = FacilityItem::with('facility')->orderBy('name')->get();
         $maintenanceBlocks = $maintenanceStorageAvailable
             ? FacilityMaintenanceBlock::with('facility')
+                ->whereDate('maintenance_date', '>=', today())
+                ->orderBy('maintenance_date')
+                ->orderBy('start_time')
+                ->get()
+            : collect();
+        $propertyMaintenanceBlocks = $propertyMaintenanceStorageAvailable
+            ? PropertyItemMaintenanceBlock::with('item')
                 ->whereDate('maintenance_date', '>=', today())
                 ->orderBy('maintenance_date')
                 ->orderBy('start_time')
@@ -324,8 +336,11 @@ class AdminController extends Controller
             'reservationHours',
             'settingsStorageAvailable',
             'maintenanceStorageAvailable',
+            'propertyMaintenanceStorageAvailable',
             'facilities',
-            'maintenanceBlocks'
+            'propertyItems',
+            'maintenanceBlocks',
+            'propertyMaintenanceBlocks'
         ));
     }
 
@@ -615,7 +630,8 @@ class AdminController extends Controller
         FacilityItemAvailability $itemAvailability,
         ReservationNotificationDispatcher $reservationNotifications,
         ReservationTimeWindow $reservationTimeWindow,
-        FacilityMaintenanceSchedule $maintenanceSchedule
+        FacilityMaintenanceSchedule $maintenanceSchedule,
+        PropertyItemMaintenanceSchedule $propertyItemMaintenanceSchedule
     )
     {
         // Mark the reservation as approved and send the user a notification
@@ -642,7 +658,13 @@ class AdminController extends Controller
             return back()->with('error', 'Only pending reservations can be approved.');
         }
 
-        $approvalError = DB::transaction(function () use ($request, $reservation, $itemAvailability, $maintenanceSchedule) {
+        $approvalError = DB::transaction(function () use (
+            $request,
+            $reservation,
+            $itemAvailability,
+            $maintenanceSchedule,
+            $propertyItemMaintenanceSchedule
+        ) {
             if ($reservation->facility_id !== null) {
                 $maintenanceBlock = $maintenanceSchedule->conflictingBlock(
                     $reservation->facility_id,
@@ -689,6 +711,16 @@ class AdminController extends Controller
                     if (!$lockedItem) {
                         return 'Cannot approve this reservation because one of its facility items is no longer available.';
                     }
+                    $itemMaintenanceBlock = $propertyItemMaintenanceSchedule->conflictingBlock(
+                        $lockedItem->id,
+                        $reservation->reservation_date->format('Y-m-d'),
+                        $reservation->start_time->format('H:i'),
+                        $reservation->end_time->format('H:i')
+                    );
+                    if ($itemMaintenanceBlock) {
+                        return "Cannot approve this reservation because {$lockedItem->name} is under maintenance: {$itemMaintenanceBlock->reason}.";
+                    }
+
                     $availableQuantity = $itemAvailability->availableQuantity(
                         $lockedItem,
                         $reservation->reservation_date->format('Y-m-d'),
@@ -773,6 +805,7 @@ class AdminController extends Controller
         Reservation $reservation,
         FacilityItemAvailability $itemAvailability,
         FacilityMaintenanceSchedule $maintenanceSchedule,
+        PropertyItemMaintenanceSchedule $propertyItemMaintenanceSchedule,
         ReservationTimeWindow $reservationTimeWindow,
         ReservationDateWindow $reservationDateWindow
     ) {
@@ -831,6 +864,21 @@ class AdminController extends Controller
         }
 
         if ($reservation->items->isNotEmpty()) {
+            foreach ($reservation->items as $item) {
+                $maintenanceBlock = $propertyItemMaintenanceSchedule->conflictingBlock(
+                    $item->id,
+                    $date,
+                    $startTime,
+                    $endTime
+                );
+
+                if ($maintenanceBlock) {
+                    throw ValidationException::withMessages([
+                        'reservation_date' => "{$item->name} is under maintenance: {$maintenanceBlock->reason}.",
+                    ]);
+                }
+            }
+
             $availableQuantities = $itemAvailability->availableQuantities(
                 $reservation->items,
                 $date,

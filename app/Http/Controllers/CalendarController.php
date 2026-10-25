@@ -121,6 +121,7 @@ class CalendarController extends Controller
         ReservationNotificationDispatcher $reservationNotifications,
         ReservationTimeWindow $reservationTimeWindow,
         FacilityMaintenanceSchedule $maintenanceSchedule,
+        \App\Services\PropertyItemMaintenanceSchedule $propertyItemMaintenanceSchedule,
         ReservationDateWindow $reservationDateWindow
     )
     {
@@ -175,7 +176,7 @@ class CalendarController extends Controller
         }
 
         try {
-            $reservation = DB::transaction(function () use ($validated, $facility, $hasItemBookings, $itemAvailability) {
+            $reservation = DB::transaction(function () use ($validated, $facility, $hasItemBookings, $itemAvailability, $propertyItemMaintenanceSchedule) {
                 $selectedItems = collect($validated['items'] ?? []);
 
                 if ($hasItemBookings) {
@@ -195,6 +196,19 @@ class CalendarController extends Controller
 
                     foreach ($selectedItems as $selection) {
                         $item = $lockedItems->get((int) $selection['facility_item_id']);
+                        $propertyMaintenanceBlock = $propertyItemMaintenanceSchedule->conflictingBlock(
+                            $item->id,
+                            $validated['date'],
+                            $validated['start_time'],
+                            $validated['end_time']
+                        );
+                        if ($propertyMaintenanceBlock) {
+                            return response()->json([
+                                'code' => 'property_item_maintenance',
+                                'error' => $propertyItemMaintenanceSchedule->validationMessage($propertyMaintenanceBlock),
+                            ], 409);
+                        }
+
                         $availableQuantity = $itemAvailability->availableQuantity(
                             $item,
                             $validated['date'],
@@ -271,6 +285,7 @@ class CalendarController extends Controller
         FacilityItemAvailability $itemAvailability,
         ReservationTimeWindow $reservationTimeWindow,
         FacilityMaintenanceSchedule $maintenanceSchedule,
+        \App\Services\PropertyItemMaintenanceSchedule $propertyItemMaintenanceSchedule,
         ReservationDateWindow $reservationDateWindow
     ) {
         abort_unless($facility->is_active, 404);
@@ -309,12 +324,26 @@ class CalendarController extends Controller
             $validated['end_time']
         );
 
-        $items = $items->map(fn (FacilityItem $item) => [
-            'id' => $item->id,
-            'name' => $item->name,
-            'stock' => $item->quantity,
-            'available' => $availableQuantities[$item->id],
-        ]);
+        $items = $items->map(function (FacilityItem $item) use (
+            $availableQuantities,
+            $propertyItemMaintenanceSchedule,
+            $validated
+        ): array {
+            $maintenanceBlock = $propertyItemMaintenanceSchedule->conflictingBlock(
+                $item->id,
+                $validated['date'],
+                $validated['start_time'],
+                $validated['end_time']
+            );
+
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'stock' => $item->quantity,
+                'available' => $maintenanceBlock ? 0 : $availableQuantities[$item->id],
+                'maintenance_reason' => $maintenanceBlock?->reason,
+            ];
+        });
 
         return response()->json(['items' => $items]);
     }
@@ -323,6 +352,7 @@ class CalendarController extends Controller
         Request $request,
         FacilityItemAvailability $itemAvailability,
         ReservationTimeWindow $reservationTimeWindow,
+        \App\Services\PropertyItemMaintenanceSchedule $propertyItemMaintenanceSchedule,
         ReservationDateWindow $reservationDateWindow
     ) {
         $validated = $request->validate([
@@ -346,12 +376,26 @@ class CalendarController extends Controller
         );
 
         return response()->json([
-            'items' => $items->map(fn (FacilityItem $item) => [
-                'id' => $item->id,
-                'name' => $item->name,
-                'stock' => $item->quantity,
-                'available' => $availableQuantities[$item->id],
-            ]),
+            'items' => $items->map(function (FacilityItem $item) use (
+                $availableQuantities,
+                $propertyItemMaintenanceSchedule,
+                $validated
+            ): array {
+                $maintenanceBlock = $propertyItemMaintenanceSchedule->conflictingBlock(
+                    $item->id,
+                    $validated['date'],
+                    $validated['start_time'],
+                    $validated['end_time']
+                );
+
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'stock' => $item->quantity,
+                    'available' => $maintenanceBlock ? 0 : $availableQuantities[$item->id],
+                    'maintenance_reason' => $maintenanceBlock?->reason,
+                ];
+            }),
         ]);
     }
 

@@ -20,9 +20,13 @@ class FacilityController extends Controller
         return response()->json($facilities);
     }
 
-    public function propertyItems()
+    public function propertyItems(\App\Services\PropertyItemMaintenanceSchedule $maintenanceSchedule)
     {
         $items = \App\Models\FacilityItem::query()
+            ->when($maintenanceSchedule->isAvailable(), fn ($query) => $query->whereNotIn(
+                'id',
+                $maintenanceSchedule->activeItemIds()
+            ))
             ->orderBy('name')
             ->get(['id', 'name', 'quantity']);
 

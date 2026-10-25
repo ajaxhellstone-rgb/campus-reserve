@@ -655,7 +655,9 @@
             const available = document.createElement('p');
             available.className = 'text-xs text-slate-500';
             available.dataset.availableFor = String(selectedItem.id);
-            available.textContent = `${selectedItem.available} available`;
+            available.textContent = selectedItem.maintenance_reason
+                ? `Under maintenance: ${selectedItem.maintenance_reason}`
+                : `${selectedItem.available} available`;
             nameGroup.append(name, available);
 
             const quantity = document.createElement('input');

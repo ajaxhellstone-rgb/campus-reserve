@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\ReservationPendingApproval;
 use App\Services\FacilityItemAvailability;
 use App\Services\FacilityMaintenanceSchedule;
+use App\Services\PropertyItemMaintenanceSchedule;
 use App\Services\ReservationNotificationDispatcher;
 use App\Services\ReservationDateWindow;
 use App\Services\ReservationTimeWindow;
@@ -39,6 +40,7 @@ class ChatbotController extends Controller
         ReservationNotificationDispatcher $reservationNotifications,
         ReservationTimeWindow $reservationTimeWindow,
         FacilityMaintenanceSchedule $maintenanceSchedule,
+        PropertyItemMaintenanceSchedule $propertyItemMaintenanceSchedule,
         ReservationDateWindow $reservationDateWindow
     ): JsonResponse {
         $message = trim((string) $request->input('message'));
@@ -201,7 +203,17 @@ class ChatbotController extends Controller
                 return response()->json(['reply' => 'Select at least one property item and quantity before I can submit the request. Tell me the item name and quantity.']);
             }
 
-            $reservation = DB::transaction(function () use ($facility, $date, $startTime, $endTime, $state, $requestedItems, $itemAvailability, $isPropertyReservation) {
+            $reservation = DB::transaction(function () use (
+                $facility,
+                $date,
+                $startTime,
+                $endTime,
+                $state,
+                $requestedItems,
+                $itemAvailability,
+                $isPropertyReservation,
+                $propertyItemMaintenanceSchedule
+            ) {
                 if ($isPropertyReservation) {
                     $itemIds = $requestedItems->pluck('facility_item_id')->map(fn ($id) => (int) $id)->all();
                     $items = FacilityItem::query()
@@ -219,6 +231,17 @@ class ChatbotController extends Controller
                         $item = $items->get((int) $selection['facility_item_id']);
                         if (!$item) {
                             return response()->json(['reply' => 'A selected property item is no longer available. Please start the property reservation again.']);
+                        }
+                        $maintenanceBlock = $propertyItemMaintenanceSchedule->conflictingBlock(
+                            $item->id,
+                            $date,
+                            $startTime,
+                            $endTime
+                        );
+                        if ($maintenanceBlock) {
+                            return response()->json([
+                                'reply' => $propertyItemMaintenanceSchedule->validationMessage($maintenanceBlock),
+                            ]);
                         }
                     }
 
@@ -566,7 +589,23 @@ class ChatbotController extends Controller
                     $endTime
                 );
                 $itemAvailabilityList = $propertyItems
-                    ->map(fn (FacilityItem $item) => "{$item->name} (" . ($availableQuantities[$item->id] ?? 0) . ' available)')
+                    ->map(function (FacilityItem $item) use (
+                        $availableQuantities,
+                        $propertyItemMaintenanceSchedule,
+                        $date,
+                        $startTime,
+                        $endTime
+                    ): string {
+                        $maintenanceBlock = $propertyItemMaintenanceSchedule->conflictingBlock(
+                            $item->id,
+                            $date->toDateString(),
+                            $startTime,
+                            $endTime
+                        );
+                        $available = $maintenanceBlock ? 0 : ($availableQuantities[$item->id] ?? 0);
+
+                        return "{$item->name} ({$available} available)";
+                    })
                     ->join(', ');
                 $inventory = $itemAvailabilityList !== '' ? $itemAvailabilityList : 'no property items are listed';
                 session(['chatbot_reservation' => array_merge($state, [
@@ -600,7 +639,13 @@ class ChatbotController extends Controller
                     continue;
                 }
 
-                $availableQuantity = $availableQuantities[$item->id] ?? 0;
+                $maintenanceBlock = $propertyItemMaintenanceSchedule->conflictingBlock(
+                    $item->id,
+                    $date->toDateString(),
+                    $startTime,
+                    $endTime
+                );
+                $availableQuantity = $maintenanceBlock ? 0 : ($availableQuantities[$item->id] ?? 0);
                 $itemAvailabilitySummary[] = "{$item->name}: {$availableQuantity} available";
 
                 if ((int) $selection['quantity'] > $availableQuantity) {

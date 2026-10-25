@@ -373,6 +373,9 @@ Route::middleware('auth')->group(function () {
             Route::post('/reservation-settings/maintenance', [AdminController::class, 'storeMaintenanceBlock'])->name('admin.reservation-settings.maintenance.store');
             Route::put('/reservation-settings/maintenance/{block}', [AdminController::class, 'updateMaintenanceBlock'])->name('admin.reservation-settings.maintenance.update');
             Route::delete('/reservation-settings/maintenance/{block}', [AdminController::class, 'destroyMaintenanceBlock'])->name('admin.reservation-settings.maintenance.destroy');
+            Route::post('/reservation-settings/property-maintenance', [\App\Http\Controllers\PropertyItemMaintenanceController::class, 'store'])->name('admin.reservation-settings.property-maintenance.store');
+            Route::put('/reservation-settings/property-maintenance/{block}', [\App\Http\Controllers\PropertyItemMaintenanceController::class, 'update'])->name('admin.reservation-settings.property-maintenance.update');
+            Route::delete('/reservation-settings/property-maintenance/{block}', [\App\Http\Controllers\PropertyItemMaintenanceController::class, 'destroy'])->name('admin.reservation-settings.property-maintenance.destroy');
             Route::post('/property-management/items', [AdminController::class, 'storeFacilityItem'])->name('admin.property-management.items.store');
             Route::put('/property-management/items/{item}', [AdminController::class, 'updateFacilityItem'])->name('admin.property-management.items.update');
             Route::delete('/property-management/items/{item}', [AdminController::class, 'destroyFacilityItem'])->name('admin.property-management.items.destroy');
