@@ -506,11 +506,9 @@
 
         function setLoading(loading) {
             memberContent.setAttribute('aria-busy', String(loading));
-            memberContent.classList.toggle('opacity-60', loading);
-            memberContent.classList.toggle('pointer-events-none', loading);
         }
 
-        function loadMembers(url, updateHistory) {
+        function loadMembers(url, historyMode) {
             if (activeRequest) activeRequest.abort();
             const controller = new AbortController();
             activeRequest = controller;
@@ -533,11 +531,33 @@
                 })
                 .then(function(html) {
                     const previousScrollTop = memberContent.querySelector('[aria-label="Scrollable member list"]')?.scrollTop || 0;
+                    const activeElement = document.activeElement;
+                    const preserveSearchFocus = activeElement instanceof HTMLInputElement
+                        && activeElement.name === 'search'
+                        && memberContent.contains(activeElement);
+                    const currentSearch = preserveSearchFocus
+                        ? activeElement.value
+                        : memberContent.querySelector('#search')?.value;
+                    const selectionStart = preserveSearchFocus ? activeElement.selectionStart : null;
+                    const selectionEnd = preserveSearchFocus ? activeElement.selectionEnd : null;
+
                     memberContent.innerHTML = html;
+                    const updatedSearch = memberContent.querySelector('#search');
+                    if (updatedSearch && currentSearch !== undefined) {
+                        updatedSearch.value = currentSearch;
+                    }
+                    if (preserveSearchFocus && updatedSearch) {
+                        updatedSearch.focus();
+                        if (selectionStart !== null && selectionEnd !== null) {
+                            updatedSearch.setSelectionRange(selectionStart, selectionEnd);
+                        }
+                    }
                     const updatedList = memberContent.querySelector('[aria-label="Scrollable member list"]');
                     if (updatedList) updatedList.scrollTop = previousScrollTop;
-                    if (updateHistory) {
+                    if (historyMode === 'push') {
                         window.history.pushState({}, '', url);
+                    } else if (historyMode === 'replace') {
+                        window.history.replaceState({}, '', url);
                     }
                 })
                 .catch(function(error) {
@@ -625,14 +645,14 @@
             }
             event.preventDefault();
             window.clearTimeout(searchTimer);
-            loadMembers(membersUrl().toString(), true);
+            loadMembers(membersUrl().toString(), 'push');
         });
 
         memberContent.addEventListener('input', function(event) {
             if (!(event.target instanceof HTMLInputElement) || event.target.name !== 'search') return;
             window.clearTimeout(searchTimer);
             searchTimer = window.setTimeout(function() {
-                loadMembers(membersUrl().toString(), true);
+                loadMembers(membersUrl().toString(), 'replace');
             }, 300);
         });
 
@@ -640,7 +660,7 @@
             if (!(event.target instanceof HTMLSelectElement)
                 || !['role', 'member_sort'].includes(event.target.name)
                 || event.target.form?.id !== 'member-filter-form') return;
-            loadMembers(membersUrl().toString(), true);
+            loadMembers(membersUrl().toString(), 'push');
         });
 
         memberContent.addEventListener('click', function(event) {

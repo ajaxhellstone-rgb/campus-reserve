@@ -162,6 +162,20 @@ class AdminDashboardPerformanceTest extends TestCase
             ->assertDontSee('Pending Reservations');
     }
 
+    public function test_member_search_remains_interactive_while_results_load(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee("memberContent.setAttribute('aria-busy', String(loading));", false)
+            ->assertSee("loadMembers(membersUrl().toString(), 'replace');", false)
+            ->assertSee('updatedSearch.setSelectionRange(selectionStart, selectionEnd);', false)
+            ->assertDontSee("memberContent.classList.toggle('pointer-events-none', loading);", false)
+            ->assertDontSee("memberContent.classList.toggle('opacity-60', loading);", false);
+    }
+
     public function test_ajax_member_list_can_be_sorted_by_name_and_joined_date(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
