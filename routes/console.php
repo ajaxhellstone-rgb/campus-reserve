@@ -12,3 +12,4 @@ Schedule::command('property-returns:notify-due')->everyMinute()->withoutOverlapp
 Schedule::command('reservations:reject-expired')->everyMinute()->withoutOverlapping();
 Schedule::command('reservations:complete-expired')->everyMinute()->withoutOverlapping();
 Schedule::command('reservations:delete-expired-rejected')->everyMinute()->withoutOverlapping();
+Schedule::command('reservations:delete-expired-completed')->everyMinute()->withoutOverlapping();

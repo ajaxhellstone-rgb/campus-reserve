@@ -78,6 +78,39 @@ class RejectExpiredReservationsTest extends TestCase
         $this->assertDatabaseHas('reservations', ['id' => $oldPending->id, 'status' => 'pending']);
     }
 
+    public function test_it_deletes_completed_reservations_three_days_after_their_scheduled_end_time(): void
+    {
+        $this->travelTo(now()->setDate(2030, 4, 5)->setTime(11, 0));
+
+        $user = User::factory()->create();
+        $facility = Facility::create([
+            'name' => 'Lecture Room 1',
+            'building' => 'Main Building',
+            'type' => 'Classroom',
+            'capacity' => 30,
+            'is_active' => true,
+        ]);
+
+        $completedAtCutoff = $this->createReservation($user, $facility, 'completed', '2030-04-02', '10:00');
+        $completedAtCutoffBefore = $this->createReservation($user, $facility, 'completed', '2030-04-02', '09:59');
+        $completedNotYetExpired = $this->createReservation($user, $facility, 'completed', '2030-04-02', '10:01');
+        $olderCompleted = $this->createReservation($user, $facility, 'completed', '2030-04-01', '15:00');
+        $oldRejected = $this->createReservation($user, $facility, 'rejected', '2030-04-01', '10:00');
+        $oldApproved = $this->createReservation($user, $facility, 'approved', '2030-04-01', '11:00');
+        $completedAtCutoff->update(['end_time' => '11:00']);
+        $completedAtCutoffBefore->update(['end_time' => '10:59']);
+        $completedNotYetExpired->update(['end_time' => '11:01']);
+
+        Artisan::call('reservations:delete-expired-completed');
+
+        $this->assertDatabaseMissing('reservations', ['id' => $completedAtCutoff->id]);
+        $this->assertDatabaseMissing('reservations', ['id' => $completedAtCutoffBefore->id]);
+        $this->assertDatabaseMissing('reservations', ['id' => $olderCompleted->id]);
+        $this->assertDatabaseHas('reservations', ['id' => $completedNotYetExpired->id, 'status' => 'completed']);
+        $this->assertDatabaseHas('reservations', ['id' => $oldRejected->id, 'status' => 'rejected']);
+        $this->assertDatabaseHas('reservations', ['id' => $oldApproved->id, 'status' => 'approved']);
+    }
+
     public function test_admin_rejection_records_the_rejection_time(): void
     {
         Notification::fake();
