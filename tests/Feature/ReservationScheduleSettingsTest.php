@@ -113,7 +113,7 @@ class ReservationScheduleSettingsTest extends TestCase
             ->assertSee("slotMinTime: reservationOpenTime + ':00'", false)
             ->assertSee("slotMaxTime: reservationCloseTime + ':00'", false);
 
-        $this->get('/calendar/manage')
+        $this->get(route('calendar.manage', ['embedded' => 1]))
             ->assertOk()
             ->assertSee('Reservations allowed 7:00 AM–7:00 PM.')
             ->assertSee('min="07:00"', false)

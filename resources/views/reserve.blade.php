@@ -152,9 +152,9 @@
             <section id="facility-reservation-panel" class="min-w-0 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-4 shadow-sm shadow-indigo-950/5 sm:p-6">
                 <div class="mb-5 flex items-center justify-between gap-3">
                     <h2 class="text-xl font-semibold text-gray-900">Available Facilities</h2>
-                    <a href="/calendar/manage" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2">
+                    <button type="button" id="facility-reserve-now" class="inline-flex shrink-0 items-center justify-center rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2">
                         Reserve Now
-                    </a>
+                    </button>
                 </div>
                 <div class="mb-5">
                     <label class="mt-4 block">
@@ -200,6 +200,22 @@
                     <p class="py-8 text-center text-sm text-slate-500">Loading property items...</p>
                 </div>
             </section>
+        </div>
+
+        <div id="facility-calendar-modal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-slate-950/40 p-2 backdrop-blur-sm sm:p-4" role="dialog" aria-modal="true" aria-labelledby="facility-calendar-modal-title">
+            <div class="flex max-h-[96dvh] w-full max-w-[96rem] flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl sm:p-5">
+                <div class="mb-3 flex shrink-0 items-center justify-between gap-3">
+                    <h2 id="facility-calendar-modal-title" class="text-lg font-semibold text-slate-900 sm:text-xl">Reserve a facility</h2>
+                    <button type="button" id="facility-calendar-close" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-2xl leading-none text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600" aria-label="Close facility reservation calendar">&times;</button>
+                </div>
+                <iframe
+                    id="facility-calendar-frame"
+                    data-src="{{ route('calendar.manage', ['embedded' => 1]) }}"
+                    title="Facility reservation calendar"
+                    class="h-[82dvh] min-h-[26rem] w-full flex-1 rounded-2xl border border-slate-100 bg-[#f3f7f4] sm:min-h-[34rem]"
+                    loading="lazy">
+                </iframe>
+            </div>
         </div>
 
         <div id="property-booking-modal" class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-slate-900/40 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="property-booking-title">
@@ -398,6 +414,10 @@
         const reservationOpenTime = @json($reservationHours['start_time']);
         const reservationCloseTime = @json($reservationHours['end_time']);
         const propertiesList = document.getElementById('available-properties-list');
+        const facilityCalendarModal = document.getElementById('facility-calendar-modal');
+        const facilityCalendarFrame = document.getElementById('facility-calendar-frame');
+        const facilityCalendarOpenButton = document.getElementById('facility-reserve-now');
+        const facilityCalendarCloseButton = document.getElementById('facility-calendar-close');
         const propertyReserveButton = document.getElementById('property-reserve-now');
         const facilitiesSearch = document.getElementById('available-facilities-search');
         const propertiesSearch = document.getElementById('available-properties-search');
@@ -406,6 +426,50 @@
         let propertyItems = [];
         let propertyItemsLoaded = false;
         let propertyItemsRequest = null;
+
+        function openFacilityCalendar() {
+            facilityCalendarModal.classList.remove('hidden');
+            facilityCalendarModal.classList.add('flex');
+            facilityCalendarModal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('overflow-hidden');
+
+            if (!facilityCalendarFrame.hasAttribute('src')) {
+                facilityCalendarFrame.src = facilityCalendarFrame.dataset.src;
+            } else {
+                facilityCalendarFrame.contentWindow?.postMessage('facility-calendar:resize', window.location.origin);
+            }
+            facilityCalendarCloseButton.focus();
+        }
+
+        function closeFacilityCalendar() {
+            facilityCalendarModal.classList.add('hidden');
+            facilityCalendarModal.classList.remove('flex');
+            facilityCalendarModal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('overflow-hidden');
+            facilityCalendarOpenButton.focus();
+        }
+
+        facilityCalendarOpenButton.addEventListener('click', openFacilityCalendar);
+        facilityCalendarCloseButton.addEventListener('click', closeFacilityCalendar);
+        facilityCalendarModal.addEventListener('click', (event) => {
+            if (event.target === facilityCalendarModal) {
+                closeFacilityCalendar();
+            }
+        });
+        facilityCalendarFrame.addEventListener('load', () => {
+            if (!facilityCalendarModal.classList.contains('hidden')) {
+                facilityCalendarFrame.contentWindow?.postMessage('facility-calendar:resize', window.location.origin);
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !facilityCalendarModal.classList.contains('hidden')) {
+                closeFacilityCalendar();
+            }
+        });
+
+        if (new URLSearchParams(window.location.search).has('open_facility_calendar')) {
+            openFacilityCalendar();
+        }
 
         function filterFacilities() {
             if (!facilitiesSearch) return;

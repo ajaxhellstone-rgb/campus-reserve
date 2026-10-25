@@ -71,7 +71,7 @@ class MobileNavigationTest extends TestCase
             ->assertDontSee('>Today</button>', false)
             ->assertSee('calendar-page-layout', false);
 
-        $this->get('/calendar/manage')
+        $this->get(route('calendar.manage', ['embedded' => 1]))
             ->assertOk()
             ->assertSee("initialView: 'timeGridWeek'", false)
         ->assertDontSee('>Today</button>', false)

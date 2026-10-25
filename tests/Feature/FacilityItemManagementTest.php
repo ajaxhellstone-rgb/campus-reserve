@@ -77,9 +77,7 @@ class FacilityItemManagementTest extends TestCase
             ->assertDontSee('bg-gradient-to-br from-slate-200 to-slate-300');
 
         $this->get('/calendar/manage')
-            ->assertOk()
-            ->assertSee('Property items are reserved separately from facilities')
-            ->assertDontSee('facilityItemOptions');
+            ->assertRedirect(route('reserve', ['open_facility_calendar' => 1]));
     }
 
     public function test_facilities_api_returns_identifiers_for_item_availability_lookup(): void

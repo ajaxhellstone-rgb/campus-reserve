@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.embedded')
 
 @section('title', 'Reserve a Facility')
 
@@ -14,7 +14,7 @@
             </div>
 
             <div class="calendar-manage-layout grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-                <aside class="calendar-manage-sidebar order-2 space-y-4 lg:order-1">
+                <aside class="calendar-manage-sidebar order-1 space-y-4 lg:order-1">
                     <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-semibold text-slate-900">Choose a date</h2>
@@ -59,7 +59,7 @@
                     </div>
                 </aside>
 
-                <main class="calendar-manage-main order-1 min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:order-2">
+                <main class="calendar-manage-main order-2 min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6 lg:order-2">
                     <div class="mb-4 flex flex-col gap-2 sm:max-w-sm">
                         <label for="calendarFacilityFilter" class="text-sm font-medium text-slate-700">Show reservations for</label>
                         <select id="calendarFacilityFilter" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-green-700 focus:outline-none focus:ring-2 focus:ring-green-100">
@@ -185,10 +185,6 @@
     @media (max-width: 767px) {
         .calendar-manage-layout {
             gap: 0;
-        }
-
-        .calendar-manage-sidebar {
-            display: none;
         }
 
         .calendar-manage-main {
@@ -469,6 +465,12 @@
         });
 
         calendar.render();
+        window.addEventListener('message', function(event) {
+            if (event.origin !== window.location.origin || event.data !== 'facility-calendar:resize') {
+                return;
+            }
+            calendar.updateSize();
+        });
         if (facilityFilter) {
             facilityFilter.addEventListener('change', function() {
                 calendar.refetchEvents();
@@ -623,7 +625,7 @@
 
         if (redirectToCalendarBtn) {
             redirectToCalendarBtn.addEventListener('click', function() {
-                window.location.href = '/calendar';
+                window.top.location.href = '/calendar';
             });
         }
 
