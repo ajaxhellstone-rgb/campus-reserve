@@ -11,6 +11,25 @@ class GoogleSignupTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_google_signup_form_prefills_the_google_name_and_email_over_stale_form_input(): void
+    {
+        $this->withSession([
+            'pending_google_signup' => [
+                'name' => 'Google User',
+                'email' => 'google.user@example.com',
+            ],
+            '_old_input' => [
+                'name' => 'Previous User',
+                'email' => 'previous.user@example.com',
+            ],
+        ])
+            ->get(route('register'))
+            ->assertOk()
+            ->assertSee('value="Google User"', false)
+            ->assertSee('value="google.user@example.com"', false)
+            ->assertDontSee('value="previous.user@example.com"', false);
+    }
+
     public function test_new_google_users_can_complete_signup_with_their_own_password(): void
     {
         session()->put('pending_google_signup', [

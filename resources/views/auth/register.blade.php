@@ -37,7 +37,7 @@
                         type="text"
                         required
                         class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100"
-                        value="{{ old('name', $googleSignup ? $googleName : '') }}"
+                        value="{{ $googleSignup ? $googleName : old('name', '') }}"
                     >
                     @error('name')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
@@ -53,7 +53,7 @@
                         required
                         @if($googleSignup) readonly @endif
                         class="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100 {{ $googleSignup ? 'bg-slate-100 text-slate-600' : '' }}"
-                        value="{{ old('email', $googleSignup ? $googleEmail : '') }}"
+                        value="{{ $googleSignup ? $googleEmail : old('email', '') }}"
                     >
                     @error('email')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
