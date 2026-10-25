@@ -661,6 +661,56 @@ class AuthController extends Controller
         return back()->with('status', $isChangingPassword ? 'Password changed successfully.' : 'Profile updated successfully.');
     }
 
+    public function updateEmail(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
+            'current_password' => ['required', 'string'],
+        ]);
+
+        $user = Auth::user();
+        if (! Hash::check($validated['current_password'], $user->password)) {
+            return response()->json([
+                'message' => 'The current password is incorrect.',
+                'errors' => ['current_password' => ['The current password is incorrect.']],
+            ], 422);
+        }
+
+        $email = trim($validated['email']);
+        $emailHash = hash('sha256', strtolower($email));
+
+        if (User::where('email_hash', $emailHash)->where('id', '!=', $user->id)->exists()) {
+            return response()->json([
+                'message' => 'This email address is already in use.',
+                'errors' => ['email' => ['This email address is already in use.']],
+            ], 422);
+        }
+
+        $user->email = $email;
+        $user->save();
+
+        return response()->json([
+            'status' => 'Email address updated successfully.',
+            'email' => $user->email,
+        ]);
+    }
+
+    public function updateProfileName(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $user = Auth::user();
+        $user->name = $validated['name'];
+        $user->save();
+
+        return response()->json([
+            'status' => 'Name saved automatically.',
+            'name' => $user->name,
+        ]);
+    }
+
     public function uploadProfilePicture(Request $request)
     {
         $validated = $request->validate([

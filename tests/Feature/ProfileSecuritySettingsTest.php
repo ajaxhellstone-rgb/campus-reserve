@@ -25,6 +25,13 @@ class ProfileSecuritySettingsTest extends TestCase
             ->assertOk()
             ->assertSee('function syncPhoneFieldsToForm()', false)
             ->assertSee('open-password-modal', false)
+            ->assertSee('profile-name-input', false)
+            ->assertSee(route('profile.name.update'), false)
+            ->assertDontSee('Save settings')
+            ->assertDontSee('>Cancel</a>', false)
+            ->assertSee('profile-email-edit', false)
+            ->assertSee('profile-email-save', false)
+            ->assertSee(route('profile.email.update'), false)
             ->assertSee('Forgot password?', false)
             ->assertSee('Resend email', false)
             ->assertSee('resend-password-reset-link', false)
@@ -59,6 +66,68 @@ class ProfileSecuritySettingsTest extends TestCase
 
         $this->assertSame('Updated Profile Name', $user->fresh()->name);
         $this->assertSame('+639123456789', $user->fresh()->phone);
+    }
+
+    public function test_user_can_change_email_after_confirming_current_password(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'old.address@example.com',
+            'password' => 'CurrentPass1!',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('profile.email.update'), [
+                'email' => 'new.address@example.com',
+                'current_password' => 'CurrentPass1!',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'Email address updated successfully.')
+            ->assertJsonPath('email', 'new.address@example.com');
+
+        $this->assertSame('new.address@example.com', $user->fresh()->email);
+        $this->assertSame(
+            hash('sha256', strtolower('new.address@example.com')),
+            $user->fresh()->email_hash
+        );
+    }
+
+    public function test_profile_name_can_be_saved_automatically(): void
+    {
+        $user = User::factory()->create(['name' => 'Original Name']);
+
+        $this->actingAs($user)
+            ->postJson(route('profile.name.update'), ['name' => 'Updated Name'])
+            ->assertOk()
+            ->assertJsonPath('status', 'Name saved automatically.')
+            ->assertJsonPath('name', 'Updated Name');
+
+        $this->assertSame('Updated Name', $user->fresh()->name);
+    }
+
+    public function test_user_cannot_change_email_with_an_incorrect_password_or_to_an_existing_address(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'owner@example.com',
+            'password' => 'CurrentPass1!',
+        ]);
+        User::factory()->create(['email' => 'taken@example.com']);
+
+        $this->actingAs($user)
+            ->postJson(route('profile.email.update'), [
+                'email' => 'new.address@example.com',
+                'current_password' => 'wrong-password',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('current_password');
+
+        $this->postJson(route('profile.email.update'), [
+            'email' => 'taken@example.com',
+            'current_password' => 'CurrentPass1!',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('email');
+
+        $this->assertSame('owner@example.com', $user->fresh()->email);
     }
 
     public function test_invalid_two_factor_disable_credentials_return_a_json_error(): void

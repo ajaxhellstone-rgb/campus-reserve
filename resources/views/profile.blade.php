@@ -92,14 +92,32 @@
                                 <div class="grid gap-6 md:grid-cols-2">
                                     <label class="block">
                                         <span class="text-sm font-semibold text-gray-900">Full name</span>
-                                        <input type="text" name="name" value="{{ old('name', auth()->user()->name) }}" required class="mt-2 w-full rounded-3xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                                        <input id="profile-name-input" type="text" name="name" value="{{ old('name', auth()->user()->name) }}" required class="mt-2 w-full rounded-3xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
                                         @error('name')<p class="mt-2 text-sm text-red-600">{{ $message }}</p>@enderror
                                     </label>
 
-                                    <label class="block">
-                                        <span class="text-sm font-semibold text-gray-900">Email address</span>
-                                        <input type="email" value="{{ auth()->user()->email }}" readonly class="mt-2 w-full rounded-3xl border border-gray-200 bg-slate-100 px-4 py-3 text-sm text-gray-600" />
-                                    </label>
+                                    <div class="block">
+                                        <label for="profile-email-input" class="text-sm font-semibold text-gray-900">Email address</label>
+                                        <div class="mt-2 flex items-center gap-2 rounded-3xl border border-gray-200 bg-slate-100 px-4 py-2">
+                                            <input id="profile-email-input" type="email" value="{{ auth()->user()->email }}" readonly required autocomplete="email" class="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm text-gray-600 outline-none focus:ring-0" />
+                                            <button type="button" id="profile-email-edit" class="rounded-full p-2 text-gray-500 transition hover:bg-white hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" aria-label="Edit email address" title="Edit email address">
+                                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16.862 4.487l2.651 2.651M4 20l4.25-.85L19.5 7.9a1.875 1.875 0 00-2.65-2.65L5.6 16.5 4 20z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <div id="profile-email-edit-controls" class="mt-3 hidden space-y-3">
+                                            <label class="block">
+                                                <span class="text-xs font-semibold text-gray-700">Current password to confirm</span>
+                                                <input id="profile-email-current-password" type="password" autocomplete="current-password" class="mt-1 w-full rounded-3xl border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+                                            </label>
+                                            <div class="flex gap-2">
+                                                <button type="button" id="profile-email-save" class="flex-1 rounded-3xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-800">Save email</button>
+                                                <button type="button" id="profile-email-cancel" class="flex-1 rounded-3xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100">Cancel</button>
+                                            </div>
+                                        </div>
+                                        <p id="profile-email-status" class="mt-2 text-sm text-gray-600" role="status" aria-live="polite"></p>
+                                    </div>
                                 </div>
 
                                 <label class="block">
@@ -221,10 +239,6 @@
                             </div>
                         </div>
 
-                        <div class="flex flex-col gap-3 sm:flex-row justify-end">
-                            <a href="{{ route('reserve') }}" class="inline-flex items-center justify-center rounded-full border border-gray-300 px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-all">Cancel</a>
-                            <button id="profile-settings-save" type="submit" class="inline-flex items-center justify-center rounded-full bg-indigo-700 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-indigo-800">Save settings</button>
-                        </div>
                     </form>
                 </div>
             </div>
@@ -311,12 +325,144 @@
         const setupCurrentPassword = document.getElementById('setup-current-password');
         const disableTwoFactorModal = document.getElementById('disable-2fa-modal');
         const profileSettingsForm = document.getElementById('profile-settings-form');
+        const profileStatus = document.getElementById('profile-status');
         const emailNotificationsToggle = document.getElementById('email-notifications-toggle');
         const emailNotificationsStatus = document.getElementById('email-notifications-status');
         const profilePictureInput = profileSettingsForm?.querySelector('input[name="profile_picture"]');
         const profilePictureUploadStatus = document.getElementById('profile-picture-upload-status');
         const disableCurrentPassword = document.getElementById('disable-current-password');
         const disableAuthenticatorCode = document.getElementById('disable-authenticator-code');
+        const profileNameInput = document.getElementById('profile-name-input');
+        const profileEmailInput = document.getElementById('profile-email-input');
+        const profileEmailEdit = document.getElementById('profile-email-edit');
+        const profileEmailControls = document.getElementById('profile-email-edit-controls');
+        const profileEmailPassword = document.getElementById('profile-email-current-password');
+        const profileEmailSave = document.getElementById('profile-email-save');
+        const profileEmailStatus = document.getElementById('profile-email-status');
+
+        profileNameInput?.addEventListener('change', async function() {
+            const name = this.value.trim();
+            if (!name) {
+                this.value = this.dataset.savedName || '';
+                return;
+            }
+
+            if (name === this.dataset.savedName) return;
+
+            this.disabled = true;
+            profileStatus.textContent = 'Saving name...';
+            profileStatus.className = 'rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-700';
+            profileStatus.classList.remove('hidden');
+
+            try {
+                const response = await fetch('{{ route('profile.name.update') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': profileSettingsForm.querySelector('input[name="_token"]').value,
+                    },
+                    body: JSON.stringify({ name }),
+                    credentials: 'same-origin',
+                });
+                if (response.status === 419) {
+                    throw new Error('Your session expired. Refresh this page and try again.');
+                }
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.errors?.name?.[0] || data.message || 'Unable to save name.');
+                }
+
+                this.value = data.name;
+                this.dataset.savedName = data.name;
+                profileStatus.textContent = data.status;
+                profileStatus.className = 'rounded-3xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800';
+            } catch (error) {
+                this.value = this.dataset.savedName || this.value;
+                profileStatus.textContent = error.message;
+                profileStatus.className = 'rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800';
+            } finally {
+                this.disabled = false;
+            }
+        });
+        profileNameInput.dataset.savedName = profileNameInput.value;
+
+        profileEmailEdit?.addEventListener('click', function() {
+            profileEmailInput.readOnly = false;
+            profileEmailInput.classList.remove('text-gray-600');
+            profileEmailInput.classList.add('text-gray-900');
+            profileEmailInput.closest('div').classList.replace('bg-slate-100', 'bg-white');
+            profileEmailEdit.classList.add('hidden');
+            profileEmailControls.classList.remove('hidden');
+            profileEmailStatus.textContent = '';
+            profileEmailInput.focus();
+            profileEmailInput.select();
+        });
+
+        document.getElementById('profile-email-cancel')?.addEventListener('click', function() {
+            profileEmailInput.value = profileEmailInput.dataset.savedEmail;
+            profileEmailInput.readOnly = true;
+            profileEmailInput.classList.remove('text-gray-900');
+            profileEmailInput.classList.add('text-gray-600');
+            profileEmailInput.closest('div').classList.replace('bg-white', 'bg-slate-100');
+            profileEmailEdit.classList.remove('hidden');
+            profileEmailControls.classList.add('hidden');
+            profileEmailPassword.value = '';
+            profileEmailStatus.textContent = '';
+            profileEmailStatus.className = 'mt-2 text-sm text-gray-600';
+        });
+
+        profileEmailInput.dataset.savedEmail = profileEmailInput.value;
+        profileEmailSave?.addEventListener('click', async function() {
+            if (!profileEmailInput.reportValidity()) return;
+
+            profileEmailSave.disabled = true;
+            profileEmailSave.textContent = 'Saving...';
+            profileEmailStatus.textContent = '';
+
+            try {
+                const response = await fetch('{{ route('profile.email.update') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': profileSettingsForm.querySelector('input[name="_token"]').value,
+                    },
+                    body: JSON.stringify({
+                        email: profileEmailInput.value.trim(),
+                        current_password: profileEmailPassword.value,
+                    }),
+                    credentials: 'same-origin',
+                });
+                if (response.status === 419) {
+                    throw new Error('Your session expired. Refresh this page and try again.');
+                }
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.errors?.email?.[0] || data.errors?.current_password?.[0] || data.message || 'Unable to update email address.');
+                }
+
+                profileEmailInput.value = data.email;
+                profileEmailInput.dataset.savedEmail = data.email;
+                profileEmailInput.readOnly = true;
+                profileEmailInput.classList.remove('text-gray-900');
+                profileEmailInput.classList.add('text-gray-600');
+                profileEmailInput.closest('div').classList.replace('bg-white', 'bg-slate-100');
+                profileEmailEdit.classList.remove('hidden');
+                profileEmailControls.classList.add('hidden');
+                profileEmailPassword.value = '';
+                profileEmailStatus.textContent = data.status;
+                profileEmailStatus.className = 'mt-2 text-sm text-emerald-700';
+            } catch (error) {
+                profileEmailStatus.textContent = error.message;
+                profileEmailStatus.className = 'mt-2 text-sm text-red-600';
+            } finally {
+                profileEmailSave.disabled = false;
+                profileEmailSave.textContent = 'Save email';
+            }
+        });
 
         profilePictureInput?.addEventListener('change', async function() {
             const picture = this.files?.[0];

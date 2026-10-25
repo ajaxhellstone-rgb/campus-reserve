@@ -332,6 +332,12 @@ Route::middleware('auth')->group(function () {
 
     // Profile settings
     Route::get('/profile', [AuthController::class, 'showProfile'])->name('profile.show');
+    Route::post('/profile/name', [AuthController::class, 'updateProfileName'])
+        ->name('profile.name.update')
+        ->middleware('throttle:10,1');
+    Route::post('/profile/email', [AuthController::class, 'updateEmail'])
+        ->name('profile.email.update')
+        ->middleware('throttle:5,1');
     Route::post('/profile/picture', [AuthController::class, 'uploadProfilePicture'])->name('profile.picture.upload');
     Route::post('/profile/password/verify', [AuthController::class, 'verifyCurrentPassword'])->name('profile.password.verify');
     Route::post('/profile/password/reset-link', [AuthController::class, 'sendAuthenticatedPasswordResetLink'])
