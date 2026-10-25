@@ -40,8 +40,20 @@ class MobileNavigationTest extends TestCase
 
             $this->assertSame(
                 2,
-                preg_match_all('/href="' . preg_quote($path, '/') . '"[^>]*aria-current="page"/', $response->getContent()),
+                preg_match_all('/href="' . preg_quote($path, '/') . '"[^>]*aria-current="page"[^>]*>/', $response->getContent()),
                 "Expected desktop and mobile navigation to mark {$path} as current."
+            );
+
+            $this->assertSame(
+                1,
+                substr_count($response->getContent(), 'after:bg-green-900'),
+                "Expected desktop navigation to underline {$path} as current."
+            );
+
+            $this->assertSame(
+                1,
+                substr_count($response->getContent(), 'underline decoration-2 underline-offset-4'),
+                "Expected desktop and mobile navigation to underline {$path} as current."
             );
         }
     }
