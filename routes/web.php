@@ -106,8 +106,6 @@ Route::middleware('guest')->group(function () {
     // Google OAuth
     Route::get('/auth/google', [AuthController::class, 'redirectToGoogle'])->name('auth.google');
     Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
-    Route::get('/auth/microsoft', [AuthController::class, 'redirectToMicrosoft'])->name('auth.microsoft');
-    Route::get('/auth/microsoft/callback', [AuthController::class, 'handleMicrosoftCallback']);
 });
 
 Route::get('/reset-password/{token}', [AuthController::class, 'showResetPassword'])->name('password.reset');

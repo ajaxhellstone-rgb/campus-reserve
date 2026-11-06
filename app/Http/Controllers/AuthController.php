@@ -41,7 +41,6 @@ class AuthController extends Controller
                     'time_left',
                     'pending_admin_2fa',
                     'pending_google_signup',
-                    'pending_microsoft_signup',
                 ]);
             }
         }
@@ -837,12 +836,12 @@ class AuthController extends Controller
      */
     public function showRegister()
     {
-        $oauthSignup = session('pending_google_signup') ?? session('pending_microsoft_signup');
+        $googleSignup = session('pending_google_signup');
 
         return view('auth.register', [
-            'oauthSignup' => ! empty($oauthSignup),
-            'oauthName' => $oauthSignup['name'] ?? null,
-            'oauthEmail' => $oauthSignup['email'] ?? null,
+            'googleSignup' => ! empty($googleSignup),
+            'googleName' => $googleSignup['name'] ?? null,
+            'googleEmail' => $googleSignup['email'] ?? null,
         ]);
     }
 
@@ -851,12 +850,12 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        $oauthSignup = session('pending_google_signup') ?? session('pending_microsoft_signup');
+        $googleSignup = session('pending_google_signup');
 
-        if ($oauthSignup) {
+        if ($googleSignup) {
             $request->merge([
-                'name' => $request->input('name', $oauthSignup['name'] ?? ''),
-                'email' => $oauthSignup['email'] ?? $request->input('email'),
+                'name' => $request->input('name', $googleSignup['name'] ?? ''),
+                'email' => $googleSignup['email'] ?? $request->input('email'),
             ]);
         }
 
@@ -880,7 +879,7 @@ class AuthController extends Controller
             'profile_picture' => 'profile_pictures/default-avatar.png', // Default avatar
         ]);
 
-        session()->forget(['pending_google_signup', 'pending_microsoft_signup']);
+        session()->forget('pending_google_signup');
         Auth::login($user);
 
         return redirect('/reserve');
@@ -1058,7 +1057,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        $request->session()->forget(['pending_2fa_user_id', 'pending_2fa_email', 'show_2fa_modal', 'time_left', 'pending_admin_2fa', 'pending_google_signup', 'pending_microsoft_signup']);
+        $request->session()->forget(['pending_2fa_user_id', 'pending_2fa_email', 'show_2fa_modal', 'time_left', 'pending_admin_2fa', 'pending_google_signup']);
 
         return redirect('/')->withCookie($this->forgetRememberDeviceCookie());
     }
@@ -1090,33 +1089,22 @@ class AuthController extends Controller
      */
     public function handleGoogleCallback(Request $request)
     {
-        return $this->handleSocialLoginCallback($request, 'google', 'Google');
-    }
-
-    public function handleMicrosoftCallback(Request $request)
-    {
-        return $this->handleSocialLoginCallback($request, 'microsoft', 'Microsoft');
-    }
-
-    private function handleSocialLoginCallback(Request $request, string $provider, string $providerName)
-    {
         try {
-            $socialiteDriver = Socialite::driver($provider);
-            if ($provider === 'google') {
-                $socialiteDriver->setHttpClient(new Client(['verify' => false]));
-            }
-            $socialiteUser = $socialiteDriver->user();
+            $httpClient = new Client(['verify' => false]);
+            $googleUser = Socialite::driver('google')
+                ->setHttpClient($httpClient)
+                ->user();
         } catch (\Exception $e) {
-            \Log::error($providerName.' OAuth Error: '.$e->getMessage());
+            \Log::error('Google OAuth Error: '.$e->getMessage());
 
-            return redirect('/login')->with('error', 'Failed to authenticate with '.$providerName.'.');
+            return redirect('/login')->with('error', 'Failed to authenticate with Google.');
         }
 
-        $email = $socialiteUser->getEmail();
+        $email = $googleUser->getEmail();
         if (! is_string($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            \Log::warning($providerName.' OAuth did not return a valid email address.');
+            \Log::warning('Google OAuth did not return a valid email address.');
 
-            return redirect('/login')->with('error', 'Your '.$providerName.' account did not provide a usable email address.');
+            return redirect('/login')->with('error', 'Your Google account did not provide a usable email address.');
         }
 
         $emailHash = hash('sha256', strtolower($email));
@@ -1124,9 +1112,8 @@ class AuthController extends Controller
 
         // New OAuth users complete the normal signup flow with their own password confirmation.
         if (! $user) {
-            session()->forget(['pending_google_signup', 'pending_microsoft_signup']);
-            session()->put('pending_'.$provider.'_signup', [
-                'name' => $socialiteUser->getName() ?: 'User',
+            session()->put('pending_google_signup', [
+                'name' => $googleUser->getName() ?: 'User',
                 'email' => $email,
             ]);
 
@@ -1137,7 +1124,7 @@ class AuthController extends Controller
             try {
                 $this->prepareLoginTwoFactor($user);
             } catch (\Exception $e) {
-                logger()->error($providerName.' sign-in 2FA setup failed', [
+                logger()->error('Google sign-in 2FA setup failed', [
                     'user_id' => $user->id,
                     'exception' => $e->getMessage(),
                 ]);
@@ -1150,7 +1137,7 @@ class AuthController extends Controller
             $request->session()->put([
                 'pending_2fa_user_id' => $user->id,
                 'pending_2fa_email' => $user->email,
-                'pending_2fa_provider' => $provider,
+                'pending_2fa_provider' => 'google',
                 'pending_2fa_redirect' => '/reserve',
                 'pending_google_2fa' => true,
             ]);
@@ -1158,8 +1145,8 @@ class AuthController extends Controller
             return redirect()->route('2fa.show')->with(
                 'status',
                 session('pending_2fa_method') === 'authenticator'
-                    ? $providerName.' sign-in succeeded. Enter your Campus Reserve authenticator code to continue.'
-                    : $providerName.' sign-in succeeded. Enter the verification code sent to your email to continue.'
+                    ? 'Google sign-in succeeded. Enter your Campus Reserve authenticator code to continue.'
+                    : 'Google sign-in succeeded. Enter the verification code sent to your email to continue.'
             );
         }
 
