@@ -45,7 +45,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Home page
-Route::get('/', function () {
+Route::get('/', function (Request $request) {
+    $request->session()->forget('pending_google_signup');
+
     // Public landing page for visitors and signed-out users.
     return view('welcome');
 })->name('home');

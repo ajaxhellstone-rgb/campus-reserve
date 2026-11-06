@@ -29,6 +29,8 @@ class AuthController extends Controller
      */
     public function showLogin()
     {
+        session()->forget('pending_google_signup');
+
         $pendingUserId = session('pending_2fa_user_id');
         if ($pendingUserId) {
             $otp = Otp::where('user_id', $pendingUserId)->latest()->first();

@@ -30,6 +30,40 @@ class GoogleSignupTest extends TestCase
             ->assertDontSee('value="previous.user@example.com"', false);
     }
 
+    public function test_leaving_google_signup_for_home_clears_the_pending_signup_details(): void
+    {
+        $this->withSession([
+            'pending_google_signup' => [
+                'name' => 'Google User',
+                'email' => 'google.user@example.com',
+            ],
+        ]);
+
+        $this->get(route('home'))
+            ->assertOk()
+            ->assertSessionMissing('pending_google_signup');
+
+        $this->get(route('register'))
+            ->assertOk()
+            ->assertDontSee('Finish creating your account with a password of your choice.')
+            ->assertDontSee('value="Google User"', false)
+            ->assertDontSee('value="google.user@example.com"', false);
+    }
+
+    public function test_opening_sign_in_clears_pending_google_signup_details(): void
+    {
+        $this->withSession([
+            'pending_google_signup' => [
+                'name' => 'Google User',
+                'email' => 'google.user@example.com',
+            ],
+        ]);
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSessionMissing('pending_google_signup');
+    }
+
     public function test_new_google_users_can_complete_signup_with_their_own_password(): void
     {
         session()->put('pending_google_signup', [
