@@ -4,8 +4,11 @@ namespace App\Providers;
 
 use App\Mail\Transport\GmailApiTransport;
 use App\Mail\Transport\ResendApiTransport;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\ServiceProvider;
+use SocialiteProviders\Manager\SocialiteWasCalled;
+use SocialiteProviders\Microsoft\Provider as MicrosoftProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -22,6 +25,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Event::listen(function (SocialiteWasCalled $event): void {
+            $event->extendSocialite('microsoft', MicrosoftProvider::class);
+        });
+
         Mail::extend('gmail-api', function (array $config): GmailApiTransport {
             return new GmailApiTransport(
                 is_string($config['client_id'] ?? null) ? $config['client_id'] : '',

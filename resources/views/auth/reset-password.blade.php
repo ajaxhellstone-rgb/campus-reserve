@@ -24,12 +24,12 @@
             </label>
             <label class="block">
                 <span class="text-sm font-medium text-slate-700">New password</span>
-                <input type="password" name="password" required class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100">
-                <p class="mt-2 text-xs leading-5 text-slate-500">Use 5-30 characters for a secure password. Longer passwords are easier to keep safe.</p>
+                <input type="password" name="password" minlength="5" maxlength="30" required aria-describedby="password-requirements" class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100">
+                <p id="password-requirements" class="mt-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm leading-5 text-indigo-950">Use 5 to 30 characters. Enter the same password in the confirmation field. Longer passwords are easier to keep safe.</p>
             </label>
             <label class="block">
                 <span class="text-sm font-medium text-slate-700">Confirm new password</span>
-                <input type="password" name="password_confirmation" required class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100">
+                <input type="password" name="password_confirmation" minlength="5" maxlength="30" required class="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-100">
                 @error('password')<p class="mt-2 text-sm text-rose-600">{{ $message }}</p>@enderror
             </label>
             <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-indigo-700 via-violet-700 to-amber-400 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-900/15 transition hover:-translate-y-0.5 hover:from-indigo-800 hover:via-violet-800 hover:to-amber-500 focus:outline-none focus:ring-4 focus:ring-indigo-200">Reset password</button>

@@ -183,7 +183,14 @@
                             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                         </svg>
                     </a>
-                    <!-- Facebook and LinkedIn similar -->
+                    <a href="{{ route('auth.microsoft') }}" class="flex h-11 w-11 items-center justify-center rounded-2xl border border-indigo-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-indigo-50" title="Login with Microsoft" aria-label="Login with Microsoft">
+                        <svg class="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="#f25022" d="M1 1h10v10H1z"/>
+                            <path fill="#7fba00" d="M13 1h10v10H13z"/>
+                            <path fill="#00a4ef" d="M1 13h10v10H1z"/>
+                            <path fill="#ffb900" d="M13 13h10v10H13z"/>
+                        </svg>
+                    </a>
                 </div>
 
                 <div id="adminHint" class="hidden mt-6 text-center bg-gray-900 text-white rounded-3xl p-4 border border-gray-800">

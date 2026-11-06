@@ -21,16 +21,16 @@
             <div class="text-center mb-8">
                 @if($method === 'authenticator')
                     <p class="mb-2 text-slate-600">
-                        @if($provider === 'google')
-                            Google sign-in succeeded. Enter the current code from your Campus Reserve authenticator app.
+                        @if($provider)
+                            {{ ucfirst($provider) }} sign-in succeeded. Enter the current code from your Campus Reserve authenticator app.
                         @else
                             Enter the current code from your authenticator app.
                         @endif
                     </p>
                 @else
                     <p class="mb-2 text-slate-600">
-                        @if($provider === 'google')
-                            Google sign-in succeeded. We sent a 6-digit verification code to your email.
+                        @if($provider)
+                            {{ ucfirst($provider) }} sign-in succeeded. We sent a 6-digit verification code to your email.
                         @else
                             We sent a 6-digit verification code to your email.
                         @endif
