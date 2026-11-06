@@ -301,7 +301,7 @@
                 <div class="relative mt-2">
                     <input id="password-modal-new" form="profile-settings-form" type="password" name="password" class="w-full rounded-3xl border border-gray-300 px-4 py-3 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-black" autocomplete="new-password">
                 </div>
-                <p class="mt-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm leading-5 text-indigo-950">Use 5 to 30 characters. Uppercase letters, numbers, and symbols can improve the strength rating, but are not required.</p>
+                <p class="mt-2 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm leading-5 text-indigo-950">Use 5 to 30 characters, including at least one uppercase letter, one number, and one symbol.</p>
             </label>
             <label class="block">
                 <span class="text-sm font-semibold text-gray-900">Confirm new password</span>

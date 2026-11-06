@@ -75,11 +75,29 @@
 
                     <div id="password-requirements" class="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-950">
                         <p class="font-semibold">Password requirements</p>
-                        <ul class="mt-1 list-inside list-disc space-y-1">
-                            <li>Use 5 to 30 characters.</li>
-                            <li>Enter the same password in the confirmation field.</li>
+                        <ul class="mt-2 space-y-1">
+                            <li class="flex items-center gap-2">
+                                <span id="password-rule-length" class="w-4 text-center font-bold text-rose-600" aria-label="Not met">×</span>
+                                <span>Use 5 to 30 characters.</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span id="password-rule-uppercase" class="w-4 text-center font-bold text-rose-600" aria-label="Not met">×</span>
+                                <span>Include at least one uppercase letter.</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span id="password-rule-number" class="w-4 text-center font-bold text-rose-600" aria-label="Not met">×</span>
+                                <span>Include at least one number.</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span id="password-rule-symbol" class="w-4 text-center font-bold text-rose-600" aria-label="Not met">×</span>
+                                <span>Include at least one symbol.</span>
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <span id="password-rule-match" class="w-4 text-center font-bold text-rose-600" aria-label="Not met">×</span>
+                                <span>Enter the same password in the confirmation field.</span>
+                            </li>
                         </ul>
-                        <p class="mt-2 text-indigo-800">Longer passwords are easier to keep secure. Uppercase letters, numbers, and symbols can improve the strength rating, but are not required.</p>
+                        <p class="mt-2 text-indigo-800">Longer passwords are easier to keep secure.</p>
                     </div>
                     
                     <!-- Password Strength Meter -->
@@ -134,23 +152,50 @@
                 const strengthBar = document.getElementById('passwordStrengthBar');
                 const strengthText = document.getElementById('passwordStrengthText');
 
-                function checkPasswordStrength(password) {
+                function checkPasswordRequirements(password) {
+                    return {
+                        length: password.length >= 5 && password.length <= 30,
+                        uppercase: /[A-Z]/.test(password),
+                        number: /[0-9]/.test(password),
+                        symbol: /[^A-Za-z0-9]/.test(password),
+                    };
+                }
+
+                function updateRequirement(id, met) {
+                    const indicator = document.getElementById(`password-rule-${id}`);
+                    indicator.textContent = met ? '✓' : '×';
+                    indicator.setAttribute('aria-label', met ? 'Met' : 'Not met');
+                    indicator.classList.toggle('text-emerald-600', met);
+                    indicator.classList.toggle('text-rose-600', !met);
+                }
+
+                function checkPasswordStrength(password, requirements) {
                     let strength = 0;
 
                     if (password.length >= 5) strength++;
                     if (password.length >= 8) strength++;
                     if (password.length >= 12) strength++;
                     if (/[a-z]/.test(password)) strength++;
-                    if (/[A-Z]/.test(password)) strength++;
-                    if (/\d/.test(password)) strength++;
-                    if (/[!@#$%^&*()_+]/.test(password)) strength++;
+                    if (requirements.uppercase) strength++;
+                    if (requirements.number) strength++;
+                    if (requirements.symbol) strength++;
 
                     return { strength };
                 }
 
                 function updatePasswordUI() {
                     const password = passwordInput.value;
-                    const { strength } = checkPasswordStrength(password);
+                    const requirements = checkPasswordRequirements(password);
+                    const passwordsMatch = password.length > 0 && password === passwordConfirmInput.value;
+                    Object.entries(requirements).forEach(([id, met]) => updateRequirement(id, met));
+                    updateRequirement('match', passwordsMatch);
+
+                    const allRequirementsMet = Object.values(requirements).every(Boolean);
+                    submitBtn.disabled = !allRequirementsMet || !passwordsMatch;
+                    submitBtn.classList.toggle('opacity-50', submitBtn.disabled);
+                    submitBtn.classList.toggle('cursor-not-allowed', submitBtn.disabled);
+                    submitBtn.classList.toggle('cursor-pointer', !submitBtn.disabled);
+                    const { strength } = checkPasswordStrength(password, requirements);
 
                     let level = 'Start';
                     let color = '#d1d5db';
@@ -164,7 +209,11 @@
                         level = 'Too short';
                         color = '#f59e0b';
                         percentage = 25;
-                    } else if (password.length >= 5 && strength < 6) {
+                    } else if (!allRequirementsMet) {
+                        level = 'Incomplete';
+                        color = '#f59e0b';
+                        percentage = 50;
+                    } else if (strength < 6) {
                         level = 'Good';
                         color = '#10b981';
                         percentage = 70;
@@ -188,6 +237,7 @@
 
                 // Add event listener
                 passwordInput.addEventListener('input', updatePasswordUI);
+                passwordConfirmInput.addEventListener('input', updatePasswordUI);
 
                 // Initial check
                 updatePasswordUI();

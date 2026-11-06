@@ -173,6 +173,25 @@ class ProfileSecuritySettingsTest extends TestCase
         Queue::assertPushed(SendQueuedNotifications::class);
     }
 
+    public function test_user_cannot_change_password_without_required_character_types(): void
+    {
+        $user = User::factory()->create([
+            'password' => 'CurrentPass1!',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('profile.update'), [
+                'name' => $user->name,
+                'current_password' => 'CurrentPass1!',
+                'password' => 'Lowercase!',
+                'password_confirmation' => 'Lowercase!',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.password.0', 'The password must contain at least one number.');
+
+        $this->assertTrue(Hash::check('CurrentPass1!', $user->fresh()->password));
+    }
+
     public function test_user_can_start_authenticator_setup_without_immediately_enabling_two_factor(): void
     {
         $user = User::factory()->create([
@@ -235,6 +254,16 @@ class ProfileSecuritySettingsTest extends TestCase
         $this->assertDatabaseMissing('password_reset_tokens', [
             'email' => 'profile.user@example.com',
         ]);
+    }
+
+    public function test_password_reset_rejects_passwords_without_a_symbol(): void
+    {
+        $this->post(route('password.update'), [
+            'email' => 'profile.user@example.com',
+            'token' => 'unused-token',
+            'password' => 'Uppercase1',
+            'password_confirmation' => 'Uppercase1',
+        ])->assertSessionHasErrors('password');
     }
 
     public function test_authenticator_setup_is_enabled_only_after_valid_code_is_saved(): void

@@ -53,6 +53,25 @@ class GoogleSignupTest extends TestCase
         $this->assertNull(session('pending_google_signup'));
     }
 
+    public function test_signup_rejects_passwords_missing_required_character_types(): void
+    {
+        foreach ([
+            'lowercase1!' => 'The password must contain at least one uppercase letter.',
+            'Uppercase!' => 'The password must contain at least one number.',
+            'Uppercase1' => 'The password must contain at least one symbol.',
+        ] as $password => $message) {
+            $response = $this->post(route('register'), [
+                'name' => 'Password Test User',
+                'email' => 'password-test@example.com',
+                'password' => $password,
+                'password_confirmation' => $password,
+            ]);
+
+            $response->assertSessionHasErrors('password');
+            $this->assertContains($message, session('errors')->getBag('default')->get('password'));
+        }
+    }
+
     public function test_login_and_signup_pages_do_not_offer_microsoft_sign_in(): void
     {
         $this->get(route('login'))
@@ -78,7 +97,16 @@ class GoogleSignupTest extends TestCase
             ->assertOk()
             ->assertSee('Password requirements')
             ->assertSee('Use 5 to 30 characters.')
+            ->assertSee('Include at least one uppercase letter.')
+            ->assertSee('Include at least one number.')
+            ->assertSee('Include at least one symbol.')
             ->assertSee('Enter the same password in the confirmation field.')
+            ->assertSee('password-rule-uppercase')
+            ->assertSee('password-rule-number')
+            ->assertSee('password-rule-symbol')
+            ->assertSee('aria-label="Not met"', false)
+            ->assertSee("indicator.textContent = met ? '✓' : '×';", false)
+            ->assertSee("passwordConfirmInput.addEventListener('input', updatePasswordUI);", false)
             ->assertSee('maxlength="30"', false)
             ->assertSee('minlength="5"', false);
     }

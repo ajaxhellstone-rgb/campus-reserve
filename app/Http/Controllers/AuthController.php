@@ -102,7 +102,7 @@ class AuthController extends Controller
         $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],
-            'password' => ['required', 'confirmed', 'min:5', 'max:30'],
+            'password' => $this->passwordRules(),
         ]);
 
         $email = strtolower($request->email);
@@ -367,7 +367,7 @@ class AuthController extends Controller
         if ($isChangingPassword) {
             $request->validate([
                 'current_password' => ['required', 'string'],
-                'password' => ['required', 'confirmed', 'min:5', 'max:30'],
+                'password' => $this->passwordRules(),
                 'password_2fa_otp' => ['nullable', 'digits:6'],
             ]);
 
@@ -507,7 +507,7 @@ class AuthController extends Controller
         if ($isChangingPassword) {
             $request->validate([
                 'current_password' => ['required', 'string'],
-                'password' => ['required', 'confirmed', 'min:5', 'max:30'],
+                'password' => $this->passwordRules(),
                 'password_2fa_otp' => ['nullable', 'digits:6'],
             ]);
 
@@ -862,7 +862,7 @@ class AuthController extends Controller
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255'],
-            'password' => ['required', 'confirmed', 'min:5', 'max:30'],
+            'password' => $this->passwordRules(),
         ]);
 
         $emailHash = hash('sha256', strtolower($request->email));
@@ -1155,5 +1155,32 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         return redirect('/reserve');
+    }
+
+    private function passwordRules(): array
+    {
+        return [
+            'required',
+            'confirmed',
+            'min:5',
+            'max:30',
+            function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! is_string($value)) {
+                    return;
+                }
+
+                if (! preg_match('/[A-Z]/', $value)) {
+                    $fail('The password must contain at least one uppercase letter.');
+                }
+
+                if (! preg_match('/[0-9]/', $value)) {
+                    $fail('The password must contain at least one number.');
+                }
+
+                if (! preg_match('/[^A-Za-z0-9]/', $value)) {
+                    $fail('The password must contain at least one symbol.');
+                }
+            },
+        ];
     }
 }
